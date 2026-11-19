@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parlei Language Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* Layout: app shell. Header across the top; nav is a left rail on wide screens and a bottom tab bar on phones. */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --sunk:#F5F7FA; --ink:#14202B; --muted:#5A6777; --line:#D8DEE6;
+  --accent:#2445C4; --accent-ink:#FFFFFF; --accent-soft:#E2E8FB;
+  --ok:#1C7448; --ok-soft:#DCF0E4; --warn:#9A5700; --warn-soft:#FBEACF; --bad:#B0222E; --bad-soft:#F8DDE0;
+  --display:'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --body:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r:12px; --shadow:0 1px 2px rgba(20,32,43,.06), 0 6px 24px rgba(20,32,43,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E141B; --surface:#17202A; --sunk:#121A22; --ink:#E6EBF1; --muted:#98A5B4; --line:#283441;
+    --accent:#8FA7FF; --accent-ink:#0E141B; --accent-soft:#1E2947;
+    --ok:#73D2A2; --ok-soft:#14301F; --warn:#F0B65C; --warn-soft:#38290F; --bad:#FF8C95; --bad-soft:#3A1A1E;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.25); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E141B; --surface:#17202A; --sunk:#121A22; --ink:#E6EBF1; --muted:#98A5B4; --line:#283441;
+  --accent:#8FA7FF; --accent-ink:#0E141B; --accent-soft:#1E2947;
+  --ok:#73D2A2; --ok-soft:#14301F; --warn:#F0B65C; --warn-soft:#38290F; --bad:#FF8C95; --bad-soft:#3A1A1E;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+h1,h2,h3,h4{text-wrap:balance;margin:0}
+h1{font:400 34px/1.1 var(--display);letter-spacing:-.01em}
+h2{font:400 26px/1.15 var(--display)}
+h3{font-size:17px;font-weight:600}
+h4{font-size:15px;font-weight:600}
+p{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.muted{color:var(--muted)}
+.hint{color:var(--muted);font-size:13px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+#app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:1fr}
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;margin-right:auto}
+.mark{width:34px;height:34px;flex:none;display:block}
+.brand .name{font:400 22px/1 var(--display)}
+.top select{max-width:230px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--sunk)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--sunk)}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:999px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
+.chip{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+#nav{display:flex;background:var(--surface);border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;z-index:20;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+#nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;text-decoration:none;color:var(--muted);font-size:11px;border-radius:10px;position:relative;min-width:0}
+#nav a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+#nav .long{display:none}
+#nav .sec{display:none}
+#nav .more-btn{display:flex}
+.navsheet{display:flex;flex-direction:column;gap:6px}
+.navsheet a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:500;position:relative}
+.navsheet .badge{position:static;margin-left:auto}
+.badge{position:absolute;top:2px;right:calc(50% - 22px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+#main{overflow:auto;padding:20px 16px 96px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+@media (min-width:860px){
+  #app{grid-template-columns:220px 1fr}
+  .top{grid-column:1 / -1}
+  #nav{position:static;flex-direction:column;border-top:0;border-right:1px solid var(--line);padding:14px 10px;gap:2px}
+  #nav a{flex:none;flex-direction:row;gap:10px;font-size:14px;padding:9px 12px;justify-content:flex-start}
+  #nav .short{display:none}
+  #nav .sec{display:flex}
+  #nav .more-btn{display:none}
+  #nav .long{display:inline}
+  .badge{position:static;margin-left:auto}
+  #main{padding:28px 32px 48px}
+}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card.narrow{max-width:460px;margin:24px auto;width:100%}
+.card-head{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.cols{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:980px){.cols{grid-template-columns:1fr 1fr}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+.hero{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.hero h1{margin-top:4px}
+.hero .muted{margin-top:6px;max-width:60ch}
+.codebox{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px dashed var(--accent);border-radius:var(--r);padding:10px 14px}
+.codebox .label{font-size:12px;color:var(--muted)}
+.code{font:600 22px/1.2 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.14em;background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-align:left}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:4px;min-width:0}
+a.tile:hover{border-color:var(--accent)}
+.tile .k{font-size:12.5px;color:var(--muted)}
+.tile .v{font:400 30px/1.05 var(--display);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile .v.sm{font:600 15px/1.3 var(--body)}
+.tile.alert{border-color:var(--warn);background:var(--warn-soft)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:500;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.btn.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.link{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-weight:500;text-align:left}
+.link.danger{color:var(--bad)}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.list{display:flex;flex-direction:column}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);min-width:0}
+.item:first-child{border-top:0}
+.item .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.item .t{font-weight:600;overflow-wrap:anywhere}
+.item .s{font-size:13px;color:var(--muted)}
+button.item{background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;width:100%;color:inherit}
+button.item:first-child{border-top:0}
+button.item:hover .t{color:var(--accent)}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap;border:1px solid var(--line)}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill.acc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.empty{color:var(--muted);padding:14px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+.unit-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:6px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:600;flex:none}
+.stat{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--ok)}
+
+.ann{padding:12px 14px;border-radius:10px;background:var(--accent-soft);display:flex;flex-direction:column;gap:6px}
+.ann p{white-space:pre-wrap;overflow-wrap:anywhere}
+.ann .meta{font-size:12px;color:var(--muted);display:flex;gap:10px}
+
+.lesson{max-width:720px}
+.lesson-body{display:flex;flex-direction:column;gap:12px;font-size:16px}
+.lesson-body h3{font:400 26px/1.2 var(--display);margin-top:6px}
+.lesson-body h4{font-size:16px;margin-top:6px}
+.lesson-body ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.lesson-body p{max-width:65ch}
+.phrases{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.ph{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.ph:first-child{border-top:0}
+.ph .fr{font-weight:600}
+.ph .en{color:var(--muted)}
+@media (max-width:520px){.ph{grid-template-columns:1fr auto}.ph .en{grid-column:1;grid-row:2}}
+.say{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:inline-grid;place-items:center;cursor:pointer;color:var(--accent);flex:none;vertical-align:middle}
+.say .ic{width:16px;height:16px}
+.say:hover{border-color:var(--accent)}
+
+.ev-day{font-weight:600;margin-top:4px}
+.ev{display:flex;gap:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);align-items:flex-start;flex-wrap:wrap}
+.ev-time{min-width:78px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.ev-time b{font-size:15px}
+.ev-time span{font-size:12px;color:var(--muted)}
+.ev-body{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
+.ev.slot{border-style:dashed}
+.ev.mine{border-color:var(--ok);background:var(--ok-soft)}
+
+.inbox{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:980px){.inbox{grid-template-columns:300px 1fr}}
+.thread{display:flex;flex-direction:column;gap:10px;min-height:320px}
+.msgs{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;padding:4px}
+.msg{max-width:80%;padding:9px 12px;border-radius:14px 14px 14px 4px;background:var(--sunk);border:1px solid var(--line);align-self:flex-start}
+.msg.mine{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);border-radius:14px 14px 4px 14px}
+.msg p{white-space:pre-wrap;overflow-wrap:anywhere}
+.msg time{display:block;font-size:11px;opacity:.7;margin-top:2px}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;resize:vertical;min-height:42px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none}
+
+label{font-size:13px;font-weight:600}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=url],input[type=search],input:not([type]),select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--sunk)}
+textarea{resize:vertical;line-height:1.5}
+.stack{display:flex;flex-direction:column;gap:8px}
+.stack > label{margin-top:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media (max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
+.grid2 > div,.grid3 > div{display:flex;flex-direction:column;gap:6px}
+.check{display:flex;gap:8px;align-items:center;font-weight:500;margin-top:8px}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--sunk);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
+
+#modalRoot{position:fixed;inset:0;z-index:50;display:none}
+#modalRoot.open{display:block}
+.scrim{position:absolute;inset:0;background:rgba(10,16,24,.5)}
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 24px));max-height:calc(100% - 32px);overflow:auto;background:var(--surface);border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:12px}
+.sheet.wide{width:min(820px,calc(100% - 24px))}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.x{border:0;background:var(--sunk);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:20px;line-height:1;color:var(--muted);flex:none}
+
+.q{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.q legend{font-weight:600;padding:0 4px}
+.opt{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;font-weight:400;font-size:15px;cursor:pointer}
+.opt:hover{background:var(--sunk)}
+.opt.right{background:var(--ok-soft);color:var(--ok);font-weight:600}
+.opt.wrong{background:var(--bad-soft);color:var(--bad);text-decoration:line-through}
+.answer{white-space:pre-wrap;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-wrap:anywhere}
+.feedback{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-soft);border-radius:0 10px 10px 0}
+.grade-row{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.grade-inline{display:flex;gap:8px;align-items:center}
+.grade-inline input{width:90px}
+
+.pr-top{display:flex;align-items:center;gap:12px;justify-content:space-between;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.flash{min-height:220px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--sunk));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;cursor:pointer;user-select:none}
+.flash.flipped{cursor:default}
+.flash .face{font:400 38px/1.15 var(--display);display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;overflow-wrap:anywhere}
+.flash .back{font-size:19px;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line);min-width:60%}
+.flash .tap{font-size:13px;color:var(--muted)}
+.pr-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pr-actions .wide{grid-column:1 / -1}
+.big-num{font:400 54px/1 var(--display);font-variant-numeric:tabular-nums}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.tab{flex:none;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:500;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tab .n{font-size:12px;font-variant-numeric:tabular-nums;opacity:.75}
+.tab.add{border-style:dashed;color:var(--accent)}
+.quick{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end}
+@media (max-width:620px){.quick{grid-template-columns:1fr 1fr}.quick .btn{grid-column:auto}}
+.lookup-note{font-size:13px;color:var(--muted);line-height:1.6}
+.found{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+.quick > div{display:flex;flex-direction:column;gap:5px}
+details.more summary{cursor:pointer;color:var(--accent);font-size:13px;font-weight:500}
+details.more[open] summary{margin-bottom:8px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.searchbox{flex:1;min-width:200px;position:relative}
+.searchbox .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);width:18px;height:18px}
+.searchbox input{padding-left:36px}
+.toolbar select{width:auto;flex:1}
+@media (min-width:621px){.toolbar select{flex:none}}
+@media (max-width:620px){.searchbox{flex-basis:100%}}
+.word{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+.word:first-child{border-top:0}
+.word .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.word .term{font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.word .mean{overflow-wrap:anywhere}
+.word .ex{font-style:italic;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.word .src{font-size:12px;color:var(--muted)}
+.word .tools{display:flex;gap:4px;align-items:center;flex:none}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid transparent;background:none;display:inline-grid;place-items:center;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{border-color:var(--line)}
+.icon-btn .ic{width:17px;height:17px}
+.icon-btn[aria-pressed="true"]{color:var(--warn)}
+.icon-btn[aria-pressed="true"] .ic{fill:currentColor}
+.lookup-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
+.au{display:flex;flex-direction:column;gap:10px}
+.au-head{display:flex;gap:12px;align-items:flex-start}
+.au-ic{width:40px;height:40px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.au audio{width:100%;height:40px}
+.speeds{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.speeds button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:12.5px;cursor:pointer;font-variant-numeric:tabular-nums;color:var(--muted)}
+.speeds button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.chiplink{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--sunk);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.mitem{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:flex-start}
+.mitem:first-child{border-top:0}
+.mitem .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mitem .t{font-weight:600;overflow-wrap:anywhere}
+.mitem .t a{color:inherit;text-decoration-color:var(--line)}
+.mitem .s{font-size:13px;color:var(--muted)}
+.mitem .notes{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mitem .side{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+.mitem select{width:auto;padding:4px 8px;font-size:13px}
+.mtype{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:var(--sunk);border:1px solid var(--line);color:var(--muted)}
+.rating{display:inline-flex;gap:1px}
+.rating button{background:none;border:0;padding:1px;cursor:pointer;color:var(--line)}
+.rating button.on{color:var(--warn)}
+.rating .ic{width:15px;height:15px;fill:currentColor;stroke:none}
+.progress{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .2s}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.bad{background:var(--bad);color:#fff}
+.banner{padding:10px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-size:14px}
+.skeleton{height:90px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.8,5.5) scale(0.93)"><path fill="var(--accent-ink)" d="M8 40 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 40 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></div>
+    <div id="classSwitch"></div>
+    <div id="roleBox"></div>
+  </header>
+  <nav id="nav" aria-label="Sections"></nav>
+  <main id="main"><div class="wrap"><div class="skeleton"></div><div class="skeleton"></div></div></main>
+</div>
+<div id="modalRoot"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ---------- basics ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const MIN = 6e4, DAY = 864e5;
+const BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];          // Leitner boxes: days until the next review
+const LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese', it:'Italian', de:'German', en:'English'};
+const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const newCode = () => Array.from({length:6}, () => CODE_ALPHA[Math.floor(Math.random()*CODE_ALPHA.length)]).join('');
+const ICON = {
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  book:'<path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/>',
+  check:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+  cards:'<rect x="3" y="7" width="13" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+  say:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 9a4 4 0 0 1 0 6"/><path d="M19 6.5a8 8 0 0 1 0 11"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  abc:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/>',
+  star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  media:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/>',
+  more:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  wave:'<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>'
+};
+const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+const VIEWS = [
+  {id:'home', long:'Home', short:'Home', icon:'home'},
+  {id:'lessons', long:'Lessons', short:'Lessons', icon:'book'},
+  {id:'words', long:'Vocabulary', short:'Words', icon:'abc'},
+  {id:'media', long:'Media', short:'Media', icon:'media', sec:true},
+  {id:'work', long:'Assignments', short:'Work', icon:'check'},
+  {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
+  {id:'calendar', long:'Schedule', short:'Schedule', icon:'cal', sec:true},
+  {id:'inbox', long:'Messages', short:'Inbox', icon:'chat'}
+];
+
+/* ---------- state ---------- */
+const S = {
+  db:null, user:null, tts:null, me:null, isOwner:false, teacherIds:[], teacherCapable:false, role:'student',
+  demo:false, fatal:null, slow:false, readOnly:false, data:{}, loaded:{}, names:{},
+  classId:null, view:'home', lessonId:null, threadId:null, showPast:false, dirty:false, practice:null, dir:'fwd',
+  wordLang:null, wordQ:'', wordSort:'new', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all'
+};
+const D = S.data;
+const store = {
+  get(k){ try { return localStorage.getItem('parlons.' + k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem('parlons.' + k, v); } catch (e) {} }
+};
+
+/* ---------- in-memory store (demo mode when opened outside claude.ai) ---------- */
+function memoryDB(){
+  const docs = new Map(), subs = new Set();
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const meta = {fromCache:false, hasPendingWrites:false};
+  const snap = p => { const d = docs.get(p); return {id:p.split('/').pop(), exists:!!d, data:() => d ? clone(d) : undefined, metadata:meta}; };
+  const fire = () => subs.forEach(f => f());
+  const merge = (a, b) => { for (const k in b) { const v = b[k]; if (v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k])) merge(a[k], v); else a[k] = v; } return a; };
+  const docRef = p => ({ id:p.split('/').pop(), path:p,
+    async get(){ return snap(p); },
+    async set(d){ docs.set(p, clone(d)); fire(); },
+    async update(d){ if (!docs.has(p)) throw {code:'invalid_argument', message:'missing'}; docs.set(p, merge(docs.get(p), clone(d))); fire(); },
+    async delete(){ docs.delete(p); fire(); },
+    onSnapshot(next){ const f = () => next(snap(p)); subs.add(f); setTimeout(f, 0); return () => subs.delete(f); },
+    collection(c){ return colRef(p + '/' + c); }
+  });
+  const colRef = (p, filters = []) => {
+    const run = () => { const out = []; for (const [k, d] of docs) { if (k.slice(0, k.lastIndexOf('/')) === p && filters.every(([f, , v]) => d[f] === v)) out.push(snap(k)); } out.sort((a, b) => a.id < b.id ? -1 : 1); return {docs:out, size:out.length, empty:!out.length, docChanges:() => [], metadata:meta}; };
+    const q = { path:p,
+      doc(id){ return docRef(p + '/' + (id || rid())); },
+      async add(d){ const r = docRef(p + '/' + rid()); await r.set(d); return r; },
+      where(f, op, v){ return colRef(p, filters.concat([[f, op, v]])); },
+      orderBy(){ return q; }, limit(){ return q; },
+      async get(){ return run(); },
+      onSnapshot(next){ const f = () => next(run()); subs.add(f); setTimeout(f, 0); return () => subs.delete(f); }
+    };
+    return q;
+  };
+  return { doc:docRef, collection:p => colRef(p) };
+}
+const SEED = __SEED__;
+const DEMO = __DEMO__;
+
+/* ---------- writes: one at a time per document ---------- */
+const chains = {};
+function errText(e){
+  const c = e && e.code;
+  if (c === 'invalid_argument') { S.readOnly = true; schedule(); return "You can't change this with your current access. Ask your teacher to invite you as an editor."; }
+  if (c === 'quota_exceeded') return 'Storage is full. Delete some old items, then try again.';
+  if (c === 'resource_exhausted') return 'Too many changes at once. Wait a moment and try again.';
+  return "Couldn't save. Check your connection and try again.";
+}
+function queue(path, fn){
+  const run = async () => { try { await fn(); } catch (e) { if (e && e.code === 'unavailable') { await new Promise(r => setTimeout(r, 400 + Math.random()*600)); await fn(); } else throw e; } };
+  const p = (chains[path] || Promise.resolve()).then(run);
+  chains[path] = p.catch(() => {});
+  return p.then(() => true, e => { toast(errText(e), true); return false; });
+}
+const setDoc = (path, data) => queue(path, () => S.db.doc(path).set(data));
+const delDoc = path => queue(path, () => S.db.doc(path).delete());
+const upsert = (path, part) => queue(path, async () => { const r = S.db.doc(path); const s = await r.get(); if (s.exists) await r.update(part); else await r.set(part); });
+
+/* ---------- reads ---------- */
+let renderQueued = false;
+function schedule(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
+function markLoaded(n){ S.loaded[n] = true; }
+function listenCol(name){
+  D[name] = {};
+  S.db.collection(name).onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { if (d.exists) m[d.id] = d.data(); });
+    D[name] = m; if (!snap.metadata || !snap.metadata.fromCache) markLoaded(name); else if (!S.loaded[name]) S.loaded[name] = 'cache';
+    schedule();
+  }, () => { markLoaded(name); schedule(); });
+}
+function listenOwn(name){
+  D[name] = {};
+  S.db.doc(name + '/' + S.me).onSnapshot(s => {
+    D[name] = s.exists ? {[S.me]: s.data()} : {};
+    if (!s.metadata || !s.metadata.fromCache) markLoaded(name); else if (!S.loaded[name]) S.loaded[name] = 'cache';
+    schedule();
+  }, () => { markLoaded(name); schedule(); });
+}
+const ready = () => ['classes', 'members'].every(n => S.loaded[n]);
+const rows = c => Object.entries(D[c] || {}).map(([id, v]) => Object.assign({id}, v));
+const byCreated = (a, b) => (a.createdAt || 0) - (b.createdAt || 0);
+
+/* names: store only ids, resolve in render */
+const wantNames = new Set(); let nameTimer = null;
+function nameOf(uid){
+  if (!uid) return 'Someone';
+  if (S.demo) return DEMO.names[uid] || 'Student';
+  const n = S.names[uid];
+  if (n === undefined && S.user) { wantNames.add(uid); if (!nameTimer) nameTimer = setTimeout(fetchNames, 30); }
+  if (uid === S.me) return n ? n + ' (you)' : 'You';
+  return n || 'Student';
+}
+async function fetchNames(){
+  nameTimer = null; const ids = [...wantNames]; wantNames.clear();
+  if (!ids.length) return;
+  try { const ps = await S.user.profiles(ids); ids.forEach(id => { S.names[id] = (ps && ps[id] && ps[id].name) || ''; }); }
+  catch (e) { ids.forEach(id => { S.names[id] = ''; }); }
+  schedule();
+}
+const initials = uid => { const n = nameOf(uid).replace(/\s*\(you\)$/, ''); return (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase(); };
+
+/* domain helpers */
+function myClasses(){
+  const all = rows('classes').sort(byCreated);
+  if (S.role === 'teacher') return S.isOwner ? all : all.filter(c => c.teacherId === S.me);
+  const m = (D.members || {})[S.me]; const ids = m && m.classIds ? Object.keys(m.classIds).filter(k => m.classIds[k]) : [];
+  return all.filter(c => ids.includes(c.id));
+}
+function currentClass(){
+  const cs = myClasses(); if (!cs.length) return null;
+  return cs.find(c => c.id === S.classId) || cs.find(c => c.id === store.get('class')) || cs[0];
+}
+const inClass = (col, cid) => rows(col).filter(x => x.classId === cid);
+const classOf = id => { const c = (D.classes || {})[id]; return c ? Object.assign({id}, c) : null; };
+function studentsOf(cid){ return Object.entries(D.members || {}).filter(([, m]) => m.classIds && m.classIds[cid]).map(([uid, m]) => ({uid, joined:m.classIds[cid]})).sort((a, b) => a.joined - b.joined); }
+const subOf = (uid, aid) => { const s = (D.subs || {})[uid]; return (s && s.items && s.items[aid]) || null; };
+const progOf = uid => { const p = (D.prog || {})[uid]; return (p && p.cards) || {}; };
+const visibleLessons = cid => inClass('lessons', cid).filter(l => S.role === 'teacher' || l.published !== false);
+function dueDate(due){ if (!due) return null; const [y, m, d] = due.split('-').map(Number); return new Date(y, m - 1, d, 23, 59, 59); }
+function dueLabel(due){
+  const dd = dueDate(due); if (!dd) return 'No due date';
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((new Date(dd.getFullYear(), dd.getMonth(), dd.getDate()) - today) / DAY);
+  if (diff === 0) return 'Due today'; if (diff === 1) return 'Due tomorrow';
+  if (diff > 1 && diff < 7) return 'Due ' + dd.toLocaleDateString(undefined, {weekday:'long'});
+  if (diff < 0) return 'Was due ' + dd.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+  return 'Due ' + dd.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+function statusOf(a, uid){
+  const s = subOf(uid, a.id);
+  if (s && s.gradedAt != null && s.grade != null) return {k:'graded', label:`${fmtNum(s.grade)} / ${a.points}`, cls:'ok', s};
+  if (s && s.submittedAt) return {k:'submitted', label:'Submitted', cls:'acc', s};
+  const dd = dueDate(a.due);
+  if (dd && dd < new Date()) return {k:'late', label:'Missing', cls:'bad', s};
+  return {k:'todo', label:'To do', cls:'warn', s};
+}
+const fmtNum = n => (Math.round(n * 10) / 10).toString();
+function toGradeCount(cid){ let n = 0; const studs = studentsOf(cid); inClass('assignments', cid).forEach(a => studs.forEach(({uid}) => { const s = subOf(uid, a.id); if (s && s.submittedAt && s.gradedAt == null) n++; })); return n; }
+function todoCount(cid){ return inClass('assignments', cid).filter(a => ['todo', 'late'].includes(statusOf(a, S.me).k)).length; }
+function deckStats(deck, uid){
+  const p = progOf(uid), now = Date.now(); let due = 0, mastered = 0, seen = 0;
+  (deck.cards || []).forEach(cd => { const x = p[deck.id + '~' + cd.id]; if (!x || x.d <= now) due++; if (x) seen++; if (x && x.b >= 4) mastered++; });
+  return {total:(deck.cards || []).length, due, mastered, seen};
+}
+const dueCardsCount = cid => inClass('decks', cid).reduce((n, d) => n + deckStats(d, S.me).due, 0);
+function eventsOf(cid, past){ const now = Date.now(); return inClass('events', cid).filter(e => { const end = new Date(e.start).getTime() + (e.mins || 60) * MIN; return past ? true : end > now; }).sort((a, b) => new Date(a.start) - new Date(b.start)); }
+function bookerOf(eid){ for (const [uid, b] of Object.entries(D.bookings || {})) if (b.slots && b.slots[eid]) return uid; return null; }
+const msgsOf = sid => Object.entries(((D.threads || {})[sid] || {}).msgs || {}).map(([id, m]) => Object.assign({id}, m)).sort((a, b) => a.at - b.at);
+function unreadFor(sid){
+  const t = (D.threads || {})[sid] || {};
+  if (S.role === 'teacher') return msgsOf(sid).filter(m => m.from !== S.me && m.at > (t.readT || 0)).length;
+  return msgsOf(sid).filter(m => m.from !== S.me && m.at > (t.readS || 0)).length;
+}
+const unreadCount = cid => S.role === 'teacher' ? studentsOf(cid).reduce((n, s) => n + unreadFor(s.uid), 0) : unreadFor(S.me);
+const fmtWhen = ts => { const d = new Date(ts); const same = d.toDateString() === new Date().toDateString(); return same ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); };
+const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+const fmtDay = iso => new Date(iso).toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+
+/* ---------- text formats ---------- */
+function inline(s){
+  let h = esc(s);
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  return h;
+}
+function sayBtn(text, lang){ return S.tts ? `<button type="button" class="say" data-act="say" data-text="${esc(text)}" data-lang="${esc(lang || 'fr')}" aria-label="Listen to ${esc(text)}">${icon('say')}</button>` : ''; }
+function renderBody(text, lang){
+  let html = '', para = [], list = false, ph = false;
+  const flushP = () => { if (para.length) { html += '<p>' + para.join('<br>') + '</p>'; para = []; } };
+  const endL = () => { if (list) { html += '</ul>'; list = false; } };
+  const endPh = () => { if (ph) { html += '</div>'; ph = false; } };
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trimEnd(); let m;
+    if (!line.trim()) { flushP(); endL(); endPh(); continue; }
+    if ((m = line.match(/^(#{1,3})\s+(.*)$/))) { flushP(); endL(); endPh(); const tag = m[1].length === 1 ? 'h3' : 'h4'; html += `<${tag}>${inline(m[2])}</${tag}>`; continue; }
+    if ((m = line.match(/^\s*[-•]\s+(.*)$/))) { flushP(); endPh(); if (!list) { html += '<ul>'; list = true; } html += `<li>${inline(m[1])}</li>`; continue; }
+    if ((m = line.match(/^(.+?)\s+=\s+(.+)$/))) { flushP(); endL(); if (!ph) { html += '<div class="phrases">'; ph = true; } html += `<div class="ph"><span class="fr">${esc(m[1].trim())}</span><span class="en">${esc(m[2].trim())}</span>${sayBtn(m[1].trim(), lang) || '<span></span>'}</div>`; continue; }
+    endL(); endPh(); para.push(inline(line));
+  }
+  flushP(); endL(); endPh();
+  return html;
+}
+function parseQuiz(text){
+  const qs = []; let cur = null; const errors = [];
+  for (const raw of String(text || '').split('\n')) {
+    const l = raw.trim(); let m; if (!l) continue;
+    if ((m = l.match(/^(?:q\s*\d*\s*[:.)]|\d+\s*[.)])\s*(.+)$/i))) { cur = {q:m[1].trim(), options:[], answer:-1}; qs.push(cur); continue; }
+    if (cur && (m = l.match(/^([*-])\s*(.+)$/))) { if (m[1] === '*') cur.answer = cur.options.length; cur.options.push(m[2].trim()); continue; }
+    if (cur && !cur.options.length) cur.q += ' ' + l;
+  }
+  qs.forEach((q, i) => { if (q.options.length < 2) errors.push(`Question ${i + 1} needs at least two choices.`); else if (q.answer < 0) errors.push(`Question ${i + 1} needs a correct answer marked with *.`); });
+  if (!qs.length) errors.push('Add at least one question.');
+  return {qs, errors};
+}
+const quizToText = qs => (qs || []).map((q, i) => `${i + 1}. ${q.q}\n` + q.options.map((o, j) => (j === q.answer ? '* ' : '- ') + o).join('\n')).join('\n\n');
+function parseDeck(text, old){
+  const known = new Map((old || []).map(c => [c.f, c.id])); const used = new Set();
+  return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const i = l.indexOf('='); if (i < 0) return null;
+    const f = l.slice(0, i).trim(), b = l.slice(i + 1).trim(); if (!f || !b) return null;
+    let id = known.get(f); if (!id || used.has(id)) id = rid(); used.add(id);
+    return {id, f, b};
+  }).filter(Boolean);
+}
+function scoreQuiz(a, answers){ const qs = a.questions || []; const right = qs.filter((q, i) => answers[i] === q.answer).length; return {right, total:qs.length, grade: qs.length ? Math.round(a.points * right / qs.length * 10) / 10 : 0}; }
+function nextBox(prev, ok, now){ const b0 = (prev && prev.b) || 0; const n = ((prev && prev.n) || 0) + 1; if (ok) { const b = Math.min(b0 + 1, BOX_DAYS.length - 1); return {b, d: now + BOX_DAYS[b] * DAY, n}; } return {b:0, d: now + 10 * MIN, n}; }
+
+/* ---------- UI plumbing ---------- */
+let toastTimer;
+function toast(msg, bad){ const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, bad ? 5000 : 2400); }
+function modal(html, opts){
+  opts = opts || {};
+  if (S.onModalClose) { const f = S.onModalClose; S.onModalClose = null; f(); }
+  const root = $('#modalRoot');
+  root.innerHTML = `<div class="scrim" data-act="closeModal"></div><div class="sheet ${opts.wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(opts.label || 'Dialog')}">${html}</div>`;
+  root.classList.add('open');
+  S.lastFocus = document.activeElement;
+  const sheet = $('.sheet', root);
+  if (opts.onMount) opts.onMount(sheet);
+  const f = sheet.querySelector('input:not([type=hidden]),textarea,select,button.primary'); if (f) f.focus(); else sheet.setAttribute('tabindex', '-1'), sheet.focus();
+}
+function closeModal(){
+  if (S.onModalClose) { const f = S.onModalClose; S.onModalClose = null; f(); }
+  const root = $('#modalRoot'); root.innerHTML = ''; root.classList.remove('open'); S.practice = null;
+  if (S.lastFocus && document.contains(S.lastFocus)) S.lastFocus.focus();
+  if (S.dirty) { S.dirty = false; schedule(); }
+}
+const head = (title, sub) => `<div class="sheet-head"><div class="stack" style="gap:2px"><h2>${esc(title)}</h2>${sub ? `<p class="muted">${sub}</p>` : ''}</div><button type="button" class="x" data-act="closeModal" aria-label="Close">×</button></div>`;
+function askConfirm(text, okLabel){
+  return new Promise(res => {
+    S.onModalClose = null;
+    modal(`${head('Are you sure?')}<p>${esc(text)}</p><div class="actions"><button class="btn" data-act="cfNo">Cancel</button><button class="btn bad" data-act="cfYes">${esc(okLabel || 'Delete')}</button></div>`, {label:'Confirm'});
+    S.confirm = v => { S.confirm = null; closeModal(); res(v); };
+  });
+}
+
+/* ---------- render ---------- */
+function render(force){
+  const a = document.activeElement;
+  const playing = [...document.querySelectorAll('#main audio')].some(x => !x.paused && !x.ended);
+  if (!force && (playing || (a && $('#main').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))) {
+    S.dirty = true; const wr = $('#wordResults'); if (wr) wr.innerHTML = wordResultsHTML(); return;
+  }
+  S.dirty = false;
+  renderTop(); renderNav();
+  const main = $('#main');
+  const keepScroll = main.scrollTop;
+  const saved = {}, keepHtml = {}; let moreOpen = null;
+  if (!force) {
+    main.querySelectorAll('input[id],textarea[id]').forEach(el => { if (!['file', 'radio', 'checkbox'].includes(el.type) && el.value) saved[el.id] = el.value; });
+    const lo = $('#lookupOut'); if (lo) keepHtml.lookupOut = lo.innerHTML; const wm = $('#wMore'); if (wm) moreOpen = wm.open;
+  }
+  main.innerHTML = `<div class="wrap">${renderMain()}</div>`;
+  for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (el && main.contains(el)) el.value = v; }
+  for (const [id, h] of Object.entries(keepHtml)) { const el = document.getElementById(id); if (el) el.innerHTML = h; }
+  if (moreOpen) { const wm = $('#wMore'); if (wm) wm.open = true; }
+  main.scrollTop = keepScroll;
+  const ms = $('#msgs'); if (ms) ms.scrollTop = ms.scrollHeight;
+}
+function renderTop(){
+  const cs = S.fatal || !ready() ? [] : myClasses(), c = currentClass();
+  $('#classSwitch').innerHTML = cs.length > 1 ? `<label class="sr" for="classSel">Class</label><select id="classSel">${cs.map(x => `<option value="${esc(x.id)}" ${c && x.id === c.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '';
+  let r = '';
+  if (S.teacherCapable) r = `<div class="seg" role="group" aria-label="View as"><button data-act="role" data-role="teacher" aria-pressed="${S.role === 'teacher'}">Teacher</button><button data-act="role" data-role="student" aria-pressed="${S.role === 'student'}">Student view</button></div>`;
+  else if (S.me) r = '<span class="chip">Student</span>';
+  if (S.demo) r = '<span class="chip" title="Opened outside claude.ai, so changes are not saved">Demo · not saved</span> ' + r;
+  $('#roleBox').innerHTML = r;
+}
+function renderNav(){
+  const c = !S.fatal && ready() ? currentClass() : null;
+  const badge = {};
+  if (c) {
+    badge.work = S.role === 'teacher' ? toGradeCount(c.id) : todoCount(c.id);
+    badge.practice = S.role === 'student' ? dueCardsCount(c.id) : 0;
+    badge.inbox = unreadCount(c.id);
+  }
+  const b = n => n ? `<span class="badge" aria-label="${n} pending">${n > 99 ? '99+' : n}</span>` : '';
+  const secOn = VIEWS.some(v => v.sec && v.id === S.view), secBadge = VIEWS.filter(v => v.sec).reduce((n, v) => n + (badge[v.id] || 0), 0);
+  $('#nav').innerHTML = VIEWS.map(v => `<a href="#${v.id}" class="${v.sec ? 'sec' : ''}" ${S.view === v.id ? 'aria-current="page"' : ''}>${icon(v.icon)}<span class="long">${v.long}</span><span class="short">${v.short}</span>${b(badge[v.id])}</a>`).join('')
+    + `<a href="#" class="more-btn" data-act="moreNav" ${secOn ? 'aria-current="page"' : ''}>${icon('more')}<span class="short">${secOn ? esc(VIEWS.find(v => v.id === S.view).short) : 'More'}</span>${b(secBadge)}</a>`;
+}
+function renderMain(){
+  if (S.fatal === 'signin') return `<section class="card narrow"><h1>Sign in to continue</h1><p class="muted">Parlei keeps your classes, homework and messages in your claude.ai account. Sign in to claude.ai, then open this page again.</p></section>`;
+  if (!ready()) return (S.slow ? '<p class="banner">Your classes are taking a while to load. Check your connection; this page keeps trying.</p>' : '') + '<div class="skeleton"></div><div class="skeleton"></div>';
+  const c = currentClass();
+  let out = S.readOnly ? `<p class="banner">You can view this portal but not hand in work or send messages. Ask your teacher to share it with you as an editor.</p>` : '';
+  if (S.view === 'words') return out + viewWords();
+  if (S.view === 'media') return out + viewMedia(c);
+  if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
+  const V = {home: S.role === 'teacher' ? viewHomeT : viewHomeS, lessons:viewLessons, work: S.role === 'teacher' ? viewWorkT : viewWorkS, practice:viewPractice, calendar:viewCalendar, inbox:viewInbox};
+  return out + (V[S.view] || V.home)(c);
+}
+
+/* ---- onboarding ---- */
+function viewOnboard(){
+  return `<section class="card narrow"><p class="eyebrow">Welcome</p><h1>Set up your first class</h1><p class="muted">A class holds your lessons, assignments, flashcards and schedule. Students join with a short code.</p><button class="btn primary" data-act="editClass">${icon('plus')} Create a class</button></section>`;
+}
+function viewJoin(){
+  return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you.</p>
+  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. BNJR26" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>`;
+}
+
+/* ---- home ---- */
+function viewHomeT(c){
+  const studs = studentsOf(c.id), next = eventsOf(c.id)[0], tg = toGradeCount(c.id), un = unreadCount(c.id);
+  const anns = inClass('announcements', c.id).sort((a, b) => b.at - a.at);
+  const asg = inClass('assignments', c.id), decks = inClass('decks', c.id);
+  return `
+  <section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(c.name)}</h1>${c.description ? `<p class="muted">${esc(c.description)}</p>` : ''}</div>
+    <div class="codebox"><span class="label">Join code</span><button class="code" data-act="copyCode" data-code="${esc(c.code)}" aria-label="Copy join code ${esc(c.code)}">${esc(c.code)}</button><span class="hint">Tap to copy for students</span></div></section>
+  <div class="tiles">
+    <div class="tile"><span class="k">Students</span><span class="v">${studs.length}</span></div>
+    <a class="tile ${tg ? 'alert' : ''}" href="#work"><span class="k">To grade</span><span class="v">${tg}</span></a>
+    <a class="tile" href="#calendar"><span class="k">Next session</span><span class="v sm">${next ? esc(new Date(next.start).toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})) + ', ' + esc(fmtTime(next.start)) : 'Nothing scheduled'}</span></a>
+    <a class="tile ${un ? 'alert' : ''}" href="#inbox"><span class="k">Unread messages</span><span class="v">${un}</span></a>
+  </div>
+  <div class="cols">
+    <section class="card"><div class="card-head"><h3>Announcements</h3><button class="btn sm" data-act="newAnn">${icon('plus')} Post</button></div>
+      ${anns.length ? anns.slice(0, 5).map(a => `<div class="ann"><p>${esc(a.text)}</p><div class="meta"><span>${esc(fmtWhen(a.at))}</span><button class="link danger" data-act="delAnn" data-id="${esc(a.id)}">Delete</button></div></div>`).join('') : '<p class="empty">Post a note your students see on their home page.</p>'}
+    </section>
+    <section class="card"><div class="card-head"><h3>Students</h3><span class="hint">${asg.length} assignments · ${decks.length} decks</span></div>
+      ${studs.length ? `<div class="list">${studs.map(({uid}) => rosterRow(uid, c, asg, decks)).join('')}</div>` : `<p class="empty">No students yet. Share the join code <b>${esc(c.code)}</b> and the link to this page.</p>`}
+    </section>
+  </div>
+  <div class="row-actions"><button class="btn" data-act="editClass" data-id="${esc(c.id)}">Edit class</button><button class="btn" data-act="editClass">${icon('plus')} New class</button></div>`;
+}
+function rosterRow(uid, c, asg, decks){
+  const done = asg.filter(a => { const s = subOf(uid, a.id); return s && s.submittedAt; }).length;
+  const graded = asg.map(a => ({a, s:subOf(uid, a.id)})).filter(x => x.s && x.s.gradedAt != null && x.s.grade != null);
+  const avg = graded.length ? Math.round(graded.reduce((n, x) => n + x.s.grade / x.a.points, 0) / graded.length * 100) : null;
+  const total = decks.reduce((n, d) => n + (d.cards || []).length, 0), mastered = decks.reduce((n, d) => n + deckStats(d, uid).mastered, 0);
+  const pct = total ? Math.round(mastered / total * 100) : 0;
+  return `<button class="item" data-act="student" data-uid="${esc(uid)}"><span class="avatar">${esc(initials(uid))}</span><span class="grow"><span class="t">${esc(nameOf(uid))}</span><span class="s">${done}/${asg.length} handed in${avg != null ? ` · average ${avg}%` : ''}</span><span class="bar" title="${pct}% of flashcards mastered"><i style="width:${pct}%"></i></span></span><span class="stat">${unreadFor(uid) ? '<span class="dot" title="Unread message"></span>' : ''}${mastered}/${total}<br>cards</span></button>`;
+}
+function viewHomeS(c){
+  const anns = inClass('announcements', c.id).sort((a, b) => b.at - a.at);
+  const next = eventsOf(c.id).filter(e => e.kind === 'class' || bookerOf(e.id) === S.me)[0];
+  const todo = inClass('assignments', c.id).map(a => Object.assign({st:statusOf(a, S.me)}, a)).filter(a => ['todo', 'late'].includes(a.st.k)).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
+  const feedback = inClass('assignments', c.id).map(a => ({a, s:subOf(S.me, a.id)})).filter(x => x.s && x.s.gradedAt).sort((x, y) => y.s.gradedAt - x.s.gradedAt).slice(0, 3);
+  const due = dueCardsCount(c.id), un = unreadCount(c.id);
+  const lessons = visibleLessons(c.id);
+  return `
+  <section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(c.name)}</h1></div></section>
+  <div class="tiles">
+    <a class="tile ${todo.length ? 'alert' : ''}" href="#work"><span class="k">Assignments to do</span><span class="v">${todo.length}</span></a>
+    <a class="tile" href="#practice"><span class="k">Cards to review</span><span class="v">${due}</span></a>
+    <a class="tile" href="#calendar"><span class="k">Next session</span><span class="v sm">${next ? esc(new Date(next.start).toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})) + ', ' + esc(fmtTime(next.start)) : 'Nothing booked'}</span></a>
+    <a class="tile ${un ? 'alert' : ''}" href="#inbox"><span class="k">New messages</span><span class="v">${un}</span></a>
+  </div>
+  <div class="cols">
+    <section class="card"><h3>From your teacher</h3>${anns.length ? anns.slice(0, 4).map(a => `<div class="ann"><p>${esc(a.text)}</p><div class="meta"><span>${esc(fmtWhen(a.at))}</span></div></div>`).join('') : '<p class="empty">No announcements yet.</p>'}</section>
+    <section class="card"><h3>Up next</h3><div class="list">
+      ${todo.slice(0, 4).map(a => `<button class="item" data-act="openA" data-id="${esc(a.id)}"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${esc(dueLabel(a.due))}</span></span><span class="pill ${a.st.cls}">${a.st.label}</span></button>`).join('')}
+      ${due ? `<a class="item" href="#practice" style="text-decoration:none;color:inherit"><span class="grow"><span class="t">Review ${due} flashcards</span><span class="s">A few minutes a day keeps words in memory</span></span><span class="pill acc">Practice</span></a>` : ''}
+      ${!todo.length && !due ? `<p class="empty">You're all caught up. ${lessons.length ? 'Reread a lesson or practise anyway.' : ''}</p>` : ''}
+    </div></section>
+  </div>
+  ${feedback.length ? `<section class="card"><h3>Latest feedback</h3><div class="list">${feedback.map(({a, s}) => `<button class="item" data-act="openA" data-id="${esc(a.id)}"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${s.feedback ? esc(s.feedback.slice(0, 120)) : 'Graded'}</span></span><span class="pill ok">${fmtNum(s.grade)} / ${a.points}</span></button>`).join('')}</div></section>` : ''}
+  <div class="row-actions"><button class="link danger" data-act="leave" data-id="${esc(c.id)}">Leave this class</button></div>`;
+}
+
+/* ---- lessons ---- */
+function viewLessons(c){
+  const ls = visibleLessons(c.id).sort((a, b) => (a.unit || '').localeCompare(b.unit || '') || (a.order || 0) - (b.order || 0) || byCreated(a, b));
+  if (S.lessonId && ls.find(l => l.id === S.lessonId)) return viewLesson(ls.find(l => l.id === S.lessonId), c);
+  const units = []; ls.forEach(l => { const u = l.unit || 'Lessons'; let g = units.find(x => x.u === u); if (!g) units.push(g = {u, items:[]}); g.items.push(l); });
+  return `<div class="page-head"><div><p class="eyebrow">${ls.length} lessons</p><h1>Lessons</h1></div>${S.role === 'teacher' ? `<button class="btn primary" data-act="editLesson">${icon('plus')} New lesson</button>` : ''}</div>
+  ${units.length ? units.map(g => `<section class="card"><p class="unit-label">${esc(g.u)}</p><div class="list">${g.items.map(l => {
+    const words = (String(l.body || '').match(/^.+?\s+=\s+.+$/gm) || []).length;
+    return `<button class="item" data-act="openLesson" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">${words ? words + ' phrases' : 'Reading'}${(l.links || []).length ? ' · ' + l.links.length + ' links' : ''}</span></span>${l.published === false ? '<span class="pill">Draft</span>' : ''}</button>`; }).join('')}</div></section>`).join('')
+  : `<p class="empty">${S.role === 'teacher' ? 'Write your first lesson. Vocabulary lines get a listen button.' : 'Your teacher has not posted lessons yet.'}</p>`}`;
+}
+function viewLesson(l, c){
+  return `<div class="lesson stack" style="gap:16px"><button class="link" data-act="closeLesson">${icon('back')} All lessons</button>
+  <div><p class="eyebrow">${esc(l.unit || 'Lesson')}</p><h1>${esc(l.title)}</h1></div>
+  ${l.published === false ? '<p class="banner">Draft: students cannot see this lesson yet.</p>' : ''}
+  <article class="lesson-body">${renderBody(l.body, c.language)}</article>
+  ${(() => { const rec = audioOf(c.id).filter(x => x.lessonId === l.id); return rec.length || S.role === 'teacher' ? `<section class="card"><div class="card-head"><h3>Listen</h3>${S.role === 'teacher' && S.assets ? `<button class="btn sm" data-act="uploadAudio" data-lesson="${esc(l.id)}">${icon('plus')} Add recording</button>` : ''}</div>${rec.length ? rec.map(x => audioCard(x, c, true)).join('') : '<p class="empty">Attach a recording of you reading this lesson aloud.</p>'}</section>` : ''; })()}
+  ${(l.links || []).length ? `<section class="card"><h3>Materials</h3><div class="list">${l.links.map(u => `<a class="item" href="${esc(u)}" target="_blank" rel="noopener"><span class="grow"><span class="t">${esc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span><span class="s">Opens in a new tab</span></span></a>`).join('')}</div></section>` : ''}
+  ${S.role === 'teacher' ? `<div class="row-actions"><button class="btn" data-act="editLesson" data-id="${esc(l.id)}">Edit lesson</button><button class="btn bad" data-act="delLesson" data-id="${esc(l.id)}">Delete</button></div>` : ''}</div>`;
+}
+
+/* ---- assignments ---- */
+function viewWorkT(c){
+  const studs = studentsOf(c.id);
+  const asg = inClass('assignments', c.id).sort((a, b) => (b.due || '').localeCompare(a.due || '') || byCreated(b, a));
+  return `<div class="page-head"><div><p class="eyebrow">${toGradeCount(c.id)} waiting for a grade</p><h1>Assignments</h1></div><button class="btn primary" data-act="editA">${icon('plus')} New assignment</button></div>
+  <section class="card">${asg.length ? `<div class="list">${asg.map(a => {
+    const subs = studs.filter(s => { const x = subOf(s.uid, a.id); return x && x.submittedAt; });
+    const waiting = studs.filter(s => { const x = subOf(s.uid, a.id); return x && x.submittedAt && x.gradedAt == null; }).length;
+    return `<div class="item"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${a.kind === 'quiz' ? 'Quiz · ' + (a.questions || []).length + ' questions' : 'Written'} · ${a.points} pts · ${esc(dueLabel(a.due))}</span></span>
+      <span class="stat">${subs.length}/${studs.length}<br>handed in</span>
+      ${waiting ? `<span class="pill warn">${waiting} to grade</span>` : ''}
+      <button class="btn sm ${waiting ? 'primary' : ''}" data-act="gradeA" data-id="${esc(a.id)}">${a.kind === 'quiz' ? 'Results' : 'Grade'}</button><button class="btn sm" data-act="editA" data-id="${esc(a.id)}">Edit</button></div>`; }).join('')}</div>`
+  : '<p class="empty">Create a written task or an auto-graded quiz.</p>'}</section>`;
+}
+function viewWorkS(c){
+  const asg = inClass('assignments', c.id).map(a => Object.assign({st:statusOf(a, S.me)}, a));
+  const open = asg.filter(a => ['todo', 'late'].includes(a.st.k)).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
+  const done = asg.filter(a => !['todo', 'late'].includes(a.st.k)).sort((a, b) => (b.st.s.submittedAt || 0) - (a.st.s.submittedAt || 0));
+  const row = a => `<button class="item" data-act="openA" data-id="${esc(a.id)}"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${a.kind === 'quiz' ? 'Quiz' : 'Written'} · ${a.points} pts · ${esc(dueLabel(a.due))}</span></span><span class="pill ${a.st.cls}">${esc(a.st.label)}</span></button>`;
+  return `<div class="page-head"><div><p class="eyebrow">${open.length} to do</p><h1>Assignments</h1></div></div>
+  <section class="card"><h3>To do</h3>${open.length ? `<div class="list">${open.map(row).join('')}</div>` : '<p class="empty">Nothing due. Bien joué !</p>'}</section>
+  ${done.length ? `<section class="card"><h3>Handed in</h3><div class="list">${done.map(row).join('')}</div></section>` : ''}`;
+}
+
+/* ---- flashcards ---- */
+function viewPractice(c){
+  const decks = inClass('decks', c.id).sort(byCreated);
+  return `<div class="page-head"><div><p class="eyebrow">Spaced repetition</p><h1>Flashcards</h1></div>${S.role === 'teacher' ? `<button class="btn primary" data-act="editDeck">${icon('plus')} New deck</button>` : ''}</div>
+  <p class="muted" style="max-width:65ch">Cards you know come back less often: tomorrow, then in 2, 4, 8 days and so on. Cards you miss come back the same day.</p>
+  ${decks.length ? `<div class="cols">${decks.map(d => { const st = deckStats(d, S.me); const pct = st.total ? Math.round(st.mastered / st.total * 100) : 0;
+    return `<section class="card"><div class="card-head"><h3>${esc(d.title)}</h3><span class="pill ${st.due ? 'warn' : 'ok'}">${st.due ? st.due + ' due' : 'Up to date'}</span></div>
+      <div class="bar" title="${pct}% mastered"><i style="width:${pct}%"></i></div><p class="hint">${st.total} cards · ${st.mastered} mastered · ${st.seen} seen</p>
+      <div class="row-actions"><button class="btn primary" data-act="practice" data-id="${esc(d.id)}">${st.due ? 'Review ' + Math.min(st.due, 25) + ' cards' : 'Practise anyway'}</button>
+      ${S.role === 'teacher' ? `<button class="btn" data-act="editDeck" data-id="${esc(d.id)}">Edit</button>` : ''}</div></section>`; }).join('')}</div>`
+  : `<p class="empty">${S.role === 'teacher' ? 'Make a deck by typing one word per line, like "bonjour = hello".' : 'No flashcard decks yet.'}</p>`}`;
+}
+
+/* ---- schedule ---- */
+function viewCalendar(c){
+  const evs = eventsOf(c.id, S.showPast); const days = [];
+  evs.forEach(e => { const k = new Date(e.start).toDateString(); let g = days.find(x => x.k === k); if (!g) days.push(g = {k, iso:e.start, items:[]}); g.items.push(e); });
+  const now = Date.now();
+  return `<div class="page-head"><div><p class="eyebrow">Times in your time zone</p><h1>Schedule</h1></div>${S.role === 'teacher' ? `<button class="btn primary" data-act="editEvent">${icon('plus')} Add to schedule</button>` : ''}</div>
+  ${days.length ? days.map(g => `<section class="stack"><p class="ev-day">${esc(fmtDay(g.iso))}</p>${g.items.map(e => eventRow(e, now)).join('')}</section>`).join('') : `<p class="empty">${S.role === 'teacher' ? 'Add class sessions and office-hour slots students can book.' : 'Nothing on the schedule yet.'}</p>`}
+  <button class="link" data-act="togglePast">${S.showPast ? 'Hide past sessions' : 'Show past sessions'}</button>`;
+}
+function eventRow(e, now){
+  const past = new Date(e.start).getTime() + (e.mins || 60) * MIN < now, booker = bookerOf(e.id), mine = booker && booker === S.me;
+  let action = '';
+  if (e.kind === 'slot') {
+    if (S.role === 'teacher') action = booker ? `<span class="pill ok">Booked by ${esc(nameOf(booker))}</span>` : '<span class="pill">Open slot</span>';
+    else if (mine) action = `<span class="pill ok">You're booked</span> ${past ? '' : `<button class="btn sm" data-act="unbook" data-id="${esc(e.id)}">Cancel booking</button>`}`;
+    else if (booker) action = '<span class="pill">Taken</span>';
+    else if (!past) action = `<button class="btn sm primary" data-act="book" data-id="${esc(e.id)}">Book this slot</button>`;
+  }
+  const showLink = e.link && (e.kind === 'class' || S.role === 'teacher' || mine);
+  return `<div class="ev ${e.kind === 'slot' ? 'slot' : ''} ${mine ? 'mine' : ''}" ${past ? 'style="opacity:.6"' : ''}>
+    <div class="ev-time"><b>${esc(fmtTime(e.start))}</b><span>${e.mins || 60} min</span></div>
+    <div class="ev-body"><b>${esc(e.title)}</b><div class="row-actions" style="align-items:center"><span class="pill ${e.kind === 'slot' ? '' : 'acc'}">${e.kind === 'slot' ? '1:1 slot' : 'Class'}</span>${action}
+      ${showLink ? `<a class="btn sm" href="${esc(e.link)}" target="_blank" rel="noopener">Join call</a>` : ''}
+      ${S.role === 'teacher' ? `<button class="link" data-act="editEvent" data-id="${esc(e.id)}">Edit</button>` : ''}</div></div></div>`;
+}
+
+/* ---- messages ---- */
+function threadHTML(sid, title){
+  const ms = msgsOf(sid);
+  return `<section class="card thread"><div class="card-head"><h3>${esc(title)}</h3>${S.role === 'teacher' ? `<button class="link" data-act="closeThread">${icon('back')} All students</button>` : ''}</div>
+    <div class="msgs" id="msgs">${ms.length ? ms.map(m => `<div class="msg ${m.from === S.me ? 'mine' : ''}"><p>${esc(m.text)}</p><time>${esc(m.from === S.me ? 'You' : nameOf(m.from))} · ${esc(fmtWhen(m.at))}</time></div>`).join('') : '<p class="empty">No messages yet. Say bonjour !</p>'}</div>
+    <form class="composer" data-form="msg" data-sid="${esc(sid)}"><label class="sr" for="msgText">Message</label><textarea id="msgText" name="text" rows="2" placeholder="Write a message"></textarea><button class="btn primary">Send</button></form></section>`;
+}
+function viewInbox(c){
+  if (S.role === 'student') return `<div class="page-head"><h1>Messages</h1></div><p class="muted">Only you and your teacher can see this conversation.</p>${threadHTML(S.me, 'Your teacher')}`;
+  const studs = studentsOf(c.id).map(s => Object.assign({last:msgsOf(s.uid).slice(-1)[0], un:unreadFor(s.uid)}, s)).sort((a, b) => ((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0));
+  const list = `<section class="card"><h3>Students</h3>${studs.length ? `<div class="list">${studs.map(s => `<button class="item" data-act="openThread" data-uid="${esc(s.uid)}" ${S.threadId === s.uid ? 'aria-current="true"' : ''}><span class="avatar">${esc(initials(s.uid))}</span><span class="grow"><span class="t">${esc(nameOf(s.uid))}</span><span class="s">${s.last ? esc(s.last.text.slice(0, 60)) : 'No messages yet'}</span></span>${s.un ? '<span class="dot" title="Unread"></span>' : ''}</button>`).join('')}</div>` : '<p class="empty">Students appear here once they join.</p>'}</section>`;
+  const pane = S.threadId ? threadHTML(S.threadId, nameOf(S.threadId)) : '<section class="card"><p class="empty">Choose a student to read and reply.</p></section>';
+  const narrow = window.matchMedia('(max-width: 979px)').matches;
+  return `<div class="page-head"><h1>Messages</h1><button class="btn" data-act="newAnn">Post to whole class</button></div><div class="inbox">${narrow && S.threadId ? pane : list + (narrow ? '' : pane)}</div>`;
+}
+function markRead(){
+  const c = currentClass(); if (!c || S.view !== 'inbox' || S.readOnly) return;
+  if (S.role === 'teacher' && S.threadId && unreadFor(S.threadId)) upsert('threads/' + S.threadId, {readT:Date.now()});
+  if (S.role === 'student' && unreadFor(S.me)) upsert('threads/' + S.me, {readS:Date.now()});
+}
+
+/* ---- vocabulary (each person's own word bank, one doc: vocab/<id>) ---- */
+const WORD_LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese (Brazil)', 'pt-PT':'Portuguese (Portugal)', it:'Italian', de:'German', en:'English', ht:'Haitian Creole', ja:'Japanese', ko:'Korean', 'zh-CN':'Mandarin', ar:'Arabic', sw:'Swahili', yo:'Yoruba', tl:'Tagalog'};
+const WR_DICT = {fr:'fren', es:'esen', 'pt-BR':'pten', 'pt-PT':'pten', it:'iten', de:'deen'};
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const vocabDoc = () => (D.vocab || {})[S.me] || {};
+const langName = code => WORD_LANGS[code] || (((vocabDoc().langs || {})[code] || {}).name) || code;
+const ttsLang = code => /^x-/.test(code) ? 'auto' : code;
+function myWords(lang){ return Object.entries(vocabDoc().words || {}).filter(([, w]) => w && w.term).map(([id, w]) => Object.assign({id}, w)).filter(w => !lang || w.lang === lang); }
+function myLangs(){
+  const ls = Object.entries(vocabDoc().langs || {}).filter(([, x]) => x).sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([k]) => k);
+  myWords().forEach(w => { if (!ls.includes(w.lang)) ls.push(w.lang); });
+  return ls;
+}
+function courseVocab(lang){
+  const out = [], seen = new Set(), base = l => String(l || '').split('-')[0];
+  const push = (term, meaning, src) => { const k = norm(term); if (!k || seen.has(k)) return; seen.add(k); out.push({term, meaning, src}); };
+  myClasses().filter(c => base(c.language) === base(lang)).forEach(c => {
+    inClass('decks', c.id).forEach(d => (d.cards || []).forEach(cd => push(cd.f, cd.b, d.title)));
+    visibleLessons(c.id).forEach(l => String(l.body || '').split('\n').forEach(line => { if (/^\s*[-•#]/.test(line)) return; const m = line.match(/^(.+?)\s+=\s+(.+)$/); if (m) push(m[1].trim(), m[2].trim(), l.title); }));
+  });
+  return out;
+}
+function hl(text, q){
+  const t = String(text || ''); if (!q) return esc(t);
+  const n = norm(t), i = n.indexOf(q); if (i < 0) return esc(t);
+  return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length));
+}
+function currentWordLang(){
+  const ls = myLangs(); if (!ls.length) return null;
+  if (S.wordLang && ls.includes(S.wordLang)) return S.wordLang;
+  const saved = store.get('wordLang'); return ls.includes(saved) ? saved : ls[0];
+}
+function wordRow(w, q, lang){
+  return `<div class="word"><div class="grow"><span class="term">${hl(w.term, q)} ${sayBtn(w.term, ttsLang(lang))}</span><span class="mean">${hl(w.meaning, q)}</span>${w.example ? `<span class="ex">${esc(w.example)}</span>` : ''}${w.note ? `<span class="src">${esc(w.note)}</span>` : ''}</div>
+    <div class="tools"><button class="icon-btn" data-act="starWord" data-id="${esc(w.id)}" aria-pressed="${!!w.star}" aria-label="${w.star ? 'Unstar' : 'Star'} ${esc(w.term)}">${icon('star')}</button><button class="btn sm" data-act="editWord" data-id="${esc(w.id)}">Edit</button></div></div>`;
+}
+function wordResultsHTML(){
+  const lang = currentWordLang(); if (!lang) return '';
+  const q = norm(S.wordQ), mine = myWords(lang);
+  const match = w => !q || norm(w.term).includes(q) || norm(w.meaning).includes(q) || norm(w.example).includes(q);
+  let list = mine.filter(match);
+  if (S.wordSort === 'az') list.sort((a, b) => norm(a.term).localeCompare(norm(b.term)));
+  else if (S.wordSort === 'star') list = list.filter(w => w.star).sort((a, b) => (b.at || 0) - (a.at || 0));
+  else list.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const have = new Set(mine.map(w => norm(w.term)));
+  const course = courseVocab(lang).filter(x => !have.has(norm(x.term)) && (!q || norm(x.term).includes(q) || norm(x.meaning).includes(q)));
+  const courseRow = x => `<div class="word"><div class="grow"><span class="term">${hl(x.term, q)} ${sayBtn(x.term, ttsLang(lang))}</span><span class="mean">${hl(x.meaning, q)}</span><span class="src">From ${esc(x.src)}</span></div><div class="tools"><button class="btn sm" data-act="addCourseWord" data-term="${esc(x.term)}" data-meaning="${esc(x.meaning)}">${icon('plus')} Add</button></div></div>`;
+  let h = `<section class="card"><div class="card-head"><h3>${q ? 'In your words' : 'Your words'}</h3><span class="hint">${list.length} ${list.length === 1 ? 'word' : 'words'}</span></div>`;
+  h += list.length ? `<div class="list">${list.map(w => wordRow(w, q, lang)).join('')}</div>` : `<p class="empty">${q ? 'Not in your list yet.' : S.wordSort === 'star' ? 'Star words you want to focus on.' : 'Add your first word above.'}</p>`;
+  h += '</section>';
+  if (q) {
+    h += `<section class="card"><div class="card-head"><h3>In your course</h3><span class="hint">${course.length} found</span></div>${course.length ? `<div class="list">${course.slice(0, 40).map(courseRow).join('')}</div>` : '<p class="empty">No lesson or flashcard has this word.</p>'}
+      <div class="lookup-links"><span class="muted">Look it up:</span>${WR_DICT[lang] ? `<a class="btn sm" href="https://www.wordreference.com/${WR_DICT[lang]}/${encodeURIComponent(S.wordQ.trim())}" target="_blank" rel="noopener">WordReference</a>` : ''}<a class="btn sm" href="https://translate.google.com/?sl=${encodeURIComponent(/^x-/.test(lang) ? 'auto' : lang)}&tl=en&text=${encodeURIComponent(S.wordQ.trim())}" target="_blank" rel="noopener">Google Translate</a><a class="btn sm" href="https://en.wiktionary.org/wiki/${encodeURIComponent(S.wordQ.trim())}" target="_blank" rel="noopener">Wiktionary</a></div></section>`;
+  } else if (course.length && S.wordSort !== 'star') {
+    h += `<section class="card"><details class="more"><summary>${course.length} words from your course you haven't added</summary><div class="list">${course.slice(0, 80).map(courseRow).join('')}</div></details></section>`;
+  }
+  return h;
+}
+function viewWords(){
+  const langs = myLangs(), lang = currentWordLang();
+  const headHtml = `<div class="page-head"><div><p class="eyebrow">Your personal word bank</p><h1>Vocabulary</h1></div></div>`;
+  if (!lang) {
+    const c = currentClass(); const sug = c && c.language ? c.language : 'fr';
+    return headHtml + `<section class="card narrow"><h2>Start your word bank</h2><p class="muted">Collect the words you meet in class, in books and out in the world. Each language you study gets its own tab.</p>
+      <form class="stack" data-form="addLang"><label for="nlLang">First language</label>${langSelect('nlLang', sug, [])}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><button class="btn primary">Create tab</button></form></section>`;
+  }
+  const mine = myWords(lang), ph = {fr:'le mot', es:'la palabra', 'pt-BR':'a palavra', 'pt-PT':'a palavra', it:'la parola', de:'das Wort'}[lang] || 'word';
+  return headHtml + `
+  <div class="tabs" role="tablist" aria-label="Languages">${langs.map(l => `<button class="tab" role="tab" aria-selected="${l === lang}" data-act="wordLang" data-lang="${esc(l)}">${esc(langName(l))} <span class="n">${myWords(l).length}</span></button>`).join('')}<button class="tab add" data-act="addLang">${icon('plus')} Language</button></div>
+  <section class="card"><form class="stack" data-form="word" style="gap:10px">
+    <div class="quick"><div><label for="wTerm">${esc(langName(lang))}</label><input id="wTerm" name="term" required maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(ph)}"></div>
+    <div><label for="wMean">Meaning</label><input id="wMean" name="meaning" required maxlength="200" autocomplete="off" placeholder="the word"></div>
+    ${S.sample ? `<button type="button" class="btn" id="lookupBtn" data-act="lookupWord">${icon('search')} Look up</button>` : ''}<button class="btn primary">${icon('plus')} Add word</button></div>
+    <div id="lookupOut"></div>
+    <p class="lookup-note">${S.sample ? 'Type a word in either box and tap <b>Look up</b> to fill in the meaning, an example and notes. Check them in a dictionary:' : 'Check meanings in a dictionary:'} <span id="dictLinks">${dictLinks(lang, '')}</span></p>
+    <details class="more" id="wMore"><summary>Add an example or note</summary><div class="stack"><label for="wEx">Example sentence</label><input id="wEx" name="example" maxlength="300" placeholder="J'apprends un nouveau mot chaque jour."><label for="wNote">Note</label><input id="wNote" name="note" maxlength="200" placeholder="masculine · heard in class on Monday"></div></details>
+  </form></section>
+  <div class="toolbar"><div class="searchbox">${icon('search')}<label class="sr" for="wordSearch">Look up a word</label><input id="wordSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Look up a word in ${esc(langName(lang))} or English" value="${esc(S.wordQ)}"></div>
+    <label class="sr" for="wordSort">Sort</label><select id="wordSort"><option value="new" ${S.wordSort === 'new' ? 'selected' : ''}>Newest first</option><option value="az" ${S.wordSort === 'az' ? 'selected' : ''}>A to Z</option><option value="star" ${S.wordSort === 'star' ? 'selected' : ''}>Starred only</option></select>
+    <button class="btn" data-act="practiseWords" ${mine.length ? '' : 'disabled'}>${icon('cards')} Practise</button></div>
+  <div id="wordResults" class="stack" style="gap:18px">${wordResultsHTML()}</div>
+  <div class="row-actions"><button class="link danger" data-act="delLang" data-lang="${esc(lang)}">Remove the ${esc(langName(lang))} tab</button></div>`;
+}
+function langSelect(id, selected, exclude){
+  return `<select id="${id}" name="lang">${Object.entries(WORD_LANGS).filter(([k]) => !exclude.includes(k)).map(([k, v]) => `<option value="${k}" ${k === selected ? 'selected' : ''}>${v}</option>`).join('')}<option value="other">Another language…</option></select>`;
+}
+function dictLinks(lang, q){
+  const t = encodeURIComponent(String(q || '').trim());
+  const wr = WR_DICT[lang] ? `<a href="https://www.wordreference.com/${WR_DICT[lang]}/${t}" target="_blank" rel="noopener">WordReference</a> · ` : '';
+  return `${wr}<a href="https://translate.google.com/?sl=${encodeURIComponent(/^x-/.test(lang) ? 'auto' : lang)}&tl=en${t ? '&text=' + t : ''}" target="_blank" rel="noopener">Google Translate</a> · <a href="https://en.wiktionary.org/wiki/${t}" target="_blank" rel="noopener">Wiktionary</a>`;
+}
+async function lookupWord(){
+  const lang = currentWordLang(), f = document.querySelector('form[data-form="word"]'); if (!f || !S.sample) return;
+  const term = f.term.value.trim(), meaning = f.meaning.value.trim();
+  if (!term && !meaning) { toast('Type a word first, in either box.', true); f.term.focus(); return; }
+  const btn = $('#lookupBtn'), out = $('#lookupOut'), L = langName(lang);
+  btn.disabled = true; btn.lastChild.textContent = ' Looking up…';
+  const prompt = `You are a bilingual ${L}–English dictionary for a learner whose main language is English.
+${L} box: "${term.slice(0, 120)}"
+English box: "${meaning.slice(0, 200)}"
+If the ${L} box has text, give the dictionary entry for it (correct the spelling and accents if needed). If only the English box has text, give the most common ${L} word or phrase for it.
+Reply with only this JSON object:
+{"found": true or false (false if this is not a real ${L} word or phrase),
+ "term": "the headword as a learner should save it; for nouns include the article, e.g. la boulangerie",
+ "meaning": "short English meaning, at most 8 words; separate distinct senses with ; ",
+ "pos": "part of speech, e.g. noun, verb, adjective, expression",
+ "note": "gender, register or regional usage worth knowing, at most 12 words, or empty",
+ "example": "one short, natural example sentence in ${L}",
+ "exampleEn": "the English translation of the example"}`;
+  try {
+    const r = await S.sample.json(prompt, {modelTier:'quick', cache:{gcTime:86400000}});
+    if (!r || r.found === false || !r.term) { out.innerHTML = `<p class="found">No entry found for "${esc(term || meaning)}". Check the spelling, or try a dictionary below.</p>`; return; }
+    f.term.value = String(r.term).slice(0, 120); f.meaning.value = String(r.meaning || '').slice(0, 200);
+    const ex = [r.example, r.exampleEn ? '(' + r.exampleEn + ')' : ''].filter(Boolean).join(' ');
+    f.example.value = ex.slice(0, 300); f.note.value = [r.pos, r.note].filter(Boolean).join(' · ').slice(0, 200);
+    $('#wMore').open = true;
+    out.innerHTML = `<p class="found"><b>${esc(r.term)}</b>${r.pos ? ' <span class="muted">' + esc(r.pos) + '</span>' : ''}<span>Filled in below. Edit anything, then tap Add word.</span></p>`;
+    $('#dictLinks').innerHTML = dictLinks(lang, r.term);
+  } catch (e) {
+    const c = e && e.code;
+    if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed') { S.sample = null; render(true); toast('Look up is turned off. You can still use the dictionary links.', true); return; }
+    out.innerHTML = `<p class="found">${c === 'rate_limited' ? 'Too many look-ups right now. Wait a minute and try again.' : "Couldn't look that up. Try again, or use a dictionary below."}</p>`;
+  } finally { const b = $('#lookupBtn'); if (b) { b.disabled = false; b.lastChild.textContent = ' Look up'; } }
+}
+function wordForm(id){
+  const w = Object.assign({id}, vocabDoc().words[id]);
+  modal(`${head('Edit word')}<form class="stack" data-form="editWord" data-id="${esc(id)}">
+    <div class="grid2"><div><label for="ewTerm">Word</label><input id="ewTerm" name="term" required maxlength="120" value="${esc(w.term)}"></div><div><label for="ewMean">Meaning</label><input id="ewMean" name="meaning" required maxlength="200" value="${esc(w.meaning)}"></div></div>
+    <label for="ewEx">Example sentence</label><input id="ewEx" name="example" maxlength="300" value="${esc(w.example || '')}">
+    <label for="ewNote">Note</label><input id="ewNote" name="note" maxlength="200" value="${esc(w.note || '')}">
+    <label for="ewLang">Language tab</label><select id="ewLang" name="lang">${myLangs().map(l => `<option value="${esc(l)}" ${l === w.lang ? 'selected' : ''}>${esc(langName(l))}</option>`).join('')}</select>
+    <div class="actions"><button type="button" class="btn bad" data-act="delWord" data-id="${esc(id)}" style="margin-right:auto">Delete</button><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save</button></div></form>`, {label:'Edit word'});
+}
+
+/* ---- media tab: class audio (teacher uploads) + personal repertoire ---- */
+const MAX_BYTES = 20 * 1024 * 1024;
+const MEDIA_TYPES = {song:'Song', video:'Video', podcast:'Podcast', show:'TV show', film:'Film', book:'Book', article:'Article', other:'Other'};
+const MEDIA_ABBR = {song:'♪', video:'Vid', podcast:'Pod', show:'TV', film:'Film', book:'Book', article:'Read', other:'•'};
+const MEDIA_STATUS = {doing:'In progress', want:'Want to try', done:'Finished'};
+const srcOf = id => S.demo ? (S.blobUrls[id] || '') : '/_blob/' + id;
+const fmtDur = s => { if (!s && s !== 0) return ''; s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const audioOf = cid => inClass('audio', cid).filter(x => S.role === 'teacher' || x.published !== false).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+function audioCard(x, c, compact){
+  const lesson = x.lessonId && (D.lessons || {})[x.lessonId];
+  return `<div class="au ${compact ? '' : 'card'}">
+    <div class="au-head"><span class="au-ic">${icon('wave')}</span><div class="grow stack" style="gap:2px;flex:1;min-width:0"><b style="overflow-wrap:anywhere">${esc(x.title)}</b><span class="hint">${[fmtDur(x.duration), new Date(x.createdAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})].filter(Boolean).join(' · ')}${x.published === false ? ' · <span class="pill">Draft</span>' : ''}</span>
+      ${lesson && !compact ? `<div class="chiprow"><button class="chiplink" data-act="openLessonFrom" data-id="${esc(x.lessonId)}">${icon('book').replace('class="ic"', 'class="ic" style="width:12px;height:12px;vertical-align:-1px"')} ${esc(lesson.title)}</button></div>` : ''}</div>
+      ${S.role === 'teacher' ? `<button class="btn sm" data-act="editAudio" data-id="${esc(x.id)}">Edit</button>` : ''}</div>
+    <audio controls preload="metadata" src="${esc(srcOf(x.assetId))}" data-aid="${esc(x.id)}"></audio>
+    <div class="speeds" role="group" aria-label="Playback speed"><span class="hint">Speed</span>${[0.75, 0.9, 1, 1.25].map(r => `<button data-act="speed" data-rate="${r}" aria-pressed="${r === 1}">${r}×</button>`).join('')}</div>
+    ${x.notes ? `<details class="more"><summary>Transcript and notes</summary><div class="lesson-body" style="font-size:15px">${renderBody(x.notes, c && c.language)}</div></details>` : ''}
+  </div>`;
+}
+function viewAudio(c){
+  if (!c) return `<p class="empty">Join a class to hear your teacher's recordings.</p>`;
+  const list = audioOf(c.id);
+  return `${S.role === 'teacher' ? `<div class="row-actions">${S.assets ? `<button class="btn primary" data-act="uploadAudio">${icon('plus')} Upload recording</button>` : '<p class="banner">Uploading needs editor access to this page.</p>'}<span class="hint" style="align-self:center">M4A from your phone uploads as is. MP3 and WAV get converted first.</span></div>` : ''}
+    ${list.length ? list.map(x => audioCard(x, c, false)).join('') : `<p class="empty">${S.role === 'teacher' ? 'Upload dialogues, pronunciation drills or a reading of a lesson.' : 'Your teacher has not shared recordings yet.'}</p>`}`;
+}
+const repDoc = () => (D.media || {})[S.me] || {};
+function myMedia(lang){ return Object.entries(repDoc().items || {}).filter(([, m]) => m && m.title).map(([id, m]) => Object.assign({id}, m)).filter(m => !lang || m.lang === lang); }
+const baseLang = l => String(l || '').split('-')[0];
+function recsFor(lang){ const cls = myClasses().filter(c => baseLang(c.language) === baseLang(lang)).map(c => c.id); return rows('recs').filter(r => cls.includes(r.classId)).sort((a, b) => (b.at || 0) - (a.at || 0)); }
+function ratingHTML(m){ return `<span class="rating" role="group" aria-label="Rating">${[1, 2, 3, 4, 5].map(n => `<button class="${(m.rating || 0) >= n ? 'on' : ''}" data-act="rateMedia" data-id="${esc(m.id)}" data-n="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${icon('star')}</button>`).join('')}</span>`; }
+function mediaRow(m){
+  const t = m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a>` : esc(m.title);
+  return `<div class="mitem"><span class="mtype" title="${esc(MEDIA_TYPES[m.type] || 'Other')}">${MEDIA_ABBR[m.type] || '•'}</span><div class="grow"><span class="t">${t}</span><span class="s">${esc(MEDIA_TYPES[m.type] || 'Other')}${m.creator ? ' · ' + esc(m.creator) : ''}</span>${m.notes ? `<span class="notes">${esc(m.notes)}</span>` : ''}${ratingHTML(m)}</div>
+    <div class="side"><label class="sr" for="ms-${esc(m.id)}">Status</label><select id="ms-${esc(m.id)}" data-media-status="${esc(m.id)}">${Object.entries(MEDIA_STATUS).map(([k, v]) => `<option value="${k}" ${m.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select><button class="btn sm" data-act="editMedia" data-id="${esc(m.id)}">Edit</button></div></div>`;
+}
+function viewRepertoire(c){
+  const langs = myLangs(), lang = currentWordLang();
+  if (!lang) return `<section class="card narrow"><h2>Build your repertoire</h2><p class="muted">Keep track of songs, shows, podcasts and books in the languages you're learning. Language tabs are shared with Vocabulary.</p>
+    <form class="stack" data-form="addLang"><label for="nlLang">First language</label>${langSelect('nlLang', (c && c.language) || 'fr', [])}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><button class="btn primary">Create tab</button></form></section>`;
+  const all = myMedia(lang), haveTitles = new Set(all.map(m => norm(m.title)));
+  const items = all.filter(m => (S.mediaType === 'all' || m.type === S.mediaType) && (S.mediaStatus === 'all' || m.status === S.mediaStatus));
+  const recs = recsFor(lang); const done = all.filter(m => m.status === 'done').length;
+  const groups = Object.keys(MEDIA_STATUS).map(k => ({k, items:items.filter(m => m.status === k).sort((a, b) => (b.at || 0) - (a.at || 0))})).filter(g => g.items.length);
+  return `<div class="tabs" role="tablist" aria-label="Languages">${langs.map(l => `<button class="tab" role="tab" aria-selected="${l === lang}" data-act="wordLang" data-lang="${esc(l)}">${esc(langName(l))} <span class="n">${myMedia(l).length}</span></button>`).join('')}<button class="tab add" data-act="addLang">${icon('plus')} Language</button></div>
+  <div class="toolbar"><label class="sr" for="mediaType">Type</label><select id="mediaType"><option value="all">All types</option>${Object.entries(MEDIA_TYPES).map(([k, v]) => `<option value="${k}" ${S.mediaType === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <label class="sr" for="mediaStatus">Status</label><select id="mediaStatus"><option value="all">Any status</option>${Object.entries(MEDIA_STATUS).map(([k, v]) => `<option value="${k}" ${S.mediaStatus === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <button class="btn primary" data-act="addMedia">${icon('plus')} Add media</button>${S.role === 'teacher' && c ? `<button class="btn" data-act="addRec">Recommend to class</button>` : ''}</div>
+  ${recs.length ? `<section class="card"><div class="card-head"><h3>${S.role === 'teacher' ? 'Your recommendations' : 'Recommended by your teacher'}</h3><span class="hint">${recs.length}</span></div><div class="list">${recs.map(r => `<div class="mitem"><span class="mtype">${MEDIA_ABBR[r.type] || '•'}</span><div class="grow"><span class="t">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>` : esc(r.title)}</span><span class="s">${esc(MEDIA_TYPES[r.type] || 'Other')}${r.creator ? ' · ' + esc(r.creator) : ''}</span>${r.note ? `<span class="notes">${esc(r.note)}</span>` : ''}</div><div class="side">${haveTitles.has(norm(r.title)) ? '<span class="pill ok">In your list</span>' : `<button class="btn sm" data-act="addFromRec" data-id="${esc(r.id)}">${icon('plus')} Add</button>`}${S.role === 'teacher' ? `<button class="link danger" data-act="delRec" data-id="${esc(r.id)}">Remove</button>` : ''}</div></div>`).join('')}</div></section>` : ''}
+  <section class="card"><div class="card-head"><h3>My ${esc(langName(lang))} repertoire</h3><span class="hint">${all.length} items · ${done} finished</span></div>
+    ${groups.length ? groups.map(g => `<p class="unit-label">${MEDIA_STATUS[g.k]} · ${g.items.length}</p><div class="list">${g.items.map(mediaRow).join('')}</div>`).join('') : `<p class="empty">${all.length ? 'Nothing matches these filters.' : 'Add a song you love, a show you want to watch or a podcast for your commute.'}</p>`}
+  </section>`;
+}
+function viewMedia(c){
+  const tab = S.mediaTab || (S.role === 'teacher' ? 'audio' : (c && audioOf(c.id).length ? 'audio' : 'rep'));
+  return `<div class="page-head"><div><p class="eyebrow">Listen, watch, read</p><h1>Media</h1></div></div>
+  <div class="seg" role="tablist" aria-label="Media sections" style="align-self:flex-start"><button role="tab" data-act="mediaTab" data-tab="audio" aria-pressed="${tab === 'audio'}">Class audio</button><button role="tab" data-act="mediaTab" data-tab="rep" aria-pressed="${tab === 'rep'}">My repertoire</button></div>
+  ${tab === 'audio' ? viewAudio(c) : viewRepertoire(c)}`;
+}
+function audioForm(id, lessonId){
+  const x = id ? Object.assign({id}, D.audio[id]) : null; const c = currentClass();
+  const lessons = inClass('lessons', c.id).sort((a, b) => (a.unit || '').localeCompare(b.unit || '') || (a.order || 0) - (b.order || 0));
+  const sel = x ? x.lessonId : lessonId;
+  modal(`${head(x ? 'Edit recording' : 'Upload a recording')}<form class="stack" data-form="audio" data-id="${esc(id || '')}">
+    ${x ? '' : `<label for="auFile">Audio file</label><input id="auFile" name="file" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm,.mp4" required><p class="hint">Up to 20 MB. M4A (iPhone Voice Memos) uploads as is; MP3, WAV and other formats are converted to a compact file first, which works best in Chrome or Edge.</p>`}
+    <label for="auTitle">Title</label><input id="auTitle" name="title" required maxlength="120" value="${esc(x ? x.title : '')}" placeholder="Dialogue: au café">
+    <label for="auLesson">Attach to lesson</label><select id="auLesson" name="lesson"><option value="">No lesson</option>${lessons.map(l => `<option value="${esc(l.id)}" ${sel === l.id ? 'selected' : ''}>${esc((l.unit ? l.unit + ' · ' : '') + l.title)}</option>`).join('')}</select>
+    <label for="auNotes">Transcript and notes</label><p class="hint">Optional. Lines like <code>un café = a coffee</code> show as vocabulary.</p><textarea id="auNotes" name="notes" rows="6">${esc(x ? x.notes || '' : '')}</textarea>
+    <label class="check"><input type="checkbox" id="auPub" name="published" ${!x || x.published !== false ? 'checked' : ''}> Students can hear this recording</label>
+    <div id="auStatus" class="stack" hidden><span class="hint" id="auStatusText"></span><div class="progress"><i id="auBar" style="width:0%"></i></div></div>
+    <div class="actions">${x ? `<button type="button" class="btn bad" data-act="delAudio" data-id="${esc(x.id)}" style="margin-right:auto">Delete</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary" id="auSave">${x ? 'Save' : 'Upload'}</button></div></form>`, {label:'Recording'});
+}
+function mediaForm(id, rec){
+  const m = id ? Object.assign({id}, rec ? D.recs[id] : repDoc().items[id]) : null; const lang = currentWordLang();
+  modal(`${head(rec ? 'Recommend to the class' : (m ? 'Edit media' : 'Add media'))}<form class="stack" data-form="${rec ? 'rec' : 'media'}" data-id="${esc(id || '')}">
+    <div class="grid2"><div><label for="mdType">Type</label><select id="mdType" name="type">${Object.entries(MEDIA_TYPES).map(([k, v]) => `<option value="${k}" ${(m ? m.type : 'song') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+    ${rec ? '<div></div>' : `<div><label for="mdLang">Language</label><select id="mdLang" name="lang">${myLangs().map(l => `<option value="${esc(l)}" ${(m ? m.lang : lang) === l ? 'selected' : ''}>${esc(langName(l))}</option>`).join('')}</select></div>`}</div>
+    <label for="mdTitle">Title</label><input id="mdTitle" name="title" required maxlength="150" value="${esc(m ? m.title : '')}" placeholder="Dernière danse">
+    <label for="mdCreator">Artist, author or channel</label><input id="mdCreator" name="creator" maxlength="100" value="${esc(m ? m.creator || '' : '')}" placeholder="Indila">
+    <label for="mdUrl">Link</label><input id="mdUrl" name="url" type="url" maxlength="500" value="${esc(m ? m.url || '' : '')}" placeholder="https://…">
+    ${rec ? `<label for="mdNote">Why you recommend it</label><textarea id="mdNote" name="note" rows="3" maxlength="600">${esc(m ? m.note || '' : '')}</textarea>`
+      : `<label for="mdStatus">Status</label><select id="mdStatus" name="status">${Object.entries(MEDIA_STATUS).map(([k, v]) => `<option value="${k}" ${(m ? m.status : 'want') === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <label for="mdNotes">Notes</label><textarea id="mdNotes" name="notes" rows="3" maxlength="1000" placeholder="New words, favourite lines, where you left off">${esc(m ? m.notes || '' : '')}</textarea>`}
+    <div class="actions">${m && !rec ? `<button type="button" class="btn bad" data-act="delMedia" data-id="${esc(m.id)}" style="margin-right:auto">Delete</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">${rec ? 'Recommend' : 'Save'}</button></div></form>`, {label:'Media'});
+}
+
+/* audio conversion: anything the browser can decode -> mono Opus in WebM (accepted as video/webm) */
+let muxerLib = null;
+function loadMuxer(){
+  if (window.WebMMuxer) return Promise.resolve(window.WebMMuxer);
+  if (!muxerLib) muxerLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/webm-muxer@5.1.4/build/webm-muxer.js'; sc.onload = () => window.WebMMuxer ? res(window.WebMMuxer) : rej({code:'nocodec'}); sc.onerror = () => { muxerLib = null; rej({code:'nolib'}); }; document.head.appendChild(sc); });
+  return muxerLib;
+}
+async function toWebm(file, onProgress){
+  if (!window.AudioEncoder || !window.AudioData || !window.OfflineAudioContext) throw {code:'nocodec'};
+  const sr = 48000;
+  let buf; try { buf = await new OfflineAudioContext(1, 1, sr).decodeAudioData(await file.arrayBuffer()); } catch (e) { throw {code:'decode'}; }
+  const cfg = {codec:'opus', sampleRate:sr, numberOfChannels:1, bitrate:64000};
+  const ok = await AudioEncoder.isConfigSupported(cfg).catch(() => ({supported:false})); if (!ok.supported) throw {code:'nocodec'};
+  const {Muxer, ArrayBufferTarget} = await loadMuxer();
+  const muxer = new Muxer({target:new ArrayBufferTarget(), audio:{codec:'A_OPUS', sampleRate:sr, numberOfChannels:1}});
+  let failed = null;
+  const enc = new AudioEncoder({output:(chunk, meta) => muxer.addAudioChunk(chunk, meta), error:e => { failed = e; }});
+  enc.configure(cfg);
+  const chs = Array.from({length:buf.numberOfChannels}, (_, i) => buf.getChannelData(i)), step = 4800;
+  for (let off = 0; off < buf.length; off += step) {
+    if (failed) throw {code:'decode'};
+    const n = Math.min(step, buf.length - off), data = new Float32Array(n);
+    for (const ch of chs) for (let i = 0; i < n; i++) data[i] += ch[off + i] / chs.length;
+    const ad = new AudioData({format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:1, timestamp:Math.round(off / sr * 1e6), data});
+    enc.encode(ad); ad.close();
+    if (enc.encodeQueueSize > 40 || off % (step * 50) === 0) { onProgress(off / buf.length); await new Promise(r => setTimeout(r, 0)); }
+  }
+  await enc.flush(); enc.close(); muxer.finalize(); onProgress(1);
+  return {blob:new Blob([muxer.target.buffer], {type:'video/webm'}), duration:buf.duration};
+}
+function demoWav(){
+  const sr = 8000, n = sr * 3, b = new DataView(new ArrayBuffer(44 + n * 2)); const w = (o, s) => [...s].forEach((ch, i) => b.setUint8(o + i, ch.charCodeAt(0)));
+  w(0, 'RIFF'); b.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true); b.setUint32(24, sr, true); b.setUint32(28, sr * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, 'data'); b.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) b.setInt16(44 + i * 2, Math.sin(i / sr * 2 * Math.PI * (330 + 110 * Math.floor(i / sr))) * 6000 * Math.min(1, (n - i) / 800), true);
+  return new Blob([b], {type:'audio/wav'});
+}
+function probeDuration(file){
+  return new Promise(res => { const a = document.createElement('audio'); const u = URL.createObjectURL(file); const done = v => { URL.revokeObjectURL(u); res(v); }; a.preload = 'metadata'; a.onloadedmetadata = () => done(isFinite(a.duration) ? a.duration : null); a.onerror = () => done(null); setTimeout(() => done(null), 5000); a.src = u; });
+}
+function audioErr(e){
+  const c = e && e.code;
+  if (c === 'nocodec' || c === 'nolib') return "This browser can't convert this file. Open the portal in Chrome or Edge, or upload an M4A (iPhone Voice Memos saves M4A).";
+  if (c === 'decode') return "Couldn't read this audio file. Try exporting it again as M4A or MP3.";
+  if (c === 'too_large') return 'This recording is over 20 MB. Split it into shorter parts.';
+  if (c === 'quota_or_state') return 'Storage for this portal is full. Delete old recordings, then try again.';
+  if (c === 'rate_limited') return 'Too many uploads at once. Wait a minute and try again.';
+  return 'Upload failed. Check your connection and try again.';
+}
+
+/* ---------- dialogs ---------- */
+function classForm(id){
+  const c = id ? classOf(id) : null;
+  modal(`${head(c ? 'Edit class' : 'New class')}<form class="stack" data-form="class" data-id="${esc(id || '')}">
+    <label for="cName">Class name</label><input id="cName" name="name" required maxlength="80" value="${esc(c ? c.name : '')}" placeholder="Français A1 · Monday evenings">
+    <div class="grid2"><div><label for="cLang">Language</label><select id="cLang" name="language">${Object.entries(LANGS).map(([k, v]) => `<option value="${k}" ${(c ? c.language : 'fr') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+    <div><label for="cLevel">Level</label><input id="cLevel" name="level" maxlength="20" value="${esc(c ? c.level : '')}" placeholder="A1"></div></div>
+    <label for="cDesc">Description</label><textarea id="cDesc" name="description" rows="2" maxlength="300">${esc(c ? c.description : '')}</textarea>
+    ${c ? `<p class="hint">Join code <b>${esc(c.code)}</b> · <button type="button" class="link" data-act="newCode" data-id="${esc(c.id)}">Make a new code</button> (the old one stops working)</p>` : ''}
+    <div class="actions">${c ? `<button type="button" class="btn bad" data-act="delClass" data-id="${esc(c.id)}" style="margin-right:auto">Delete class</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">${c ? 'Save' : 'Create class'}</button></div></form>`, {label:'Class'});
+}
+function lessonForm(id){
+  const l = id ? Object.assign({id}, D.lessons[id]) : null;
+  const c = currentClass(); const units = [...new Set(inClass('lessons', c.id).map(x => x.unit).filter(Boolean))];
+  modal(`${head(l ? 'Edit lesson' : 'New lesson')}<form class="stack" data-form="lesson" data-id="${esc(id || '')}">
+    <label for="lTitle">Title</label><input id="lTitle" name="title" required maxlength="120" value="${esc(l ? l.title : '')}">
+    <div class="grid2"><div><label for="lUnit">Unit</label><input id="lUnit" name="unit" list="unitList" maxlength="60" value="${esc(l ? l.unit : (units[units.length - 1] || ''))}" placeholder="Unit 1 · Se présenter"><datalist id="unitList">${units.map(u => `<option value="${esc(u)}">`).join('')}</datalist></div>
+    <div><label for="lOrder">Order in unit</label><input id="lOrder" name="order" type="number" min="0" value="${esc(l ? l.order : inClass('lessons', c.id).length + 1)}"></div></div>
+    <label for="lBody">Lesson</label>
+    <p class="hint">Lines like <code>bonjour = hello</code> become a vocabulary list with a listen button. Start a line with <code>#</code> for a heading or <code>-</code> for a bullet. Use <code>**bold**</code> and <code>*italics*</code>.</p>
+    <textarea id="lBody" name="body" rows="12">${esc(l ? l.body : '')}</textarea>
+    <label for="lLinks">Links to materials, one per line</label><textarea id="lLinks" name="links" rows="3" placeholder="https://…">${esc(l ? (l.links || []).join('\n') : '')}</textarea>
+    <label class="check"><input type="checkbox" id="lPub" name="published" ${!l || l.published !== false ? 'checked' : ''}> Students can see this lesson</label>
+    <div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save lesson</button></div></form>`, {wide:true, label:'Lesson'});
+}
+function assignmentForm(id){
+  const a = id ? Object.assign({id}, D.assignments[id]) : null; const quiz = a ? a.kind === 'quiz' : false;
+  const wk = new Date(Date.now() + 7 * DAY); const def = `${wk.getFullYear()}-${String(wk.getMonth() + 1).padStart(2, '0')}-${String(wk.getDate()).padStart(2, '0')}`;
+  modal(`${head(a ? 'Edit assignment' : 'New assignment')}<form class="stack" data-form="assignment" data-id="${esc(id || '')}">
+    <label for="aTitle">Title</label><input id="aTitle" name="title" required maxlength="120" value="${esc(a ? a.title : '')}">
+    <div class="grid3"><div><label for="aKind">Type</label><select id="aKind" name="kind"><option value="written" ${!quiz ? 'selected' : ''}>Written</option><option value="quiz" ${quiz ? 'selected' : ''}>Quiz (auto-graded)</option></select></div>
+    <div><label for="aDue">Due</label><input id="aDue" name="due" type="date" value="${esc(a ? a.due : def)}"></div>
+    <div><label for="aPts">Points</label><input id="aPts" name="points" type="number" min="1" max="1000" value="${esc(a ? a.points : 10)}"></div></div>
+    <label for="aInstr">Instructions</label><textarea id="aInstr" name="instructions" rows="4">${esc(a ? a.instructions : '')}</textarea>
+    <div id="quizBox" class="stack" ${quiz ? '' : 'hidden'}><label for="aQs">Questions</label>
+      <p class="hint">Number each question. List choices below it with <code>-</code> and mark the right one with <code>*</code>.</p>
+      <textarea id="aQs" name="questions" rows="10" placeholder="1. « Merci » means…&#10;- please&#10;* thank you&#10;- hello">${esc(a ? quizToText(a.questions) : '')}</textarea></div>
+    <p id="aErr" class="banner" hidden></p>
+    <div class="actions">${a ? `<button type="button" class="btn bad" data-act="delA" data-id="${esc(a.id)}" style="margin-right:auto">Delete</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save assignment</button></div></form>`, {wide:true, label:'Assignment'});
+}
+function deckForm(id){
+  const d = id ? Object.assign({id}, D.decks[id]) : null;
+  modal(`${head(d ? 'Edit deck' : 'New deck')}<form class="stack" data-form="deck" data-id="${esc(id || '')}">
+    <label for="dTitle">Deck name</label><input id="dTitle" name="title" required maxlength="80" value="${esc(d ? d.title : '')}" placeholder="Food & drink">
+    <label for="dCards">Cards, one per line</label><p class="hint">Write the word, an equals sign, then its meaning: <code>le pain = bread</code>. Students keep their progress when you edit a card's meaning.</p>
+    <textarea id="dCards" name="cards" rows="14">${esc(d ? (d.cards || []).map(x => x.f + ' = ' + x.b).join('\n') : '')}</textarea>
+    <div class="actions">${d ? `<button type="button" class="btn bad" data-act="delDeck" data-id="${esc(d.id)}" style="margin-right:auto">Delete deck</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save deck</button></div></form>`, {label:'Deck'});
+}
+function eventForm(id){
+  const e = id ? Object.assign({id}, D.events[id]) : null; const st = e ? new Date(e.start) : new Date(Date.now() + DAY);
+  const ds = `${st.getFullYear()}-${String(st.getMonth() + 1).padStart(2, '0')}-${String(st.getDate()).padStart(2, '0')}`;
+  const ts = e ? `${String(st.getHours()).padStart(2, '0')}:${String(st.getMinutes()).padStart(2, '0')}` : '18:30';
+  modal(`${head(e ? 'Edit session' : 'Add to schedule')}<form class="stack" data-form="event" data-id="${esc(id || '')}">
+    <label for="eKind">What is it?</label><select id="eKind" name="kind"><option value="class" ${!e || e.kind === 'class' ? 'selected' : ''}>Class session (whole class)</option><option value="slot" ${e && e.kind === 'slot' ? 'selected' : ''}>1:1 slots students can book</option></select>
+    <label for="eTitle">Title</label><input id="eTitle" name="title" required maxlength="80" value="${esc(e ? e.title : 'Class')}">
+    <div class="grid3"><div><label for="eDate">Date</label><input id="eDate" name="date" type="date" required value="${ds}"></div>
+    <div><label for="eTime">Start</label><input id="eTime" name="time" type="time" required value="${ts}"></div>
+    <div><label for="eMins">Minutes</label><input id="eMins" name="mins" type="number" min="5" max="480" value="${esc(e ? e.mins : 60)}"></div></div>
+    ${e ? '' : '<div id="slotBox" class="stack" hidden><label for="eCount">Number of back-to-back slots</label><input id="eCount" name="count" type="number" min="1" max="16" value="4"></div>'}
+    <label for="eLink">Video call link</label><input id="eLink" name="link" type="url" value="${esc(e ? e.link : '')}" placeholder="https://meet.google.com/… or Zoom link">
+    <p class="hint">For 1:1 slots, only the student who books sees the link.</p>
+    <div class="actions">${e ? `<button type="button" class="btn bad" data-act="delEvent" data-id="${esc(e.id)}" style="margin-right:auto">Delete</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save</button></div></form>`, {label:'Schedule'});
+}
+function openAssignment(aid){
+  const a = Object.assign({id:aid}, D.assignments[aid]); const c = classOf(a.classId); const s = subOf(S.me, aid);
+  const graded = s && s.gradedAt != null;
+  let body = `<div class="lesson-body" style="font-size:15px">${renderBody(a.instructions, c && c.language)}</div>`;
+  if (a.kind === 'quiz') {
+    if (s && s.submittedAt) {
+      body += (a.questions || []).map((q, i) => `<fieldset class="q"><legend>${i + 1}. ${esc(q.q)}</legend>${q.options.map((o, j) => `<div class="opt ${j === q.answer ? 'right' : (s.answers && s.answers[i] === j ? 'wrong' : '')}">${esc(o)}</div>`).join('')}</fieldset>`).join('');
+      body += `<p class="feedback"><b>Score: ${fmtNum(s.grade)} / ${a.points}</b>${s.feedback ? '<br>' + esc(s.feedback) : ''}</p>`;
+    } else {
+      body += `<form class="stack" data-form="quiz" data-id="${esc(aid)}">${(a.questions || []).map((q, i) => `<fieldset class="q"><legend>${i + 1}. ${esc(q.q)}</legend>${q.options.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}" id="q${i}o${j}"> ${esc(o)}</label>`).join('')}</fieldset>`).join('')}
+      <div class="actions"><button type="button" class="btn" data-act="closeModal">Later</button><button class="btn primary">Submit answers</button></div></form>`;
+    }
+  } else {
+    if (graded) body += `<p class="hint">Your answer</p><div class="answer">${esc(s.text)}</div><div class="feedback"><b>Grade: ${fmtNum(s.grade)} / ${a.points}</b>${s.feedback ? `<p style="white-space:pre-wrap;margin-top:4px">${esc(s.feedback)}</p>` : ''}</div>`;
+    else body += `<form class="stack" data-form="written" data-id="${esc(aid)}"><label for="wText">Your answer</label><textarea id="wText" name="text" rows="9">${esc(s ? s.text : '')}</textarea>
+      ${s && s.submittedAt ? `<p class="hint">Handed in ${esc(fmtWhen(s.submittedAt))}. You can update it until it's graded.</p>` : ''}
+      <div class="actions"><button type="button" class="btn" data-act="closeModal">Close</button><button class="btn primary">${s && s.submittedAt ? 'Update answer' : 'Hand in'}</button></div></form>`;
+  }
+  modal(head(a.title, `${a.kind === 'quiz' ? 'Quiz' : 'Written'} · ${a.points} points · ${esc(dueLabel(a.due))}`) + body, {wide:true, label:a.title});
+}
+function gradeDialog(aid){
+  const a = Object.assign({id:aid}, D.assignments[aid]); const studs = studentsOf(a.classId);
+  const rowsHtml = studs.map(({uid}, i) => {
+    const s = subOf(uid, aid), st = statusOf(a, uid);
+    let content = '';
+    if (s && s.submittedAt) {
+      content = a.kind === 'quiz' ? `<p>Answered ${s.right != null ? s.right : '?'} of ${s.total != null ? s.total : (a.questions || []).length} correctly.</p>` : `<div class="answer">${esc(s.text)}</div>`;
+      content += `<form class="stack" data-form="grade" data-uid="${esc(uid)}" data-id="${esc(aid)}"><div class="grade-inline"><label for="g${i}">Grade</label><input id="g${i}" name="grade" type="number" step="0.5" min="0" max="${a.points}" value="${s.grade != null ? esc(s.grade) : ''}"><span class="muted">/ ${a.points}</span></div>
+        <label for="f${i}">Feedback</label><textarea id="f${i}" name="feedback" rows="3" placeholder="Très bien ! Watch your accents on…">${esc(s.feedback || '')}</textarea>
+        <div class="actions" style="margin-top:0"><button class="btn primary sm">${s.gradedAt != null && a.kind !== 'quiz' ? 'Update grade' : 'Save grade'}</button></div></form>`;
+    } else content = '<p class="muted">Not handed in yet.</p>';
+    return `<div class="grade-row"><div class="card-head"><b>${esc(nameOf(uid))}</b><span class="pill ${st.cls}">${esc(st.label)}</span></div>${s && s.submittedAt ? `<span class="hint">Handed in ${esc(fmtWhen(s.submittedAt))}</span>` : ''}${content}</div>`;
+  }).join('');
+  modal(head(a.title, `${esc(dueLabel(a.due))} · ${a.points} points`) + (rowsHtml || '<p class="empty">No students in this class yet.</p>'), {wide:true, label:'Grading'});
+}
+function studentDialog(uid){
+  const c = currentClass(); const asg = inClass('assignments', c.id).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+  const decks = inClass('decks', c.id);
+  modal(head(nameOf(uid), `Joined ${esc(new Date(studentsOf(c.id).find(s => s.uid === uid)?.joined || Date.now()).toLocaleDateString())}`) +
+    `<h3>Assignments</h3><div class="list">${asg.map(a => { const st = statusOf(a, uid); return `<div class="item"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${esc(dueLabel(a.due))}</span></span><span class="pill ${st.cls}">${esc(st.label)}</span></div>`; }).join('') || '<p class="empty">No assignments yet.</p>'}</div>
+    <h3>Flashcards</h3><div class="list">${decks.map(d => { const st = deckStats(d, uid); return `<div class="item"><span class="grow"><span class="t">${esc(d.title)}</span><span class="s">${st.seen} of ${st.total} seen</span></span><span class="stat">${st.mastered}/${st.total}<br>mastered</span></div>`; }).join('') || '<p class="empty">No decks yet.</p>'}</div>
+    <div class="actions"><button class="btn primary" data-act="msgStudent" data-uid="${esc(uid)}">Send a message</button></div>`, {wide:true, label:'Student'});
+}
+
+/* ---- flashcard session ---- */
+function startPractice(deckId){
+  const deck = Object.assign({id:deckId}, D.decks[deckId]);
+  runPractice(deckId, deck.title, deck.cards || [], (classOf(deck.classId) || {}).language || 'fr');
+}
+function runPractice(deckId, title, cards, lang){
+  const p = progOf(S.me), now = Date.now();
+  let q = cards.filter(cd => { const x = p[deckId + '~' + cd.id]; return !x || x.d <= now; });
+  q = q.length ? q.slice(0, 25) : shuffle(cards).slice(0, 25);
+  if (!q.length) { toast('There are no cards to practise yet.'); return; }
+  const st = {deckId, q, i:0, flipped:false, pending:{}, again:new Set(), right:0, wrong:0, lang, title};
+  modal('<div id="pr" class="stack" style="gap:14px"></div>', {label:'Practice ' + title});
+  S.practice = st;
+  S.onModalClose = () => { const n = Object.keys(st.pending).length; if (n && !S.readOnly) upsert('prog/' + S.me, {cards:st.pending, updated:Date.now()}); };
+  drawPractice();
+}
+function drawPractice(){
+  const st = S.practice, el = $('#pr'); if (!st || !el) return;
+  if (st.i >= st.q.length) {
+    const total = st.right + st.wrong;
+    el.innerHTML = `<div class="pr-top"><span>${esc(st.title)}</span><button class="x" data-act="closeModal" aria-label="Close">×</button></div>
+      <div class="flash flipped"><span class="big-num">${st.right}/${total}</span><p>${st.wrong ? `Cards you missed come back later today. À bientôt !` : 'Parfait ! Every card goes up a level.'}</p></div>
+      <button class="btn primary wide" data-act="closeModal">Done</button>`;
+    return;
+  }
+  const cd = st.q[st.i], fwd = S.dir === 'fwd';
+  const front = fwd ? cd.f : cd.b, back = fwd ? cd.b : cd.f;
+  el.innerHTML = `<div class="pr-top"><span>${esc(st.title)} · ${st.i + 1} of ${st.q.length}</span><button class="link" data-act="flipDir">${fwd ? 'Showing word first' : 'Showing meaning first'} · switch</button><button class="x" data-act="closeModal" aria-label="Close">×</button></div>
+    <div class="flash ${st.flipped ? 'flipped' : ''}" ${st.flipped ? '' : 'data-act="reveal" role="button" tabindex="0" aria-label="Show answer"'}>
+      <div class="face">${esc(front)} ${fwd ? sayBtn(cd.f, st.lang) : ''}</div>
+      ${st.flipped ? `<div class="back">${esc(back)} ${fwd ? '' : sayBtn(cd.f, st.lang)}</div>` : '<div class="tap">Say it out loud, then tap to check</div>'}
+    </div>
+    <div class="pr-actions">${st.flipped ? '<button class="btn bad" data-act="answer" data-ok="0">Missed it</button><button class="btn ok" data-act="answer" data-ok="1">Knew it</button>' : '<button class="btn primary wide" data-act="reveal">Show answer</button>'}</div>`;
+  const b = el.querySelector('.pr-actions .btn'); if (b) b.focus();
+}
+
+/* ---------- actions ---------- */
+const ACT = {
+  closeModal: () => closeModal(),
+  cfYes: () => S.confirm && S.confirm(true),
+  cfNo: () => S.confirm && S.confirm(false),
+  role: d => { S.role = d.role; store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.threadId = null; render(true); },
+  copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
+  editClass: d => classForm(d.id),
+  newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
+  delClass: async d => { const c = classOf(d.id); if (await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class')) { await delDoc('classes/' + d.id); toast('Class deleted'); } },
+  newAnn: () => modal(`${head('Post an announcement', 'Everyone in the class sees this on their home page.')}<form class="stack" data-form="ann"><label for="anText">Message</label><textarea id="anText" name="text" rows="5" required maxlength="2000"></textarea><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Post</button></div></form>`, {label:'Announcement'}),
+  delAnn: async d => { if (await askConfirm('Delete this announcement?')) delDoc('announcements/' + d.id); },
+  student: d => studentDialog(d.uid),
+  msgStudent: d => { closeModal(); S.threadId = d.uid; go('inbox'); },
+  openLesson: d => { S.lessonId = d.id; render(true); $('#main').scrollTop = 0; },
+  closeLesson: () => { S.lessonId = null; render(true); },
+  editLesson: d => lessonForm(d.id),
+  delLesson: async d => { if (await askConfirm('Delete this lesson?')) { await delDoc('lessons/' + d.id); S.lessonId = null; render(true); } },
+  editA: d => assignmentForm(d.id),
+  delA: async d => { if (await askConfirm("Delete this assignment? Students' answers to it will be hidden.")) delDoc('assignments/' + d.id); },
+  gradeA: d => gradeDialog(d.id),
+  openA: d => openAssignment(d.id),
+  editDeck: d => deckForm(d.id),
+  delDeck: async d => { if (await askConfirm('Delete this deck?')) delDoc('decks/' + d.id); },
+  practice: d => startPractice(d.id),
+  reveal: () => { if (S.practice) { S.practice.flipped = true; drawPractice(); } },
+  flipDir: () => { S.dir = S.dir === 'fwd' ? 'rev' : 'fwd'; if (S.practice) { S.practice.flipped = false; drawPractice(); } },
+  answer: d => {
+    const st = S.practice; if (!st) return; const cd = st.q[st.i], key = st.deckId + '~' + cd.id, ok = d.ok === '1';
+    st.pending[key] = nextBox(st.pending[key] || progOf(S.me)[key], ok, Date.now());
+    if (ok) st.right++; else { st.wrong++; if (!st.again.has(cd.id)) { st.again.add(cd.id); st.q.push(cd); } }
+    st.i++; st.flipped = false; drawPractice();
+  },
+  say: async (d, el) => {
+    if (!S.tts) return;
+    try { el.setAttribute('aria-busy', 'true'); await S.tts.speak(d.text, d.lang === 'auto' ? {rate:0.9} : {language:d.lang || 'fr', rate:0.9}); }
+    catch (e) { if (e && e.code === 'not_granted') { S.tts = null; render(true); } else if (e && e.code === 'rate_limited') toast('Too many requests. Try again in a moment.'); }
+    finally { el.removeAttribute('aria-busy'); }
+  },
+  editEvent: d => eventForm(d.id),
+  delEvent: async d => { if (await askConfirm('Remove this from the schedule?')) delDoc('events/' + d.id); },
+  togglePast: () => { S.showPast = !S.showPast; render(true); },
+  book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) toast('Booked. See you then !'); },
+  unbook: d => upsert('bookings/' + S.me, {slots:{[d.id]:false}}),
+  openThread: d => { S.threadId = d.uid; render(true); markRead(); },
+  closeThread: () => { S.threadId = null; render(true); },
+  lookupWord: () => lookupWord(),
+  wordLang: d => { S.wordLang = d.lang; store.set('wordLang', d.lang); S.wordQ = ''; render(true); },
+  addLang: () => modal(`${head('Add a language tab')}<form class="stack" data-form="addLang"><label for="nlLang">Language</label>${langSelect('nlLang', '', myLangs())}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Add tab</button></div></form>`, {label:'Add language'}),
+  delLang: async d => {
+    const ws = myWords(d.lang);
+    if (!(await askConfirm(ws.length ? `Remove the ${langName(d.lang)} tab and its ${ws.length} words? This can't be undone.` : `Remove the ${langName(d.lang)} tab?`, 'Remove'))) return;
+    const words = {}; ws.forEach(w => { words[w.id] = null; });
+    if (await upsert('vocab/' + S.me, {langs:{[d.lang]:null}, words})) { S.wordLang = null; toast('Tab removed'); render(true); }
+  },
+  starWord: d => { const w = vocabDoc().words[d.id]; if (w) upsert('vocab/' + S.me, {words:{[d.id]:{star:!w.star}}}); },
+  editWord: d => wordForm(d.id),
+  delWord: async d => { if (await askConfirm('Delete this word?')) upsert('vocab/' + S.me, {words:{[d.id]:null}}); },
+  addCourseWord: async d => { const lang = currentWordLang(); if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:{lang, term:d.term, meaning:d.meaning, at:Date.now()}}})) toast(`Added "${d.term}"`); },
+  practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term, b:w.meaning})), ttsLang(lang)); },
+  moreNav: () => {
+    const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? dueCardsCount(c.id) : 0;
+    modal(`${head('More')}<nav class="navsheet">${VIEWS.filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
+  },
+  navTo: d => { closeModal(); go(d.v); },
+  mediaTab: d => { S.mediaTab = d.tab; render(true); },
+  speed: (d, el) => { const box = el.closest('.au'); const au = box && box.querySelector('audio'); if (!au) return; au.playbackRate = Number(d.rate); box.querySelectorAll('.speeds button').forEach(b => b.setAttribute('aria-pressed', String(b === el))); },
+  uploadAudio: d => audioForm(null, d.lesson),
+  editAudio: d => audioForm(d.id),
+  delAudio: async d => {
+    const x = D.audio[d.id]; if (!x) return;
+    if (!(await askConfirm(`Delete "${x.title}"? Students won't be able to play it any more.`))) return;
+    if (await delDoc('audio/' + d.id)) { try { if (S.assets && x.assetId) await S.assets.delete(x.assetId); } catch (e) {} toast('Recording deleted'); }
+  },
+  openLessonFrom: d => { S.lessonId = d.id; go('lessons'); },
+  addMedia: () => mediaForm(null, false),
+  editMedia: d => mediaForm(d.id, false),
+  delMedia: async d => { if (await askConfirm('Remove this from your repertoire?', 'Remove')) upsert('media/' + S.me, {items:{[d.id]:null}}); },
+  rateMedia: d => { const m = repDoc().items[d.id]; if (!m) return; const n = Number(d.n); upsert('media/' + S.me, {items:{[d.id]:{rating: m.rating === n ? 0 : n}}}); },
+  addRec: () => mediaForm(null, true),
+  delRec: async d => { if (await askConfirm('Remove this recommendation?', 'Remove')) delDoc('recs/' + d.id); },
+  addFromRec: async d => { const r = D.recs[d.id]; if (!r) return; const lang = currentWordLang(); if (await upsert('media/' + S.me, {items:{['m' + rid()]:{lang, type:r.type, title:r.title, creator:r.creator || '', url:r.url || '', status:'want', notes:r.note ? 'Teacher: ' + r.note : '', at:Date.now()}}})) toast(`Added "${r.title}"`); },
+  leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) upsert('members/' + S.me, {classIds:{[d.id]:false}}); }
+};
+
+const FORMS = {
+  join: async f => {
+    const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return;
+    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code);
+    if (!c) { toast("That code doesn't match a class. Check it with your teacher.", true); return; }
+    if (await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}})) { S.classId = c.id; store.set('class', c.id); f.code.blur(); toast('Welcome to ' + c.name); }
+  },
+  class: async f => {
+    const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
+    const doc = {name:f.name.value.trim(), language:f.language.value, level:f.level.value.trim(), description:f.description.value.trim(),
+      code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, createdAt: old ? old.createdAt : Date.now()};
+    if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
+  },
+  ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); if (await setDoc('announcements/' + rid(), {classId:c.id, text:t, at:Date.now(), by:S.me})) { closeModal(); toast('Posted'); } },
+  lesson: async f => {
+    const id = f.dataset.id || 'l-' + rid(); const old = f.dataset.id ? D.lessons[id] : null; const c = currentClass();
+    const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), unit:f.unit.value.trim(), order:Number(f.order.value) || 0, body:f.body.value,
+      links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
+    if (await setDoc('lessons/' + id, doc)) { closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
+  },
+  assignment: async f => {
+    const id = f.dataset.id || 'a-' + rid(); const old = f.dataset.id ? D.assignments[id] : null; const c = currentClass();
+    const kind = f.kind.value; let questions = [];
+    if (kind === 'quiz') { const r = parseQuiz(f.questions.value); if (r.errors.length) { const e = $('#aErr'); e.textContent = r.errors.join(' '); e.hidden = false; return; } questions = r.qs; }
+    const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), kind, due:f.due.value, points:Math.max(1, Number(f.points.value) || 10), instructions:f.instructions.value, questions, createdAt: old ? old.createdAt : Date.now()};
+    if (await setDoc('assignments/' + id, doc)) { closeModal(); toast('Assignment saved'); }
+  },
+  deck: async f => {
+    const id = f.dataset.id || 'd-' + rid(); const old = f.dataset.id ? D.decks[id] : null; const c = currentClass();
+    const cards = parseDeck(f.cards.value, old && old.cards);
+    if (!cards.length) { toast('Add at least one card, like "bonjour = hello".', true); return; }
+    if (await setDoc('decks/' + id, {classId: old ? old.classId : c.id, title:f.title.value.trim(), cards, createdAt: old ? old.createdAt : Date.now()})) { closeModal(); toast(cards.length + ' cards saved'); }
+  },
+  event: async f => {
+    const id = f.dataset.id; const old = id ? D.events[id] : null; const c = currentClass();
+    const [y, m, d] = f.date.value.split('-').map(Number), [hh, mm] = f.time.value.split(':').map(Number);
+    const start = new Date(y, m - 1, d, hh, mm); const mins = Math.max(5, Number(f.mins.value) || 60);
+    const base = {classId: old ? old.classId : c.id, kind:f.kind.value, title:f.title.value.trim(), mins, link:f.link.value.trim()};
+    if (id) { if (await setDoc('events/' + id, Object.assign({}, base, {start:start.toISOString(), createdAt:old.createdAt || Date.now()}))) { closeModal(); toast('Saved'); } return; }
+    const n = base.kind === 'slot' ? Math.min(16, Math.max(1, Number(f.count.value) || 1)) : 1; let ok = true;
+    for (let i = 0; i < n; i++) ok = (await setDoc('events/e-' + rid(), Object.assign({}, base, {start:new Date(start.getTime() + i * mins * MIN).toISOString(), createdAt:Date.now()}))) && ok;
+    if (ok) { closeModal(); toast(n > 1 ? n + ' slots added' : 'Added to the schedule'); }
+  },
+  quiz: async f => {
+    const a = Object.assign({id:f.dataset.id}, D.assignments[f.dataset.id]); const answers = (a.questions || []).map((q, i) => { const r = f.querySelector(`input[name="q${i}"]:checked`); return r ? Number(r.value) : -1; });
+    if (answers.includes(-1)) { toast('Answer every question before you submit.', true); return; }
+    const sc = scoreQuiz(a, answers), now = Date.now();
+    if (await upsert('subs/' + S.me, {items:{[a.id]:{answers, right:sc.right, total:sc.total, grade:sc.grade, submittedAt:now, gradedAt:now, feedback:''}}})) { toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
+  },
+  written: async f => {
+    const t = f.text.value.trim(); if (!t) { toast('Write your answer first.', true); return; }
+    if (await upsert('subs/' + S.me, {items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { closeModal(); toast('Handed in. Merci !'); }
+  },
+  grade: async f => {
+    const g = f.grade.value === '' ? null : Number(f.grade.value); if (g == null || isNaN(g)) { toast('Enter a grade first.', true); return; }
+    if (await upsert('subs/' + f.dataset.uid, {items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) toast('Grade saved for ' + nameOf(f.dataset.uid));
+  },
+  audio: async f => {
+    const id = f.dataset.id, c = currentClass(), btn = $('#auSave');
+    const meta = {title:f.title.value.trim(), lessonId:f.lesson.value || '', notes:f.notes.value, published:f.published.checked};
+    if (id) { const old = D.audio[id]; if (await setDoc('audio/' + id, Object.assign({}, old, meta))) { closeModal(); toast('Saved'); } return; }
+    const file = f.file.files[0]; if (!file) { toast('Choose an audio file.', true); return; }
+    if (!S.assets) { toast('Uploading needs editor access to this page.', true); return; }
+    const box = $('#auStatus'), txt = $('#auStatusText'), bar = $('#auBar');
+    const status = (t, p) => { box.hidden = false; txt.textContent = t; if (p != null) bar.style.width = Math.round(p * 100) + '%'; };
+    btn.disabled = true;
+    try {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      const direct = /mp4|m4a|aac/.test(file.type) || ['m4a', 'mp4', 'm4b'].includes(ext) ? 'video/mp4' : (/webm/.test(file.type) || ext === 'webm' ? 'video/webm' : null);
+      let blob = file, type = direct, duration = null, res = null;
+      if (direct && file.size <= MAX_BYTES) {
+        duration = await probeDuration(file); status('Uploading…', 0.3);
+        try { res = await S.assets.upload(file, {type}); } catch (e) { if (!e || e.code !== 'unsupported_type') throw e; }
+      }
+      if (!res) {
+        status('Converting… 0%', 0);
+        const out = await toWebm(file, p => status(`Converting… ${Math.round(p * 100)}%`, p * 0.8));
+        if (out.blob.size > MAX_BYTES) throw {code:'too_large'};
+        blob = out.blob; type = 'video/webm'; duration = out.duration; status('Uploading…', 0.85);
+        res = await S.assets.upload(blob, {type});
+      }
+      status('Saving…', 0.95);
+      const ok = await setDoc('audio/au-' + rid(), Object.assign(meta, {classId:c.id, assetId:res.id, type, size:res.sizeBytes || blob.size, duration, name:file.name, createdAt:Date.now()}));
+      if (ok) { closeModal(); toast('Recording uploaded'); if (meta.lessonId && S.view !== 'lessons') S.mediaTab = 'audio'; render(true); } else btn.disabled = false;
+    } catch (e) { status(audioErr(e)); bar.style.width = '0%'; btn.disabled = false; }
+  },
+  media: async f => {
+    const id = f.dataset.id || 'm' + rid(), old = f.dataset.id ? repDoc().items[id] : null;
+    const m = {lang:f.lang.value, type:f.type.value, title:f.title.value.trim(), creator:f.creator.value.trim(), url:/^https?:\/\//i.test(f.url.value.trim()) ? f.url.value.trim() : '', status:f.status.value, notes:f.notes.value.trim(), at: old ? old.at : Date.now()};
+    if (!m.title) return;
+    if (await upsert('media/' + S.me, {items:{[id]:m}})) { if (m.lang !== currentWordLang()) { S.wordLang = m.lang; store.set('wordLang', m.lang); } closeModal(); render(true); toast(old ? 'Saved' : `Added "${m.title}"`); }
+  },
+  rec: async f => {
+    const c = currentClass(); const r = {classId:c.id, type:f.type.value, title:f.title.value.trim(), creator:f.creator.value.trim(), url:/^https?:\/\//i.test(f.url.value.trim()) ? f.url.value.trim() : '', note:f.note.value.trim(), at:Date.now()};
+    if (!r.title) return;
+    if (await setDoc('recs/r-' + rid(), r)) { closeModal(); toast('Recommended to ' + c.name); }
+  },
+  addLang: async f => {
+    let code = f.lang.value, name = '';
+    if (code === 'other') { name = f.name.value.trim(); if (!name) { toast('Type the language name.', true); return; } code = 'x-' + (norm(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || rid()); }
+    if (await upsert('vocab/' + S.me, {langs:{[code]:{at:Date.now(), name:name || WORD_LANGS[code]}}})) { S.wordLang = code; store.set('wordLang', code); if ($('#modalRoot').classList.contains('open')) closeModal(); render(true); }
+  },
+  word: async f => {
+    const lang = currentWordLang(), term = f.term.value.trim(), meaning = f.meaning.value.trim(); if (!term || !meaning) return;
+    if (myWords(lang).some(w => norm(w.term) === norm(term))) { toast(`"${term}" is already in your list.`, true); return; }
+    const w = {lang, term, meaning, at:Date.now()}; if (f.example.value.trim()) w.example = f.example.value.trim(); if (f.note.value.trim()) w.note = f.note.value.trim();
+    if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:w}})) { S.wordQ = ''; render(true); const t = $('#wTerm'); if (t) t.focus(); toast(`Added "${term}"`); }
+  },
+  editWord: async f => {
+    const w = {term:f.term.value.trim(), meaning:f.meaning.value.trim(), example:f.example.value.trim(), note:f.note.value.trim(), lang:f.lang.value};
+    if (!w.term || !w.meaning) return;
+    if (await upsert('vocab/' + S.me, {words:{[f.dataset.id]:w}})) { closeModal(); toast('Saved'); }
+  },
+  msg: async f => {
+    const t = f.text.value.trim(); if (!t) return; const sid = f.dataset.sid, now = Date.now();
+    const part = {msgs:{[rid()]:{from:S.me, text:t.slice(0, 4000), at:now}}, lastAt:now};
+    part[S.role === 'teacher' ? 'readT' : 'readS'] = now;
+    f.text.value = '';
+    if (await upsert('threads/' + sid, part)) { render(true); const box = $('#msgText'); if (box) box.focus(); } else f.text.value = t;
+  }
+};
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t || !t.dataset.act) return;
+  const fn = ACT[t.dataset.act]; if (!fn) return; e.preventDefault(); fn(t.dataset, t, e);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#modalRoot').classList.contains('open')) closeModal();
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.flash[data-act="reveal"]')) { e.preventDefault(); ACT.reveal(); }
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target.id === 'msgText') e.target.form.requestSubmit();
+});
+document.addEventListener('submit', e => { const f = e.target; e.preventDefault(); const h = FORMS[f.dataset.form]; if (h) h(f); });
+document.addEventListener('change', e => {
+  if (e.target.id === 'classSel') { S.classId = e.target.value; store.set('class', S.classId); S.lessonId = null; S.threadId = null; render(true); }
+  if (e.target.id === 'nlLang') { const o = $('#nlOther'); if (o) o.hidden = e.target.value !== 'other'; }
+  if (e.target.id === 'mediaType') { S.mediaType = e.target.value; render(true); }
+  if (e.target.id === 'mediaStatus') { S.mediaStatus = e.target.value; render(true); }
+  if (e.target.dataset && e.target.dataset.mediaStatus) upsert('media/' + S.me, {items:{[e.target.dataset.mediaStatus]:{status:e.target.value}}});
+  if (e.target.id === 'auFile' && e.target.files[0]) { const t = $('#auTitle'); if (t && !t.value) t.value = e.target.files[0].name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); }
+  if (e.target.id === 'wordSort') { S.wordSort = e.target.value; $('#wordResults').innerHTML = wordResultsHTML(); }
+  if (e.target.id === 'aKind') $('#quizBox').hidden = e.target.value !== 'quiz';
+  if (e.target.id === 'eKind') { const b = $('#slotBox'); if (b) b.hidden = e.target.value !== 'slot'; const t = $('#eTitle'); if (t && ['Class', 'Office hours · 1:1'].includes(t.value)) t.value = e.target.value === 'slot' ? 'Office hours · 1:1' : 'Class'; }
+});
+['pause', 'ended'].forEach(ev => document.addEventListener(ev, () => { if (S.dirty) setTimeout(() => render(), 0); }, true));
+document.addEventListener('input', e => {
+  if (e.target.id === 'wTerm' && $('#dictLinks')) { $('#dictLinks').innerHTML = dictLinks(currentWordLang(), e.target.value); const o = $('#lookupOut'); if (o) o.innerHTML = ''; }
+  if (e.target.id === 'wordSearch') { S.wordQ = e.target.value; $('#wordResults').innerHTML = wordResultsHTML(); }
+});
+document.addEventListener('focusout', () => setTimeout(() => { if (S.dirty && !$('#modalRoot').classList.contains('open')) render(); }, 0));
+function go(v){ if (location.hash !== '#' + v) location.hash = v; else route(); }
+function route(){
+  const v = location.hash.slice(1); S.view = VIEWS.some(x => x.id === v) ? v : 'home';
+  if (S.view !== 'lessons') S.lessonId = null;
+  if (S.view !== 'inbox') S.threadId = null;
+  render(true); $('#main').scrollTop = 0; markRead();
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- boot ---------- */
+async function boot(){
+  S.view = VIEWS.some(x => x.id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  for (let i = 0; i < 15 && !(window.claude && window.claude.use); i++) await new Promise(r => setTimeout(r, 100));
+  const C = window.claude && typeof window.claude.use === 'function' ? window.claude : null;
+  let db = null, user = null, tts = null;
+  if (C) [db, user, tts, S.assets, S.sample] = await Promise.all(['db', 'user', 'tts', 'assets', 'sample'].map(n => Promise.resolve().then(() => C.use(n)).catch(() => null)));
+  if (C && db) {
+    S.db = db; S.user = user; S.tts = tts;
+    S.me = user ? await Promise.resolve(user.id()).catch(() => null) : null;
+    if (!S.me) { S.fatal = 'signin'; render(true); return; }
+    S.isOwner = user ? !!(await Promise.resolve(user.isOwner()).catch(() => false)) : false;
+    try { const cfg = await db.doc('config/teachers').get(); S.teacherIds = cfg.exists ? ((cfg.data() || {}).ids || []) : []; } catch (e) { S.teacherIds = []; }
+  } else if (C) { S.fatal = 'signin'; render(true); return; }
+  else {
+    S.demo = true; S.db = memoryDB(); S.me = 'demo-teacher'; S.isOwner = true;
+    for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
+    for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
+    S.assets = { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id], sizeBytes:blob.size, contentType:blob.type}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
+    S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
+    await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
+  }
+  S.teacherCapable = S.isOwner || S.teacherIds.includes(S.me);
+  S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
+  ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'members', 'bookings'].forEach(listenCol);
+  ['subs', 'prog', 'threads'].forEach(S.teacherCapable ? listenCol : listenOwn);
+  listenOwn('vocab'); listenOwn('media'); listenCol('audio'); listenCol('recs');
+  const t = setInterval(() => { if (ready()) { clearInterval(t); clearTimeout(slow); S.slow = false; } }, 300);
+  const slow = setTimeout(() => { if (!ready()) { S.slow = true; schedule(); } }, 10000);
+  render(true);
+}
+boot();
+</script>
+</body>
+</html>

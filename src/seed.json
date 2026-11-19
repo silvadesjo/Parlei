@@ -1,0 +1,114 @@
+{
+  "classes/fr-a1": {
+    "name": "Français A1 · Monday evenings",
+    "language": "fr",
+    "level": "A1",
+    "description": "Beginner French: greetings, introductions and everyday life.",
+    "code": "BNJR26",
+    "teacherId": "owner",
+    "createdAt": 1763337600000
+  },
+  "lessons/l-greet": {
+    "classId": "fr-a1",
+    "unit": "Unit 1 · Se présenter",
+    "order": 1,
+    "title": "Saying hello and goodbye",
+    "published": true,
+    "createdAt": 1763337600000,
+    "body": "# Les salutations\nIn French, the greeting you choose depends on the time of day and how well you know the person.\n\nbonjour = hello / good morning\nbonsoir = good evening\nsalut = hi / bye (informal)\nau revoir = goodbye\nà bientôt = see you soon\nbonne journée = have a good day\n\n## Formal or informal?\n- Use **vous** with strangers, elders and at work.\n- Use **tu** with friends, family and children.\n- When in doubt, start with *vous*.\n\nComment allez-vous ? = How are you? (formal)\nÇa va ? = How's it going? (informal)\nÇa va bien, merci. = I'm fine, thanks.",
+    "links": []
+  },
+  "lessons/l-intro": {
+    "classId": "fr-a1",
+    "unit": "Unit 1 · Se présenter",
+    "order": 2,
+    "title": "Introducing yourself",
+    "published": true,
+    "createdAt": 1763337600001,
+    "body": "# Je me présente\nje m'appelle Joyce = my name is Joyce\nj'habite à Toronto = I live in Toronto\nje suis étudiant / étudiante = I am a student\nje parle anglais et un peu français = I speak English and a little French\nenchanté / enchantée = nice to meet you\n\n## Your turn\nWrite three to five sentences about yourself using the phrases above. You'll hand them in as this week's writing assignment.",
+    "links": []
+  },
+  "assignments/a-quiz1": {
+    "classId": "fr-a1",
+    "title": "Quiz: greetings",
+    "kind": "quiz",
+    "points": 5,
+    "due": "2026-11-23",
+    "createdAt": 1763337600000,
+    "instructions": "Choose the best answer for each question. You get one attempt, and your score appears right away.",
+    "questions": [
+      {"q": "It's 8 p.m. and you walk into a restaurant. You say…", "options": ["Bonjour", "Bonsoir", "Salut", "Bonne nuit"], "answer": 1},
+      {"q": "Which greeting is informal?", "options": ["Bonjour", "Au revoir", "Salut", "Bonsoir"], "answer": 2},
+      {"q": "How do you ask your teacher how they are?", "options": ["Ça va ?", "Comment allez-vous ?", "Salut ?", "Tu vas bien ?"], "answer": 1},
+      {"q": "« À bientôt » means…", "options": ["See you soon", "Good morning", "Have a good day", "Thank you"], "answer": 0},
+      {"q": "« Enchanté » means…", "options": ["Excuse me", "I'm sorry", "Nice to meet you", "Good luck"], "answer": 2}
+    ]
+  },
+  "assignments/a-write1": {
+    "classId": "fr-a1",
+    "title": "Write about yourself",
+    "kind": "written",
+    "points": 10,
+    "due": "2026-11-30",
+    "createdAt": 1763337600001,
+    "instructions": "Write 3–5 sentences introducing yourself in French: your name, where you live, what you do and which languages you speak. Use the phrases from the lesson \"Introducing yourself\".",
+    "questions": []
+  },
+  "decks/d-greet": {
+    "classId": "fr-a1",
+    "title": "Greetings & introductions",
+    "createdAt": 1763337600000,
+    "cards": [
+      {"id": "c1", "f": "bonjour", "b": "hello"},
+      {"id": "c2", "f": "bonsoir", "b": "good evening"},
+      {"id": "c3", "f": "salut", "b": "hi / bye (informal)"},
+      {"id": "c4", "f": "au revoir", "b": "goodbye"},
+      {"id": "c5", "f": "à bientôt", "b": "see you soon"},
+      {"id": "c6", "f": "merci", "b": "thank you"},
+      {"id": "c7", "f": "s'il vous plaît", "b": "please (formal)"},
+      {"id": "c8", "f": "je m'appelle…", "b": "my name is…"},
+      {"id": "c9", "f": "enchanté", "b": "nice to meet you"},
+      {"id": "c10", "f": "comment allez-vous ?", "b": "how are you? (formal)"},
+      {"id": "c11", "f": "ça va bien", "b": "I'm fine"},
+      {"id": "c12", "f": "bonne journée", "b": "have a good day"}
+    ]
+  },
+  "decks/d-num": {
+    "classId": "fr-a1",
+    "title": "Numbers 1–10",
+    "createdAt": 1763337600001,
+    "cards": [
+      {"id": "n1", "f": "un", "b": "one"},
+      {"id": "n2", "f": "deux", "b": "two"},
+      {"id": "n3", "f": "trois", "b": "three"},
+      {"id": "n4", "f": "quatre", "b": "four"},
+      {"id": "n5", "f": "cinq", "b": "five"},
+      {"id": "n6", "f": "six", "b": "six"},
+      {"id": "n7", "f": "sept", "b": "seven"},
+      {"id": "n8", "f": "huit", "b": "eight"},
+      {"id": "n9", "f": "neuf", "b": "nine"},
+      {"id": "n10", "f": "dix", "b": "ten"}
+    ]
+  },
+  "events/e-class1": {
+    "classId": "fr-a1", "kind": "class", "title": "Monday class · Unit 1",
+    "start": "2026-11-23T23:30:00.000Z", "mins": 90, "link": "", "createdAt": 1763337600000
+  },
+  "events/e-class2": {
+    "classId": "fr-a1", "kind": "class", "title": "Monday class · Unit 1 review",
+    "start": "2026-11-30T23:30:00.000Z", "mins": 90, "link": "", "createdAt": 1763337600000
+  },
+  "events/e-oh1": {
+    "classId": "fr-a1", "kind": "slot", "title": "Office hours · 1:1",
+    "start": "2026-11-18T22:00:00.000Z", "mins": 30, "link": "", "createdAt": 1763337600000
+  },
+  "events/e-oh2": {
+    "classId": "fr-a1", "kind": "slot", "title": "Office hours · 1:1",
+    "start": "2026-11-18T22:30:00.000Z", "mins": 30, "link": "", "createdAt": 1763337600000
+  },
+  "announcements/an-welcome": {
+    "classId": "fr-a1",
+    "text": "Bienvenue ! Our first class is Monday at 6:30 p.m. Before then, read \"Saying hello and goodbye\" and try the greetings flashcards.",
+    "at": 1763337600000
+  }
+}
