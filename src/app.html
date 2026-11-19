@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parlei Language Portal</title>
+<meta name="theme-color" content="#2445C4">
+<meta name="description" content="Parlei: lessons, vocabulary, flashcards, audio and messages for language classes.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Parlei">
+<title>Parlei</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -32,6 +39,18 @@
   --ok:#73D2A2; --ok-soft:#14301F; --warn:#F0B65C; --warn-soft:#38290F; --bad:#FF8C95; --bad-soft:#3A1A1E;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.25); color-scheme:dark;
 }
+/* Daylight: an opt-in bright palette in lighter blues; wins over the device or app theme */
+:root:root.daylight{
+  --bg:#EAF4FF; --surface:#FFFFFF; --sunk:#F3F9FF; --ink:#0F2740; --muted:#4A6582; --line:#C9DEF3;
+  --accent:#1F74D6; --accent-ink:#FFFFFF; --accent-soft:#D9EAFD;
+  --ok:#1B7A4A; --ok-soft:#DDF3E6; --warn:#9A5A00; --warn-soft:#FFF0D6; --bad:#B4262F; --bad-soft:#FCE3E5;
+  --shadow:0 1px 2px rgba(31,116,214,.08), 0 6px 24px rgba(31,116,214,.08); color-scheme:light;
+}
+.daylight .top{background:linear-gradient(180deg,#FFFFFF,#F3F9FF)}
+.daylight #nav{background:#FFFFFF}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--sunk);color:var(--muted);display:grid;place-items:center;cursor:pointer;flex:none}
+.theme-btn:hover{color:var(--ink)}
+.theme-btn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%;margin:0}
@@ -185,7 +204,7 @@ button.item:hover .t{color:var(--accent)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none}
 
 label{font-size:13px;font-weight:600}
-input[type=text],input[type=number],input[type=date],input[type=time],input[type=url],input[type=search],input:not([type]),select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--sunk)}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=url],input[type=search],input[type=email],input[type=tel],input[type=password],input:not([type]),select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--sunk)}
 textarea{resize:vertical;line-height:1.5}
 .stack{display:flex;flex-direction:column;gap:8px}
 .stack > label{margin-top:6px}
@@ -193,6 +212,7 @@ textarea{resize:vertical;line-height:1.5}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 @media (max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
 .grid2 > div,.grid3 > div{display:flex;flex-direction:column;gap:6px}
+@media (max-width:480px){form .grid2.stackable{grid-template-columns:1fr}}
 .check{display:flex;gap:8px;align-items:center;font-weight:500;margin-top:8px}
 .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 code{font:13px ui-monospace,Menlo,monospace;background:var(--sunk);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
@@ -300,6 +320,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
     <div class="brand"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.8,5.5) scale(0.93)"><path fill="var(--accent-ink)" d="M8 40 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 40 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></div>
     <div id="classSwitch"></div>
     <div id="roleBox"></div>
+    <button type="button" class="theme-btn" id="themeBtn" data-act="toggleDay" aria-pressed="false" aria-label="Daylight mode" title="Daylight mode: a brighter display"></button>
   </header>
   <nav id="nav" aria-label="Sections"></nav>
   <main id="main"><div class="wrap"><div class="skeleton"></div><div class="skeleton"></div></div></main>
@@ -307,6 +328,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 <div id="modalRoot"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script>window.parleiReady = new Promise(r => { window.__parleiResolve = r; });</script>
 <script>
 'use strict';
 /* ---------- basics ---------- */
@@ -334,7 +356,10 @@ const ICON = {
   wave:'<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>',
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
-  back:'<path d="M15 5l-7 7 7 7"/>'
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'
 };
 const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 const VIEWS = [
@@ -345,15 +370,18 @@ const VIEWS = [
   {id:'work', long:'Assignments', short:'Work', icon:'check'},
   {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
   {id:'calendar', long:'Schedule', short:'Schedule', icon:'cal', sec:true},
-  {id:'inbox', long:'Messages', short:'Inbox', icon:'chat'}
+  {id:'inbox', long:'Messages', short:'Inbox', icon:'chat'},
+  {id:'students', long:'Students', short:'Students', icon:'users', sec:true, teacher:true},
+  {id:'account', long:'Settings', short:'Settings', icon:'gear', sec:true}
 ];
+const navViews = () => VIEWS.filter(v => !v.teacher || S.role === 'teacher');
 
 /* ---------- state ---------- */
 const S = {
   db:null, user:null, tts:null, me:null, isOwner:false, teacherIds:[], teacherCapable:false, role:'student',
   demo:false, fatal:null, slow:false, readOnly:false, data:{}, loaded:{}, names:{},
   classId:null, view:'home', lessonId:null, threadId:null, showPast:false, dirty:false, practice:null, dir:'fwd',
-  wordLang:null, wordQ:'', wordSort:'new', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all'
+  wordLang:null, wordQ:'', wordSort:'new', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
 };
 const D = S.data;
 const store = {
@@ -398,7 +426,7 @@ const DEMO = __DEMO__;
 const chains = {};
 function errText(e){
   const c = e && e.code;
-  if (c === 'invalid_argument') { S.readOnly = true; schedule(); return "You can't change this with your current access. Ask your teacher to invite you as an editor."; }
+  if (c === 'invalid_argument') return "You don't have permission to change that. If this keeps happening, sign out and back in.";
   if (c === 'quota_exceeded') return 'Storage is full. Delete some old items, then try again.';
   if (c === 'resource_exhausted') return 'Too many changes at once. Wait a moment and try again.';
   return "Couldn't save. Check your connection and try again.";
@@ -439,8 +467,11 @@ const byCreated = (a, b) => (a.createdAt || 0) - (b.createdAt || 0);
 
 /* names: store only ids, resolve in render */
 const wantNames = new Set(); let nameTimer = null;
+const profileOf = uid => (D.profiles || {})[uid] || null;
+function profName(uid){ const p = profileOf(uid); return p ? String(p.preferred || [p.first, p.last].filter(Boolean).join(' ')).trim() : ''; }
 function nameOf(uid){
   if (!uid) return 'Someone';
+  const pn = profName(uid); if (pn) return uid === S.me ? pn + ' (you)' : pn;
   if (S.demo) return DEMO.names[uid] || 'Student';
   const n = S.names[uid];
   if (n === undefined && S.user) { wantNames.add(uid); if (!nameTimer) nameTimer = setTimeout(fetchNames, 30); }
@@ -470,7 +501,17 @@ function currentClass(){
 const inClass = (col, cid) => rows(col).filter(x => x.classId === cid);
 const classOf = id => { const c = (D.classes || {})[id]; return c ? Object.assign({id}, c) : null; };
 function studentsOf(cid){ return Object.entries(D.members || {}).filter(([, m]) => m.classIds && m.classIds[cid]).map(([uid, m]) => ({uid, joined:m.classIds[cid]})).sort((a, b) => a.joined - b.joined); }
-const subOf = (uid, aid) => { const s = (D.subs || {})[uid]; return (s && s.items && s.items[aid]) || null; };
+function subOf(uid, aid){
+  const s = (D.subs || {})[uid], g = (D.grades || {})[uid];
+  const item = s && s.items && s.items[aid], gr = g && g.items && g.items[aid];
+  if (!item && !gr) return null;
+  const out = Object.assign({}, item || {}, gr || {});
+  const a = (D.assignments || {})[aid];
+  if (a && a.kind === 'quiz' && item && item.answers && !(gr && gr.grade != null)) {   // quizzes grade themselves from the answer key
+    const sc = scoreQuiz(Object.assign({id:aid}, a), item.answers); out.grade = sc.grade; out.right = sc.right; out.total = sc.total; out.gradedAt = item.submittedAt;
+  }
+  return out;
+}
 const progOf = uid => { const p = (D.prog || {})[uid]; return (p && p.cards) || {}; };
 const visibleLessons = cid => inClass('lessons', cid).filter(l => S.role === 'teacher' || l.published !== false);
 function dueDate(due){ if (!due) return null; const [y, m, d] = due.split('-').map(Number); return new Date(y, m - 1, d, 23, 59, 59); }
@@ -625,6 +666,7 @@ function renderTop(){
   $('#roleBox').innerHTML = r;
 }
 function renderNav(){
+  if (S.authScreen || S.fatal) { $('#nav').innerHTML = ''; return; }
   const c = !S.fatal && ready() ? currentClass() : null;
   const badge = {};
   if (c) {
@@ -633,28 +675,53 @@ function renderNav(){
     badge.inbox = unreadCount(c.id);
   }
   const b = n => n ? `<span class="badge" aria-label="${n} pending">${n > 99 ? '99+' : n}</span>` : '';
-  const secOn = VIEWS.some(v => v.sec && v.id === S.view), secBadge = VIEWS.filter(v => v.sec).reduce((n, v) => n + (badge[v.id] || 0), 0);
-  $('#nav').innerHTML = VIEWS.map(v => `<a href="#${v.id}" class="${v.sec ? 'sec' : ''}" ${S.view === v.id ? 'aria-current="page"' : ''}>${icon(v.icon)}<span class="long">${v.long}</span><span class="short">${v.short}</span>${b(badge[v.id])}</a>`).join('')
+  const secOn = navViews().some(v => v.sec && v.id === S.view), secBadge = navViews().filter(v => v.sec).reduce((n, v) => n + (badge[v.id] || 0), 0);
+  $('#nav').innerHTML = navViews().map(v => `<a href="#${v.id}" class="${v.sec ? 'sec' : ''}" ${S.view === v.id ? 'aria-current="page"' : ''}>${icon(v.icon)}<span class="long">${v.long}</span><span class="short">${v.short}</span>${b(badge[v.id])}</a>`).join('')
     + `<a href="#" class="more-btn" data-act="moreNav" ${secOn ? 'aria-current="page"' : ''}>${icon('more')}<span class="short">${secOn ? esc(VIEWS.find(v => v.id === S.view).short) : 'More'}</span>${b(secBadge)}</a>`;
 }
 function renderMain(){
-  if (S.fatal === 'signin') return `<section class="card narrow"><h1>Sign in to continue</h1><p class="muted">Parlei keeps your classes, homework and messages in your claude.ai account. Sign in to claude.ai, then open this page again.</p></section>`;
+  if (S.authScreen) return viewAuth();
+  if (S.fatal === 'config') return `<section class="card narrow"><h1>Almost there</h1><p class="muted">Parlei can't reach its database. Check the Firebase settings in <code>config.js</code> (see SETUP.md), then reload.</p></section>`;
   if (!ready()) return (S.slow ? '<p class="banner">Your classes are taking a while to load. Check your connection; this page keeps trying.</p>' : '') + '<div class="skeleton"></div><div class="skeleton"></div>';
   const c = currentClass();
-  let out = S.readOnly ? `<p class="banner">You can view this portal but not hand in work or send messages. Ask your teacher to share it with you as an editor.</p>` : '';
+  let out = S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
   if (S.view === 'words') return out + viewWords();
   if (S.view === 'media') return out + viewMedia(c);
+  if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
+  if (S.view === 'account') return out + viewAccount();
   if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
+  if (S.role === 'student' && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account so your teacher knows who you are. <button class="link" data-act="editProfile">Add your details</button></p>`;
   const V = {home: S.role === 'teacher' ? viewHomeT : viewHomeS, lessons:viewLessons, work: S.role === 'teacher' ? viewWorkT : viewWorkS, practice:viewPractice, calendar:viewCalendar, inbox:viewInbox};
   return out + (V[S.view] || V.home)(c);
 }
 
 /* ---- onboarding ---- */
 function viewOnboard(){
-  return `<section class="card narrow"><p class="eyebrow">Welcome</p><h1>Set up your first class</h1><p class="muted">A class holds your lessons, assignments, flashcards and schedule. Students join with a short code.</p><button class="btn primary" data-act="editClass">${icon('plus')} Create a class</button></section>`;
+  return `<section class="card narrow"><p class="eyebrow">Welcome</p><h1>Set up your first class</h1><p class="muted">A class holds your lessons, assignments, flashcards and schedule. Students join with a short code.</p><div class="row-actions"><button class="btn primary" data-act="editClass">${icon('plus')} Create a class</button><button class="btn" data-act="loadSample">Start with a sample French A1 class</button></div></section>`;
+}
+function profileFields(p){
+  p = p || {};
+  return `<div class="grid2"><div><label for="pfFirst">First name</label><input id="pfFirst" name="first" required maxlength="40" autocomplete="given-name" value="${esc(p.first || '')}"></div>
+    <div><label for="pfLast">Last name</label><input id="pfLast" name="last" required maxlength="40" autocomplete="family-name" value="${esc(p.last || '')}"></div></div>
+    <label for="pfPref">What should we call you? <span class="hint">(optional)</span></label><input id="pfPref" name="preferred" maxlength="40" value="${esc(p.preferred || '')}" placeholder="Leave blank to use your first name">
+    <label for="pfEmail">Email</label><input id="pfEmail" name="email" type="email" required maxlength="120" autocomplete="email" value="${esc(p.email || '')}" placeholder="you@example.com">
+    <div class="grid2 stackable"><div><label for="pfPhone">Phone <span class="hint">(optional)</span></label><input id="pfPhone" name="phone" type="tel" maxlength="30" autocomplete="tel" value="${esc(p.phone || '')}"></div>
+    <div><label for="pfNative">Languages you already speak</label><input id="pfNative" name="native" maxlength="80" value="${esc(p.native || '')}" placeholder="English, Tagalog"></div></div>
+    <label for="pfGoals">Why are you learning? <span class="hint">(optional)</span></label><textarea id="pfGoals" name="goals" rows="2" maxlength="400" placeholder="Travel to Montréal, talk with family, a job…">${esc(p.goals || '')}</textarea>`;
+}
+function readProfile(f){
+  const p = {first:f.first.value.trim(), last:f.last.value.trim(), preferred:f.preferred.value.trim(), email:f.email.value.trim(), phone:f.phone.value.trim(), native:f.native.value.trim(), goals:f.goals.value.trim()};
+  if (!p.first || !p.last) return {err:'Add your first and last name.'};
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return {err:'Check your email address.'};
+  return {p};
 }
 function viewJoin(){
-  return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you.</p>
+  const prof = profileOf(S.me);
+  if (!prof) return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your student account</h1><p class="muted">Tell your teacher who you are, then enter the join code they gave you. Only your teacher sees these details.</p>
+    <form class="stack" data-form="signup">${profileFields(S.demo ? {} : {first:(S.names[S.me] || '').split(' ')[0] || '', last:(S.names[S.me] || '').split(' ').slice(1).join(' '), email:S.email || ''})}
+    <label for="joinCode">Join code</label><input id="joinCode" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. BNJR26" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
+    <button class="btn primary">Create account and join</button></form></section>`;
+  return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me))}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
   <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. BNJR26" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>`;
 }
 
@@ -690,6 +757,26 @@ function rosterRow(uid, c, asg, decks){
   const pct = total ? Math.round(mastered / total * 100) : 0;
   return `<button class="item" data-act="student" data-uid="${esc(uid)}"><span class="avatar">${esc(initials(uid))}</span><span class="grow"><span class="t">${esc(nameOf(uid))}</span><span class="s">${done}/${asg.length} handed in${avg != null ? ` · average ${avg}%` : ''}</span><span class="bar" title="${pct}% of flashcards mastered"><i style="width:${pct}%"></i></span></span><span class="stat">${unreadFor(uid) ? '<span class="dot" title="Unread message"></span>' : ''}${mastered}/${total}<br>cards</span></button>`;
 }
+/* greeting in the class's language: new members get "hello", everyone else "welcome back" */
+const GREET = {
+  fr:{hi:h => h >= 18 || h < 4 ? 'Bonsoir' : 'Bonjour', back:'Bon retour', sp:'\u00a0'},
+  es:{hi:h => h >= 20 || h < 4 ? 'Buenas noches' : h >= 12 ? 'Buenas tardes' : 'Buenos días', back:'Qué bueno verte de nuevo', open:'¡'},
+  'pt-BR':{hi:h => h >= 18 || h < 4 ? 'Boa noite' : h >= 12 ? 'Boa tarde' : 'Bom dia', back:'Que bom te ver de novo'},
+  it:{hi:h => h >= 18 || h < 4 ? 'Buonasera' : 'Buongiorno', back:'Ciao di nuovo'},
+  de:{hi:h => h >= 18 || h < 4 ? 'Guten Abend' : h < 11 ? 'Guten Morgen' : 'Guten Tag', back:'Willkommen zurück'},
+  en:{hi:h => h >= 18 || h < 4 ? 'Good evening' : h >= 12 ? 'Good afternoon' : 'Good morning', back:'Welcome back'}
+};
+function greetingHTML(c){
+  const m = (D.members || {})[S.me], joined = m && m.classIds && m.classIds[c.id];
+  const isNew = typeof joined === 'number' && Date.now() - joined < 60 * MIN;
+  const g = GREET[c.language] || GREET[baseLang(c.language)] || GREET.en, h = new Date().getHours();
+  const prof = profileOf(S.me); const raw = prof ? (prof.preferred || prof.first || '') : S.demo ? (S.me === 'demo-teacher' ? '' : DEMO.names[S.me] || '') : (S.names[S.me] || ''); nameOf(S.me);
+  const first = raw.trim().split(/\s+/)[0] || '';
+  const word = isNew ? g.hi(h) : g.back, sp = g.sp || '';
+  const line = `${g.open || ''}${word}${first ? ', ' + first : ''}${sp}!`;
+  const sub = isNew ? `Welcome to ${c.name}. Start with the newest lesson, then try the flashcards.` : `Welcome back to ${c.name}. Here's what's waiting for you.`;
+  return `<section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(line)}</h1><p class="muted">${esc(sub)}</p></div></section>`;
+}
 function viewHomeS(c){
   const anns = inClass('announcements', c.id).sort((a, b) => b.at - a.at);
   const next = eventsOf(c.id).filter(e => e.kind === 'class' || bookerOf(e.id) === S.me)[0];
@@ -698,7 +785,7 @@ function viewHomeS(c){
   const due = dueCardsCount(c.id), un = unreadCount(c.id);
   const lessons = visibleLessons(c.id);
   return `
-  <section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(c.name)}</h1></div></section>
+  ${greetingHTML(c)}
   <div class="tiles">
     <a class="tile ${todo.length ? 'alert' : ''}" href="#work"><span class="k">Assignments to do</span><span class="v">${todo.length}</span></a>
     <a class="tile" href="#practice"><span class="k">Cards to review</span><span class="v">${due}</span></a>
@@ -714,7 +801,7 @@ function viewHomeS(c){
     </div></section>
   </div>
   ${feedback.length ? `<section class="card"><h3>Latest feedback</h3><div class="list">${feedback.map(({a, s}) => `<button class="item" data-act="openA" data-id="${esc(a.id)}"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${s.feedback ? esc(s.feedback.slice(0, 120)) : 'Graded'}</span></span><span class="pill ok">${fmtNum(s.grade)} / ${a.points}</span></button>`).join('')}</div></section>` : ''}
-  <div class="row-actions"><button class="link danger" data-act="leave" data-id="${esc(c.id)}">Leave this class</button></div>`;
+  <div class="row-actions"><button class="link" data-act="editProfile">My account details</button><button class="link" data-act="joinAnother">Join another class</button><button class="link danger" data-act="leave" data-id="${esc(c.id)}">Leave this class</button></div>`;
 }
 
 /* ---- lessons ---- */
@@ -896,8 +983,8 @@ function viewWords(){
     <div><label for="wMean">Meaning</label><input id="wMean" name="meaning" required maxlength="200" autocomplete="off" placeholder="the word"></div>
     ${S.sample ? `<button type="button" class="btn" id="lookupBtn" data-act="lookupWord">${icon('search')} Look up</button>` : ''}<button class="btn primary">${icon('plus')} Add word</button></div>
     <div id="lookupOut"></div>
+    <details class="more" id="wMore"><summary>Add an example or note</summary><div class="stack"><label for="wEx">Example sentence</label><textarea id="wEx" name="example" rows="2" maxlength="300" placeholder="J'apprends un nouveau mot chaque jour."></textarea><label for="wNote">Note</label><textarea id="wNote" name="note" rows="2" maxlength="200" placeholder="masculine · heard in class on Monday"></textarea></div></details>
     <p class="lookup-note">${S.sample ? 'Type a word in either box and tap <b>Look up</b> to fill in the meaning, an example and notes. Check them in a dictionary:' : 'Check meanings in a dictionary:'} <span id="dictLinks">${dictLinks(lang, '')}</span></p>
-    <details class="more" id="wMore"><summary>Add an example or note</summary><div class="stack"><label for="wEx">Example sentence</label><input id="wEx" name="example" maxlength="300" placeholder="J'apprends un nouveau mot chaque jour."><label for="wNote">Note</label><input id="wNote" name="note" maxlength="200" placeholder="masculine · heard in class on Monday"></div></details>
   </form></section>
   <div class="toolbar"><div class="searchbox">${icon('search')}<label class="sr" for="wordSearch">Look up a word</label><input id="wordSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Look up a word in ${esc(langName(lang))} or English" value="${esc(S.wordQ)}"></div>
     <label class="sr" for="wordSort">Sort</label><select id="wordSort"><option value="new" ${S.wordSort === 'new' ? 'selected' : ''}>Newest first</option><option value="az" ${S.wordSort === 'az' ? 'selected' : ''}>A to Z</option><option value="star" ${S.wordSort === 'star' ? 'selected' : ''}>Starred only</option></select>
@@ -919,7 +1006,18 @@ async function lookupWord(){
   if (!term && !meaning) { toast('Type a word first, in either box.', true); f.term.focus(); return; }
   const btn = $('#lookupBtn'), out = $('#lookupOut'), L = langName(lang);
   btn.disabled = true; btn.lastChild.textContent = ' Looking up…';
-  const prompt = `You are a bilingual ${L}–English dictionary for a learner whose main language is English.
+  const isEn = baseLang(lang) === 'en';
+  const prompt = isEn ? `You are an English dictionary for a language learner.
+Word or phrase: "${(term || meaning).slice(0, 120)}"
+Give the dictionary entry for it (correct the spelling if needed).
+Reply with only this JSON object:
+{"found": true or false (false if this is not a real English word or phrase),
+ "term": "the headword, spelled correctly",
+ "meaning": "a short, plain definition, at most 12 words; separate distinct senses with ; ",
+ "pos": "part of speech, e.g. noun, verb, adjective, expression",
+ "note": "register or usage worth knowing, at most 12 words, or empty",
+ "example": "one short, natural example sentence",
+ "exampleEn": ""}` : `You are a bilingual ${L}–English dictionary for a learner whose main language is English.
 ${L} box: "${term.slice(0, 120)}"
 English box: "${meaning.slice(0, 200)}"
 If the ${L} box has text, give the dictionary entry for it (correct the spelling and accents if needed). If only the English box has text, give the most common ${L} word or phrase for it.
@@ -932,17 +1030,19 @@ Reply with only this JSON object:
  "example": "one short, natural example sentence in ${L}",
  "exampleEn": "the English translation of the example"}`;
   try {
-    const r = await S.sample.json(prompt, {modelTier:'quick', cache:{gcTime:86400000}});
+    const r = S.lookupApi ? await S.lookupApi({lang, langName:L, term, meaning}) : await S.sample.json(prompt, {modelTier:'quick', cache:{gcTime:86400000}});
     if (!r || r.found === false || !r.term) { out.innerHTML = `<p class="found">No entry found for "${esc(term || meaning)}". Check the spelling, or try a dictionary below.</p>`; return; }
     f.term.value = String(r.term).slice(0, 120); f.meaning.value = String(r.meaning || '').slice(0, 200);
-    const ex = [r.example, r.exampleEn ? '(' + r.exampleEn + ')' : ''].filter(Boolean).join(' ');
+    const tr = r.exampleEn && norm(r.exampleEn) !== norm(r.example) && !isEn ? '(' + r.exampleEn + ')' : '';
+    const ex = [r.example, tr].filter(Boolean).join(' ');
     f.example.value = ex.slice(0, 300); f.note.value = [r.pos, r.note].filter(Boolean).join(' · ').slice(0, 200);
     $('#wMore').open = true;
-    out.innerHTML = `<p class="found"><b>${esc(r.term)}</b>${r.pos ? ' <span class="muted">' + esc(r.pos) + '</span>' : ''}<span>Filled in below. Edit anything, then tap Add word.</span></p>`;
+    out.innerHTML = `<p class="found"><b>${esc(r.term)}</b>${r.pos ? ' <span class="muted">' + esc(r.pos) + '</span>' : ''}<span>${esc(r.meaning || '')}</span><span class="muted">Filled in below. Edit anything, then tap Add word.</span></p>`;
     $('#dictLinks').innerHTML = dictLinks(lang, r.term);
   } catch (e) {
     const c = e && e.code;
-    if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed') { S.sample = null; render(true); toast('Look up is turned off. You can still use the dictionary links.', true); return; }
+    if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed' || c === 'lookup_off') { S.sample = null; render(true); toast('Look up is turned off. You can still use the dictionary links.', true); return; }
+    if (c === 'daily_limit') { out.innerHTML = '<p class="found">You have reached today\'s look-up limit. Try again tomorrow, or use a dictionary below.</p>'; return; }
     out.innerHTML = `<p class="found">${c === 'rate_limited' ? 'Too many look-ups right now. Wait a minute and try again.' : "Couldn't look that up. Try again, or use a dictionary below."}</p>`;
   } finally { const b = $('#lookupBtn'); if (b) { b.disabled = false; b.lastChild.textContent = ' Look up'; } }
 }
@@ -957,11 +1057,11 @@ function wordForm(id){
 }
 
 /* ---- media tab: class audio (teacher uploads) + personal repertoire ---- */
-const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 const MEDIA_TYPES = {song:'Song', video:'Video', podcast:'Podcast', show:'TV show', film:'Film', book:'Book', article:'Article', other:'Other'};
 const MEDIA_ABBR = {song:'♪', video:'Vid', podcast:'Pod', show:'TV', film:'Film', book:'Book', article:'Read', other:'•'};
 const MEDIA_STATUS = {doing:'In progress', want:'Want to try', done:'Finished'};
-const srcOf = id => S.demo ? (S.blobUrls[id] || '') : '/_blob/' + id;
+const srcOf = x => x.url || S.blobUrls[x.assetId] || '';
 const fmtDur = s => { if (!s && s !== 0) return ''; s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const audioOf = cid => inClass('audio', cid).filter(x => S.role === 'teacher' || x.published !== false).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 function audioCard(x, c, compact){
@@ -970,7 +1070,7 @@ function audioCard(x, c, compact){
     <div class="au-head"><span class="au-ic">${icon('wave')}</span><div class="grow stack" style="gap:2px;flex:1;min-width:0"><b style="overflow-wrap:anywhere">${esc(x.title)}</b><span class="hint">${[fmtDur(x.duration), new Date(x.createdAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})].filter(Boolean).join(' · ')}${x.published === false ? ' · <span class="pill">Draft</span>' : ''}</span>
       ${lesson && !compact ? `<div class="chiprow"><button class="chiplink" data-act="openLessonFrom" data-id="${esc(x.lessonId)}">${icon('book').replace('class="ic"', 'class="ic" style="width:12px;height:12px;vertical-align:-1px"')} ${esc(lesson.title)}</button></div>` : ''}</div>
       ${S.role === 'teacher' ? `<button class="btn sm" data-act="editAudio" data-id="${esc(x.id)}">Edit</button>` : ''}</div>
-    <audio controls preload="metadata" src="${esc(srcOf(x.assetId))}" data-aid="${esc(x.id)}"></audio>
+    <audio controls preload="metadata" src="${esc(srcOf(x))}" data-aid="${esc(x.id)}"></audio>
     <div class="speeds" role="group" aria-label="Playback speed"><span class="hint">Speed</span>${[0.75, 0.9, 1, 1.25].map(r => `<button data-act="speed" data-rate="${r}" aria-pressed="${r === 1}">${r}×</button>`).join('')}</div>
     ${x.notes ? `<details class="more"><summary>Transcript and notes</summary><div class="lesson-body" style="font-size:15px">${renderBody(x.notes, c && c.language)}</div></details>` : ''}
   </div>`;
@@ -978,7 +1078,7 @@ function audioCard(x, c, compact){
 function viewAudio(c){
   if (!c) return `<p class="empty">Join a class to hear your teacher's recordings.</p>`;
   const list = audioOf(c.id);
-  return `${S.role === 'teacher' ? `<div class="row-actions">${S.assets ? `<button class="btn primary" data-act="uploadAudio">${icon('plus')} Upload recording</button>` : '<p class="banner">Uploading needs editor access to this page.</p>'}<span class="hint" style="align-self:center">M4A from your phone uploads as is. MP3 and WAV get converted first.</span></div>` : ''}
+  return `${S.role === 'teacher' ? `<div class="row-actions">${S.assets ? `<button class="btn primary" data-act="uploadAudio">${icon('plus')} Upload recording</button>` : '<p class="banner">Uploading needs editor access to this page.</p>'}<span class="hint" style="align-self:center">MP3, M4A and WAV files, up to 50 MB each.</span></div>` : ''}
     ${list.length ? list.map(x => audioCard(x, c, false)).join('') : `<p class="empty">${S.role === 'teacher' ? 'Upload dialogues, pronunciation drills or a reading of a lesson.' : 'Your teacher has not shared recordings yet.'}</p>`}`;
 }
 const repDoc = () => (D.media || {})[S.me] || {};
@@ -1019,7 +1119,7 @@ function audioForm(id, lessonId){
   const lessons = inClass('lessons', c.id).sort((a, b) => (a.unit || '').localeCompare(b.unit || '') || (a.order || 0) - (b.order || 0));
   const sel = x ? x.lessonId : lessonId;
   modal(`${head(x ? 'Edit recording' : 'Upload a recording')}<form class="stack" data-form="audio" data-id="${esc(id || '')}">
-    ${x ? '' : `<label for="auFile">Audio file</label><input id="auFile" name="file" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm,.mp4" required><p class="hint">Up to 20 MB. M4A (iPhone Voice Memos) uploads as is; MP3, WAV and other formats are converted to a compact file first, which works best in Chrome or Edge.</p>`}
+    ${x ? '' : `<label for="auFile">Audio file</label><input id="auFile" name="file" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm" required><p class="hint">MP3, M4A (iPhone Voice Memos), WAV and other audio files, up to 50 MB.</p>`}
     <label for="auTitle">Title</label><input id="auTitle" name="title" required maxlength="120" value="${esc(x ? x.title : '')}" placeholder="Dialogue: au café">
     <label for="auLesson">Attach to lesson</label><select id="auLesson" name="lesson"><option value="">No lesson</option>${lessons.map(l => `<option value="${esc(l.id)}" ${sel === l.id ? 'selected' : ''}>${esc((l.unit ? l.unit + ' · ' : '') + l.title)}</option>`).join('')}</select>
     <label for="auNotes">Transcript and notes</label><p class="hint">Optional. Lines like <code>un café = a coffee</code> show as vocabulary.</p><textarea id="auNotes" name="notes" rows="6">${esc(x ? x.notes || '' : '')}</textarea>
@@ -1041,36 +1141,6 @@ function mediaForm(id, rec){
     <div class="actions">${m && !rec ? `<button type="button" class="btn bad" data-act="delMedia" data-id="${esc(m.id)}" style="margin-right:auto">Delete</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">${rec ? 'Recommend' : 'Save'}</button></div></form>`, {label:'Media'});
 }
 
-/* audio conversion: anything the browser can decode -> mono Opus in WebM (accepted as video/webm) */
-let muxerLib = null;
-function loadMuxer(){
-  if (window.WebMMuxer) return Promise.resolve(window.WebMMuxer);
-  if (!muxerLib) muxerLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/webm-muxer@5.1.4/build/webm-muxer.js'; sc.onload = () => window.WebMMuxer ? res(window.WebMMuxer) : rej({code:'nocodec'}); sc.onerror = () => { muxerLib = null; rej({code:'nolib'}); }; document.head.appendChild(sc); });
-  return muxerLib;
-}
-async function toWebm(file, onProgress){
-  if (!window.AudioEncoder || !window.AudioData || !window.OfflineAudioContext) throw {code:'nocodec'};
-  const sr = 48000;
-  let buf; try { buf = await new OfflineAudioContext(1, 1, sr).decodeAudioData(await file.arrayBuffer()); } catch (e) { throw {code:'decode'}; }
-  const cfg = {codec:'opus', sampleRate:sr, numberOfChannels:1, bitrate:64000};
-  const ok = await AudioEncoder.isConfigSupported(cfg).catch(() => ({supported:false})); if (!ok.supported) throw {code:'nocodec'};
-  const {Muxer, ArrayBufferTarget} = await loadMuxer();
-  const muxer = new Muxer({target:new ArrayBufferTarget(), audio:{codec:'A_OPUS', sampleRate:sr, numberOfChannels:1}});
-  let failed = null;
-  const enc = new AudioEncoder({output:(chunk, meta) => muxer.addAudioChunk(chunk, meta), error:e => { failed = e; }});
-  enc.configure(cfg);
-  const chs = Array.from({length:buf.numberOfChannels}, (_, i) => buf.getChannelData(i)), step = 4800;
-  for (let off = 0; off < buf.length; off += step) {
-    if (failed) throw {code:'decode'};
-    const n = Math.min(step, buf.length - off), data = new Float32Array(n);
-    for (const ch of chs) for (let i = 0; i < n; i++) data[i] += ch[off + i] / chs.length;
-    const ad = new AudioData({format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:1, timestamp:Math.round(off / sr * 1e6), data});
-    enc.encode(ad); ad.close();
-    if (enc.encodeQueueSize > 40 || off % (step * 50) === 0) { onProgress(off / buf.length); await new Promise(r => setTimeout(r, 0)); }
-  }
-  await enc.flush(); enc.close(); muxer.finalize(); onProgress(1);
-  return {blob:new Blob([muxer.target.buffer], {type:'video/webm'}), duration:buf.duration};
-}
 function demoWav(){
   const sr = 8000, n = sr * 3, b = new DataView(new ArrayBuffer(44 + n * 2)); const w = (o, s) => [...s].forEach((ch, i) => b.setUint8(o + i, ch.charCodeAt(0)));
   w(0, 'RIFF'); b.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true); b.setUint32(24, sr, true); b.setUint32(28, sr * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, 'data'); b.setUint32(40, n * 2, true);
@@ -1082,12 +1152,135 @@ function probeDuration(file){
 }
 function audioErr(e){
   const c = e && e.code;
-  if (c === 'nocodec' || c === 'nolib') return "This browser can't convert this file. Open the portal in Chrome or Edge, or upload an M4A (iPhone Voice Memos saves M4A).";
   if (c === 'decode') return "Couldn't read this audio file. Try exporting it again as M4A or MP3.";
-  if (c === 'too_large') return 'This recording is over 20 MB. Split it into shorter parts.';
-  if (c === 'quota_or_state') return 'Storage for this portal is full. Delete old recordings, then try again.';
+  if (c === 'too_large') return 'This recording is over 50 MB. Split it into shorter parts.';
+  if (c === 'quota_or_state' || c === 'storage/quota-exceeded') return 'Storage is full. Delete old recordings, then try again.';
+  if (c === 'storage/unauthorized') return 'Only teachers can upload recordings.';
   if (c === 'rate_limited') return 'Too many uploads at once. Wait a minute and try again.';
   return 'Upload failed. Check your connection and try again.';
+}
+
+/* ---- teacher: enrolment ---- */
+function enrolment(){
+  const mine = myClasses(); const ids = new Set(mine.map(c => c.id));
+  const people = new Map();
+  Object.entries(D.members || {}).forEach(([uid, m]) => {
+    const cls = Object.entries(m.classIds || {}).filter(([cid, v]) => v && ids.has(cid)).map(([cid, v]) => ({cid, joined:v}));
+    people.set(uid, {uid, classes:cls});
+  });
+  Object.keys(D.profiles || {}).forEach(uid => { if (!people.has(uid)) people.set(uid, {uid, classes:[]}); });
+  return [...people.values()].filter(x => x.uid !== S.me || x.classes.length).map(x => {
+    const p = profileOf(x.uid) || {}, joined = x.classes.length ? Math.min(...x.classes.map(c => c.joined)) : (p.createdAt || 0);
+    const prog = (D.prog || {})[x.uid], sub = (D.subs || {})[x.uid];
+    const subTimes = sub && sub.items ? Object.values(sub.items).map(i => i && i.submittedAt || 0) : [];
+    const active = Math.max(p.lastSeen || 0, (prog && prog.updated) || 0, ...subTimes, 0);
+    return Object.assign(x, {p, joined, active});
+  });
+}
+const ago = ts => { if (!ts) return 'Not yet'; const d = Date.now() - ts; if (d < 60 * MIN) return 'Just now'; if (d < DAY) return Math.round(d / 36e5) + ' h ago'; if (d < 7 * DAY) return Math.round(d / DAY) + ' d ago'; return new Date(ts).toLocaleDateString(undefined, {month:'short', day:'numeric'}); };
+function studentsFiltered(){
+  const q = norm(S.stuQ || ''), cf = S.stuClass || 'all';
+  return enrolment().filter(x => (cf === 'all' ? true : cf === 'none' ? !x.classes.length : x.classes.some(c => c.cid === cf)))
+    .filter(x => !q || norm(nameOf(x.uid)).includes(q) || norm(x.p.email).includes(q) || norm([x.p.first, x.p.last].join(' ')).includes(q))
+    .sort((a, b) => norm(nameOf(a.uid)).localeCompare(norm(nameOf(b.uid))));
+}
+function studentListHTML(){
+  const list = studentsFiltered();
+  if (!list.length) return `<p class="empty">${enrolment().length ? 'No students match.' : 'No students yet. Share a class join code and the link to this portal.'}</p>`;
+  return `<div class="list">${list.map(x => `<button class="item" data-act="student" data-uid="${esc(x.uid)}"><span class="avatar">${esc(initials(x.uid))}</span>
+    <span class="grow"><span class="t">${esc(nameOf(x.uid))}${x.p.preferred && x.p.first ? ` <span class="s" style="font-weight:400">(${esc(x.p.first)} ${esc(x.p.last || '')})</span>` : ''}</span>
+    <span class="s">${x.p.email ? esc(x.p.email) : '<span class="pill warn">Details not added</span>'}</span>
+    <span class="chiprow">${x.classes.length ? x.classes.map(c => `<span class="chiplink">${esc((classOf(c.cid) || {}).name || 'Class')}</span>`).join('') : '<span class="chiplink">No class</span>'}</span></span>
+    <span class="stat">Joined ${esc(x.joined ? new Date(x.joined).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : '—')}<br>Active ${esc(ago(x.active))}</span></button>`).join('')}</div>`;
+}
+function viewStudents(){
+  const all = enrolment(), mine = myClasses(), enrolled = all.filter(x => x.classes.length).length, noDetails = all.filter(x => !x.p.email).length;
+  return `<div class="page-head"><div><p class="eyebrow">${enrolled} enrolled across ${mine.length} ${mine.length === 1 ? 'class' : 'classes'}</p><h1>Students</h1></div><button class="btn" data-act="copyEmails">Copy emails</button></div>
+  <div class="tiles">${mine.map(c => `<div class="tile"><span class="k">${esc(c.name)}</span><span class="v">${studentsOf(c.id).length}</span><span class="hint">Code ${esc(c.code)}</span></div>`).join('')}${noDetails ? `<div class="tile alert"><span class="k">Missing details</span><span class="v">${noDetails}</span></div>` : ''}</div>
+  <div class="toolbar"><div class="searchbox">${icon('search')}<label class="sr" for="stuSearch">Search students</label><input id="stuSearch" type="search" autocomplete="off" placeholder="Search by name or email" value="${esc(S.stuQ || '')}"></div>
+    <label class="sr" for="stuClass">Class</label><select id="stuClass"><option value="all">All students</option>${mine.map(c => `<option value="${esc(c.id)}" ${S.stuClass === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="none" ${S.stuClass === 'none' ? 'selected' : ''}>Not in a class</option></select></div>
+  <section class="card" id="stuList">${studentListHTML()}</section>`;
+}
+function profileForm(){
+  modal(`${head('My account details', 'Only your teacher sees these.')}<form class="stack" data-form="profile">${profileFields(profileOf(S.me))}
+    <div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save</button></div></form>`, {label:'Account details'});
+}
+
+/* ---- sign in / create account ---- */
+function viewAuth(){
+  const mode = S.authMode || 'signin', busy = S.authBusy ? 'disabled' : '';
+  const google = `<button type="button" class="btn wide" data-act="googleSignIn" ${busy}><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.1a4.4 4.4 0 0 1-1.9 2.9v2.4h3.1c1.8-1.7 2.7-4.1 2.7-7z" fill="#4285F4" stroke="none"/><path d="M12 21.5c2.6 0 4.7-.9 6.3-2.3l-3.1-2.4c-.9.6-2 .9-3.2.9-2.5 0-4.6-1.7-5.3-3.9H3.5v2.5A9.5 9.5 0 0 0 12 21.5z" fill="#34A853" stroke="none"/><path d="M6.7 13.8a5.7 5.7 0 0 1 0-3.6V7.7H3.5a9.5 9.5 0 0 0 0 8.6z" fill="#FBBC05" stroke="none"/><path d="M12 6.3c1.4 0 2.6.5 3.6 1.4l2.7-2.7A9.5 9.5 0 0 0 3.5 7.7l3.2 2.5C7.4 8 9.5 6.3 12 6.3z" fill="#EA4335" stroke="none"/></svg> Continue with Google</button>`;
+  const err = S.authError ? `<p class="banner">${esc(S.authError)}</p>` : '';
+  if (mode === 'reset') return `<section class="card narrow"><p class="eyebrow">Parlei</p><h1>Reset your password</h1><p class="muted">We'll email you a link to choose a new password.</p>${err}
+    <form class="stack" data-form="authReset"><label for="auEmail">Email</label><input id="auEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}"><button class="btn primary" ${busy}>Send reset link</button></form>
+    <button class="link" data-act="authMode" data-mode="signin">Back to sign in</button></section>`;
+  if (mode === 'signup') return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your Parlei account</h1><p class="muted">For students joining a class. You'll enter your teacher's join code next.</p>${err}
+    <form class="stack" data-form="authSignup"><div class="grid2"><div><label for="suFirst">First name</label><input id="suFirst" name="first" required maxlength="40" autocomplete="given-name"></div><div><label for="suLast">Last name</label><input id="suLast" name="last" required maxlength="40" autocomplete="family-name"></div></div>
+    <label for="suEmail">Email</label><input id="suEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
+    <label for="suPw">Password</label><input id="suPw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+    <button class="btn primary" ${busy}>Create account</button></form>${google}
+    <p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p></section>`;
+  return `<section class="card narrow"><p class="eyebrow">Parlei</p><h1>Sign in</h1>${err}
+    <form class="stack" data-form="authSignin"><label for="siEmail">Email</label><input id="siEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
+    <label for="siPw">Password</label><input id="siPw" name="password" type="password" required autocomplete="current-password"><button class="btn primary" ${busy}>Sign in</button></form>
+    ${google}<div class="row-actions" style="justify-content:space-between"><button class="link" data-act="authMode" data-mode="signup">New student? Create an account</button><button class="link" data-act="authMode" data-mode="reset">Forgot password?</button></div></section>`;
+}
+function authErrText(e){
+  const c = (e && e.code) || '';
+  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'That email and password don\'t match. Try again, or reset your password.';
+  if (/email-already-in-use/.test(c)) return 'An account with this email already exists. Sign in instead.';
+  if (/weak-password/.test(c)) return 'Choose a password with at least 8 characters.';
+  if (/invalid-email/.test(c)) return 'Check your email address.';
+  if (/too-many-requests/.test(c)) return 'Too many attempts. Wait a few minutes and try again.';
+  if (/popup-blocked/.test(c)) return 'Your browser blocked the Google window. Allow pop-ups for this site and try again.';
+  if (/network/.test(c)) return 'No connection. Check your internet and try again.';
+  return 'Something went wrong. Try again.';
+}
+async function authRun(fn){
+  S.authBusy = true; S.authError = ''; render(true);
+  try { await fn(); } catch (e) { if (!/popup-closed|cancelled-popup/.test((e && e.code) || '')) S.authError = authErrText(e); }
+  S.authBusy = false; if (S.authScreen) render(true);
+}
+
+/* ---- settings: account, notifications, display ---- */
+const NOTIFY_TYPES = {
+  student:[['announcement', 'Announcements', 'When your teacher posts to the class'], ['assignment', 'New assignments', 'When homework or a quiz is posted'], ['lesson', 'New lessons and recordings', 'When a lesson or audio is added'], ['grade', 'Grades and feedback', 'When your work is graded'], ['message', 'Messages', 'When your teacher writes to you'], ['due', 'Due-date reminders', 'The day before an assignment is due'], ['session', 'Class reminders', 'The day before a class or a booked 1:1']],
+  teacher:[['submission', 'Work handed in', 'When a student submits an assignment'], ['message', 'Messages', 'When a student writes to you'], ['joined', 'New students', 'When someone joins one of your classes'], ['booking', '1:1 bookings', 'When a student books an office-hour slot'], ['session', 'Class reminders', 'The day before each class session']]
+};
+const prefOn = (ch, type) => { const n = ((profileOf(S.me) || {}).notify || {})[ch] || {}; return n[type] !== false; };
+function viewAccount(){
+  const p = profileOf(S.me) || {}, types = NOTIFY_TYPES[S.teacherCapable && S.role === 'teacher' ? 'teacher' : 'student'];
+  const push = S.platform && S.platform.push ? S.platform.push.status() : 'unavailable';
+  const email = p.email || S.email || '';
+  const pushText = {unsupported:'This browser can\'t receive notifications. On iPhone or iPad, open Parlei in Safari, tap Share, then "Add to Home Screen", and open it from there.', denied:'Notifications are blocked for Parlei in this browser. Allow them in your browser or phone settings, then come back here.', on:'On for this device.', off:'Off for this device.', unavailable:'Push notifications work once Parlei is set up on its own website (see SETUP.md).'}[push];
+  return `<div class="page-head"><div><p class="eyebrow">${esc(email)}</p><h1>Settings</h1></div></div>
+  <section class="card"><h3>Account</h3><div class="list">
+    <div class="item"><span class="grow"><span class="s">Name</span><span>${esc(profName(S.me) || S.names[S.me] || '—')}</span></span><button class="btn sm" data-act="editProfile">Edit details</button></div>
+    <div class="item"><span class="grow"><span class="s">Email</span><span>${esc(email || '—')}</span></span></div>
+    ${S.platform ? `<div class="item"><span class="grow"><span class="s">Password</span><span>We'll email you a link to change it.</span></span><button class="btn sm" data-act="changePassword">Change password</button></div>` : ''}
+  </div>${S.platform ? `<div class="row-actions"><button class="btn" data-act="signOut">Sign out</button></div>` : ''}</section>
+  <section class="card"><div class="card-head"><h3>Notifications</h3><span class="hint">Emails go to ${esc(email || 'your account email')}</span></div>
+    <div class="list"><div class="item" style="padding:6px 0"><span class="grow"></span><span class="hint" style="width:56px;text-align:center">Email</span><span class="hint" style="width:56px;text-align:center">Push</span></div>
+    ${types.map(([k, label, desc]) => `<div class="item"><span class="grow"><span class="t" style="font-weight:500">${esc(label)}</span><span class="s">${esc(desc)}</span></span>
+      <span style="width:56px;display:grid;place-items:center"><input type="checkbox" id="ne-${k}" data-notify="email:${k}" ${prefOn('email', k) ? 'checked' : ''} aria-label="Email for ${esc(label)}"></span>
+      <span style="width:56px;display:grid;place-items:center"><input type="checkbox" id="np-${k}" data-notify="push:${k}" ${prefOn('push', k) ? 'checked' : ''} aria-label="Push for ${esc(label)}"></span></div>`).join('')}</div></section>
+  <section class="card"><h3>Push notifications on this device</h3><p class="muted">${esc(pushText)}</p>
+    <div class="row-actions">${push === 'off' ? '<button class="btn primary" data-act="pushOn">Turn on for this device</button>' : ''}${push === 'on' ? '<button class="btn" data-act="pushOff">Turn off for this device</button>' : ''}${S.platform ? '<button class="btn" data-act="testNotify">Send me a test</button>' : ''}</div></section>
+  <section class="card"><h3>Display</h3><div class="item" style="border:0;padding:0"><span class="grow"><span class="t" style="font-weight:500">Daylight mode</span><span class="s">A brighter, light-blue look on this device</span></span><button class="btn sm" data-act="toggleDay">${document.documentElement.classList.contains('daylight') ? 'Turn off' : 'Turn on'}</button></div></section>`;
+}
+window.parleiToast = m => toast(m);
+function notify(evt){ if (S.platform && S.platform.notify) Promise.resolve(S.platform.notify(evt)).catch(() => {}); }
+function browserTTS(){
+  if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return null;
+  const LOCALE = {fr:'fr-FR', es:'es-ES', 'pt-BR':'pt-BR', 'pt-PT':'pt-PT', it:'it-IT', de:'de-DE', en:'en-US', ja:'ja-JP', ko:'ko-KR', 'zh-CN':'zh-CN', ar:'ar-SA', ht:'fr-HT', sw:'sw-KE', tl:'fil-PH', yo:'yo-NG'};
+  return { speak(text, o){
+    o = o || {}; return new Promise((res, rej) => {
+      const u = new SpeechSynthesisUtterance(text), loc = LOCALE[o.language] || o.language;
+      if (loc) { u.lang = loc; const base = loc.split('-')[0]; const v = speechSynthesis.getVoices().find(x => x.lang === loc) || speechSynthesis.getVoices().find(x => x.lang.split(/[-_]/)[0] === base); if (v) u.voice = v; }
+      u.rate = o.rate || 1; u.onend = () => res(); u.onerror = () => rej({code:'error'});
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    });
+  } };
 }
 
 /* ---------- dialogs ---------- */
@@ -1189,9 +1382,16 @@ function gradeDialog(aid){
   modal(head(a.title, `${esc(dueLabel(a.due))} · ${a.points} points`) + (rowsHtml || '<p class="empty">No students in this class yet.</p>'), {wide:true, label:'Grading'});
 }
 function studentDialog(uid){
-  const c = currentClass(); const asg = inClass('assignments', c.id).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
-  const decks = inClass('decks', c.id);
-  modal(head(nameOf(uid), `Joined ${esc(new Date(studentsOf(c.id).find(s => s.uid === uid)?.joined || Date.now()).toLocaleDateString())}`) +
+  const m = (D.members || {})[uid] || {}, p = profileOf(uid) || {};
+  const memberOf = myClasses().filter(x => m.classIds && m.classIds[x.id]);
+  const c = memberOf.find(x => x.id === (currentClass() || {}).id) || memberOf[0] || currentClass();
+  const asg = c ? inClass('assignments', c.id).sort((a, b) => (a.due || '').localeCompare(b.due || '')) : [];
+  const decks = c ? inClass('decks', c.id) : [];
+  const info = [['Full name', [p.first, p.last].filter(Boolean).join(' ')], ['Email', p.email], ['Phone', p.phone], ['Speaks', p.native], ['Learning because', p.goals]].filter(([, v]) => v);
+  modal(head(nameOf(uid), p.createdAt ? `Account created ${esc(new Date(p.createdAt).toLocaleDateString())}` : 'Has not added their details yet') +
+    (info.length ? `<div class="list">${info.map(([k, v]) => `<div class="item"><span class="grow"><span class="s">${esc(k)}</span><span style="white-space:pre-wrap;overflow-wrap:anywhere">${k === 'Email' ? `<a href="mailto:${esc(v)}">${esc(v)}</a>` : esc(v)}</span></span>${k === 'Email' ? `<button class="btn sm" data-act="copyText" data-text="${esc(v)}">Copy</button>` : ''}</div>`).join('')}</div>` : '') +
+    `<h3>Classes</h3><div class="list">${memberOf.length ? memberOf.map(x => `<div class="item"><span class="grow"><span class="t">${esc(x.name)}</span><span class="s">Joined ${esc(new Date(m.classIds[x.id]).toLocaleDateString())}</span></span><button class="link danger" data-act="removeStudent" data-uid="${esc(uid)}" data-cid="${esc(x.id)}">Remove</button></div>`).join('') : '<p class="empty">Not enrolled in any of your classes.</p>'}</div>` +
+    (c ? `<p class="hint">Progress below is for ${esc(c.name)}.</p>` : '') +
     `<h3>Assignments</h3><div class="list">${asg.map(a => { const st = statusOf(a, uid); return `<div class="item"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${esc(dueLabel(a.due))}</span></span><span class="pill ${st.cls}">${esc(st.label)}</span></div>`; }).join('') || '<p class="empty">No assignments yet.</p>'}</div>
     <h3>Flashcards</h3><div class="list">${decks.map(d => { const st = deckStats(d, uid); return `<div class="item"><span class="grow"><span class="t">${esc(d.title)}</span><span class="s">${st.seen} of ${st.total} seen</span></span><span class="stat">${st.mastered}/${st.total}<br>mastered</span></div>`; }).join('') || '<p class="empty">No decks yet.</p>'}</div>
     <div class="actions"><button class="btn primary" data-act="msgStudent" data-uid="${esc(uid)}">Send a message</button></div>`, {wide:true, label:'Student'});
@@ -1236,9 +1436,10 @@ function drawPractice(){
 /* ---------- actions ---------- */
 const ACT = {
   closeModal: () => closeModal(),
+  toggleDay: () => { const on = !document.documentElement.classList.contains('daylight'); applyDaylight(on); store.set('daylight', on ? '1' : '0'); toast(on ? 'Daylight mode on' : 'Daylight mode off'); },
   cfYes: () => S.confirm && S.confirm(true),
   cfNo: () => S.confirm && S.confirm(false),
-  role: d => { S.role = d.role; store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.threadId = null; render(true); },
+  role: d => { S.role = d.role; if (S.view === 'students' && d.role !== 'teacher') { S.view = 'home'; location.hash = 'home'; } store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.threadId = null; render(true); },
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
@@ -1275,7 +1476,7 @@ const ACT = {
   editEvent: d => eventForm(d.id),
   delEvent: async d => { if (await askConfirm('Remove this from the schedule?')) delDoc('events/' + d.id); },
   togglePast: () => { S.showPast = !S.showPast; render(true); },
-  book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) toast('Booked. See you then !'); },
+  book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) { notify({type:'booking', eid:d.id}); toast('Booked. See you then !'); } },
   unbook: d => upsert('bookings/' + S.me, {slots:{[d.id]:false}}),
   openThread: d => { S.threadId = d.uid; render(true); markRead(); },
   closeThread: () => { S.threadId = null; render(true); },
@@ -1295,7 +1496,7 @@ const ACT = {
   practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term, b:w.meaning})), ttsLang(lang)); },
   moreNav: () => {
     const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? dueCardsCount(c.id) : 0;
-    modal(`${head('More')}<nav class="navsheet">${VIEWS.filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
+    modal(`${head('More')}<nav class="navsheet">${navViews().filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
   },
   navTo: d => { closeModal(); go(d.v); },
   mediaTab: d => { S.mediaTab = d.tab; render(true); },
@@ -1315,15 +1516,66 @@ const ACT = {
   addRec: () => mediaForm(null, true),
   delRec: async d => { if (await askConfirm('Remove this recommendation?', 'Remove')) delDoc('recs/' + d.id); },
   addFromRec: async d => { const r = D.recs[d.id]; if (!r) return; const lang = currentWordLang(); if (await upsert('media/' + S.me, {items:{['m' + rid()]:{lang, type:r.type, title:r.title, creator:r.creator || '', url:r.url || '', status:'want', notes:r.note ? 'Teacher: ' + r.note : '', at:Date.now()}}})) toast(`Added "${r.title}"`); },
+  loadSample: async () => {
+    const code = newCode(); let ok = true;
+    for (const [path, v] of Object.entries(SEED)) {
+      const doc = Object.assign({}, v, path.startsWith('classes/') ? {teacherId:S.me, code, createdAt:Date.now()} : {});
+      ok = (await setDoc(path, doc)) && ok;
+    }
+    if (ok) { S.classId = 'fr-a1'; store.set('class', 'fr-a1'); toast('Sample class added. Its join code is ' + code); render(true); }
+  },
+  editProfile: () => profileForm(),
+  authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
+  googleSignIn: () => authRun(() => S.platform.signInGoogle()),
+  signOut: async () => { try { await S.platform.signOut(); } catch (e) {} location.hash = 'home'; location.reload(); },
+  changePassword: async () => { try { await S.platform.resetPassword(S.email); toast('Check your email for a link to change your password.'); } catch (e) { toast(authErrText(e), true); } },
+  resendVerify: async () => { try { await S.platform.resendVerification(); toast('Sent. Check your inbox.'); } catch (e) { toast(authErrText(e), true); } },
+  pushOn: async () => { const r = await S.platform.push.enable(S.me); toast(r.ok ? 'Push notifications are on for this device' : (r.message || 'Couldn\'t turn on notifications.'), !r.ok); render(true); },
+  pushOff: async () => { await S.platform.push.disable(S.me); toast('Push notifications are off for this device'); render(true); },
+  testNotify: async () => { try { const r = await S.platform.notify({type:'test'}); toast(r && r.sent ? 'Test sent. It can take a few seconds to arrive.' : 'Nothing was sent. Turn on email or push for at least one notification.'); } catch (e) { toast('Couldn\'t send the test. Check the setup steps for email and push.', true); } },
+  joinAnother: () => modal(`${head('Join another class')}<form class="stack" data-form="join"><label for="joinCode2">Join code</label><input id="joinCode2" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Join class</button></div></form>`, {label:'Join class'}),
+  copyText: async d => { try { await navigator.clipboard.writeText(d.text); toast('Copied'); } catch (e) { toast(d.text); } },
+  copyEmails: async () => {
+    const emails = studentsFiltered().map(x => x.p.email).filter(Boolean);
+    if (!emails.length) { toast('None of these students have added an email yet.', true); return; }
+    try { await navigator.clipboard.writeText(emails.join(', ')); toast(`Copied ${emails.length} email${emails.length > 1 ? 's' : ''}`); }
+    catch (e) { modal(`${head('Student emails')}<textarea rows="6" readonly>${esc(emails.join(', '))}</textarea>`, {label:'Emails'}); }
+  },
+  removeStudent: async d => {
+    const c = classOf(d.cid); if (!c) return;
+    if (!(await askConfirm(`Remove ${nameOf(d.uid)} from ${c.name}? Their work is kept, and they can rejoin with the code unless you make a new one.`, 'Remove'))) return;
+    if (await upsert('members/' + d.uid, {classIds:{[d.cid]:false}})) toast('Student removed from ' + c.name);
+  },
   leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) upsert('members/' + S.me, {classIds:{[d.id]:false}}); }
 };
 
 const FORMS = {
+  authSignin: f => { S.authEmail = f.email.value.trim(); return authRun(() => S.platform.signIn(S.authEmail, f.password.value)); },
+  authSignup: f => {
+    const first = f.first.value.trim(), last = f.last.value.trim(), email = f.email.value.trim(); S.authEmail = email;
+    S.pendingProfile = {first, last, preferred:'', email, phone:'', native:'', goals:'', createdAt:Date.now(), lastSeen:Date.now()};
+    return authRun(() => S.platform.signUp(email, f.password.value, (first + ' ' + last).trim()));
+  },
+  authReset: f => { S.authEmail = f.email.value.trim(); return authRun(async () => { await S.platform.resetPassword(S.authEmail); S.authMode = 'signin'; toast('If that email has an account, a reset link is on its way.'); }); },
+  signup: async f => {
+    const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
+    const code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
+    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code);
+    if (!c) { toast("That join code doesn't match a class. Check it with your teacher.", true); return; }
+    const now = Date.now();
+    if (!(await upsert('profiles/' + S.me, Object.assign(r.p, {createdAt:now, lastSeen:now})))) return;
+    if (await upsert('members/' + S.me, {classIds:{[c.id]:now}})) { notify({type:'joined', cid:c.id}); S.classId = c.id; store.set('class', c.id); f.code.blur(); go('home'); }
+  },
+  profile: async f => {
+    const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
+    const old = profileOf(S.me); if (!old) { r.p.createdAt = Date.now(); r.p.lastSeen = Date.now(); }
+    if (await upsert('profiles/' + S.me, r.p)) { closeModal(); toast('Details saved'); render(true); }
+  },
   join: async f => {
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return;
     const c = rows('classes').find(x => (x.code || '').toUpperCase() === code);
     if (!c) { toast("That code doesn't match a class. Check it with your teacher.", true); return; }
-    if (await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}})) { S.classId = c.id; store.set('class', c.id); f.code.blur(); toast('Welcome to ' + c.name); }
+    if (await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}})) { notify({type:'joined', cid:c.id}); S.classId = c.id; store.set('class', c.id); f.code.blur(); if ($('#modalRoot').classList.contains('open')) closeModal(); go('home'); render(true); }
   },
   class: async f => {
     const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
@@ -1331,19 +1583,19 @@ const FORMS = {
       code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, createdAt: old ? old.createdAt : Date.now()};
     if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
   },
-  ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); if (await setDoc('announcements/' + rid(), {classId:c.id, text:t, at:Date.now(), by:S.me})) { closeModal(); toast('Posted'); } },
+  ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); const id = 'an-' + rid(); if (await setDoc('announcements/' + id, {classId:c.id, text:t, at:Date.now(), by:S.me})) { notify({type:'announcement', id}); closeModal(); toast('Posted'); } },
   lesson: async f => {
     const id = f.dataset.id || 'l-' + rid(); const old = f.dataset.id ? D.lessons[id] : null; const c = currentClass();
     const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), unit:f.unit.value.trim(), order:Number(f.order.value) || 0, body:f.body.value,
       links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
-    if (await setDoc('lessons/' + id, doc)) { closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
+    if (await setDoc('lessons/' + id, doc)) { if (!old && doc.published) notify({type:'lesson', id}); closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
   },
   assignment: async f => {
     const id = f.dataset.id || 'a-' + rid(); const old = f.dataset.id ? D.assignments[id] : null; const c = currentClass();
     const kind = f.kind.value; let questions = [];
     if (kind === 'quiz') { const r = parseQuiz(f.questions.value); if (r.errors.length) { const e = $('#aErr'); e.textContent = r.errors.join(' '); e.hidden = false; return; } questions = r.qs; }
     const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), kind, due:f.due.value, points:Math.max(1, Number(f.points.value) || 10), instructions:f.instructions.value, questions, createdAt: old ? old.createdAt : Date.now()};
-    if (await setDoc('assignments/' + id, doc)) { closeModal(); toast('Assignment saved'); }
+    if (await setDoc('assignments/' + id, doc)) { if (!old) notify({type:'assignment', id}); closeModal(); toast('Assignment saved'); }
   },
   deck: async f => {
     const id = f.dataset.id || 'd-' + rid(); const old = f.dataset.id ? D.decks[id] : null; const c = currentClass();
@@ -1365,43 +1617,33 @@ const FORMS = {
     const a = Object.assign({id:f.dataset.id}, D.assignments[f.dataset.id]); const answers = (a.questions || []).map((q, i) => { const r = f.querySelector(`input[name="q${i}"]:checked`); return r ? Number(r.value) : -1; });
     if (answers.includes(-1)) { toast('Answer every question before you submit.', true); return; }
     const sc = scoreQuiz(a, answers), now = Date.now();
-    if (await upsert('subs/' + S.me, {items:{[a.id]:{answers, right:sc.right, total:sc.total, grade:sc.grade, submittedAt:now, gradedAt:now, feedback:''}}})) { toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
+    if (await upsert('subs/' + S.me, {items:{[a.id]:{answers, right:sc.right, total:sc.total, submittedAt:now}}})) { notify({type:'submission', aid:a.id}); toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
   },
   written: async f => {
     const t = f.text.value.trim(); if (!t) { toast('Write your answer first.', true); return; }
-    if (await upsert('subs/' + S.me, {items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { closeModal(); toast('Handed in. Merci !'); }
+    if (await upsert('subs/' + S.me, {items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { notify({type:'submission', aid:f.dataset.id}); closeModal(); toast('Handed in. Merci !'); }
   },
   grade: async f => {
     const g = f.grade.value === '' ? null : Number(f.grade.value); if (g == null || isNaN(g)) { toast('Enter a grade first.', true); return; }
-    if (await upsert('subs/' + f.dataset.uid, {items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) toast('Grade saved for ' + nameOf(f.dataset.uid));
+    if (await upsert('grades/' + f.dataset.uid, {items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) { notify({type:'grade', uid:f.dataset.uid, aid:f.dataset.id}); toast('Grade saved for ' + nameOf(f.dataset.uid)); }
   },
   audio: async f => {
     const id = f.dataset.id, c = currentClass(), btn = $('#auSave');
     const meta = {title:f.title.value.trim(), lessonId:f.lesson.value || '', notes:f.notes.value, published:f.published.checked};
     if (id) { const old = D.audio[id]; if (await setDoc('audio/' + id, Object.assign({}, old, meta))) { closeModal(); toast('Saved'); } return; }
     const file = f.file.files[0]; if (!file) { toast('Choose an audio file.', true); return; }
-    if (!S.assets) { toast('Uploading needs editor access to this page.', true); return; }
+    if (!S.assets) { toast('Only teachers can upload recordings.', true); return; }
     const box = $('#auStatus'), txt = $('#auStatusText'), bar = $('#auBar');
     const status = (t, p) => { box.hidden = false; txt.textContent = t; if (p != null) bar.style.width = Math.round(p * 100) + '%'; };
     btn.disabled = true;
     try {
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      const direct = /mp4|m4a|aac/.test(file.type) || ['m4a', 'mp4', 'm4b'].includes(ext) ? 'video/mp4' : (/webm/.test(file.type) || ext === 'webm' ? 'video/webm' : null);
-      let blob = file, type = direct, duration = null, res = null;
-      if (direct && file.size <= MAX_BYTES) {
-        duration = await probeDuration(file); status('Uploading…', 0.3);
-        try { res = await S.assets.upload(file, {type}); } catch (e) { if (!e || e.code !== 'unsupported_type') throw e; }
-      }
-      if (!res) {
-        status('Converting… 0%', 0);
-        const out = await toWebm(file, p => status(`Converting… ${Math.round(p * 100)}%`, p * 0.8));
-        if (out.blob.size > MAX_BYTES) throw {code:'too_large'};
-        blob = out.blob; type = 'video/webm'; duration = out.duration; status('Uploading…', 0.85);
-        res = await S.assets.upload(blob, {type});
-      }
-      status('Saving…', 0.95);
-      const ok = await setDoc('audio/au-' + rid(), Object.assign(meta, {classId:c.id, assetId:res.id, type, size:res.sizeBytes || blob.size, duration, name:file.name, createdAt:Date.now()}));
-      if (ok) { closeModal(); toast('Recording uploaded'); if (meta.lessonId && S.view !== 'lessons') S.mediaTab = 'audio'; render(true); } else btn.disabled = false;
+      if (file.size > MAX_BYTES) throw {code:'too_large'};
+      const duration = await probeDuration(file); const aid = 'au-' + rid();
+      status('Uploading… 0%', 0);
+      const res = await S.assets.upload(file, {classId:c.id, id:aid, onProgress:p => status(`Uploading… ${Math.round(p * 100)}%`, p * 0.95)});
+      status('Saving…', 0.97);
+      const ok = await setDoc('audio/' + aid, Object.assign(meta, {classId:c.id, assetId:res.id, url:res.url, type:file.type || '', size:file.size, duration, name:file.name, createdAt:Date.now()}));
+      if (ok) { if (meta.published) notify({type:'audio', id:aid}); closeModal(); toast('Recording uploaded'); if (meta.lessonId && S.view !== 'lessons') S.mediaTab = 'audio'; render(true); } else btn.disabled = false;
     } catch (e) { status(audioErr(e)); bar.style.width = '0%'; btn.disabled = false; }
   },
   media: async f => {
@@ -1436,7 +1678,7 @@ const FORMS = {
     const part = {msgs:{[rid()]:{from:S.me, text:t.slice(0, 4000), at:now}}, lastAt:now};
     part[S.role === 'teacher' ? 'readT' : 'readS'] = now;
     f.text.value = '';
-    if (await upsert('threads/' + sid, part)) { render(true); const box = $('#msgText'); if (box) box.focus(); } else f.text.value = t;
+    if (await upsert('threads/' + sid, part)) { notify({type:'message', sid}); render(true); const box = $('#msgText'); if (box) box.focus(); } else f.text.value = t;
   }
 };
 
@@ -1453,6 +1695,8 @@ document.addEventListener('submit', e => { const f = e.target; e.preventDefault(
 document.addEventListener('change', e => {
   if (e.target.id === 'classSel') { S.classId = e.target.value; store.set('class', S.classId); S.lessonId = null; S.threadId = null; render(true); }
   if (e.target.id === 'nlLang') { const o = $('#nlOther'); if (o) o.hidden = e.target.value !== 'other'; }
+  if (e.target.dataset && e.target.dataset.notify) { const [ch, type] = e.target.dataset.notify.split(':'); upsert('profiles/' + S.me, {notify:{[ch]:{[type]:e.target.checked}}}); }
+  if (e.target.id === 'stuClass') { S.stuClass = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'mediaType') { S.mediaType = e.target.value; render(true); }
   if (e.target.id === 'mediaStatus') { S.mediaStatus = e.target.value; render(true); }
   if (e.target.dataset && e.target.dataset.mediaStatus) upsert('media/' + S.me, {items:{[e.target.dataset.mediaStatus]:{status:e.target.value}}});
@@ -1464,50 +1708,69 @@ document.addEventListener('change', e => {
 ['pause', 'ended'].forEach(ev => document.addEventListener(ev, () => { if (S.dirty) setTimeout(() => render(), 0); }, true));
 document.addEventListener('input', e => {
   if (e.target.id === 'wTerm' && $('#dictLinks')) { $('#dictLinks').innerHTML = dictLinks(currentWordLang(), e.target.value); const o = $('#lookupOut'); if (o) o.innerHTML = ''; }
+  if (e.target.id === 'stuSearch') { S.stuQ = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'wordSearch') { S.wordQ = e.target.value; $('#wordResults').innerHTML = wordResultsHTML(); }
 });
 document.addEventListener('focusout', () => setTimeout(() => { if (S.dirty && !$('#modalRoot').classList.contains('open')) render(); }, 0));
 function go(v){ if (location.hash !== '#' + v) location.hash = v; else route(); }
 function route(){
-  const v = location.hash.slice(1); S.view = VIEWS.some(x => x.id === v) ? v : 'home';
+  const v = location.hash.slice(1); S.view = navViews().some(x => x.id === v) ? v : 'home';
   if (S.view !== 'lessons') S.lessonId = null;
   if (S.view !== 'inbox') S.threadId = null;
   render(true); $('#main').scrollTop = 0; markRead();
 }
 window.addEventListener('hashchange', route);
 
+function applyDaylight(on){
+  document.documentElement.classList.toggle('daylight', on);
+  const b = $('#themeBtn'); if (b) { b.setAttribute('aria-pressed', String(on)); b.innerHTML = icon('sun'); }
+}
+applyDaylight(store.get('daylight') === '1');
+
 /* ---------- boot ---------- */
 async function boot(){
   S.view = VIEWS.some(x => x.id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
-  for (let i = 0; i < 15 && !(window.claude && window.claude.use); i++) await new Promise(r => setTimeout(r, 100));
-  const C = window.claude && typeof window.claude.use === 'function' ? window.claude : null;
-  let db = null, user = null, tts = null;
-  if (C) [db, user, tts, S.assets, S.sample] = await Promise.all(['db', 'user', 'tts', 'assets', 'sample'].map(n => Promise.resolve().then(() => C.use(n)).catch(() => null)));
-  if (C && db) {
-    S.db = db; S.user = user; S.tts = tts;
-    S.me = user ? await Promise.resolve(user.id()).catch(() => null) : null;
-    if (!S.me) { S.fatal = 'signin'; render(true); return; }
-    S.isOwner = user ? !!(await Promise.resolve(user.isOwner()).catch(() => false)) : false;
-    try { const cfg = await db.doc('config/teachers').get(); S.teacherIds = cfg.exists ? ((cfg.data() || {}).ids || []) : []; } catch (e) { S.teacherIds = []; }
-  } else if (C) { S.fatal = 'signin'; render(true); return; }
-  else {
-    S.demo = true; S.db = memoryDB(); S.me = 'demo-teacher'; S.isOwner = true;
+  S.tts = browserTTS();
+  const P = await window.parleiReady;          // null when config.js has no Firebase settings: run the demo
+  if (!P) {
+    S.demo = true; S.db = memoryDB(); S.me = 'demo-teacher'; S.isOwner = true; S.teacherCapable = true;
     for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
     for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
-    S.assets = { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id], sizeBytes:blob.size, contentType:blob.type}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
+    S.assets = { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
     S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
     await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
+    startApp(); return;
   }
-  S.teacherCapable = S.isOwner || S.teacherIds.includes(S.me);
+  if (P.error) { S.fatal = 'config'; render(true); return; }
+  S.platform = P; S.db = P.db;
+  if (P.lookup) { S.lookupApi = P.lookup; S.sample = {}; }
+  P.onUser(async u => {
+    if (!u) { if (S.me) { location.reload(); return; } S.authScreen = true; render(true); return; }
+    if (S.me) { if (S.me !== u.uid) location.reload(); return; }
+    S.authScreen = false; S.me = u.uid; S.email = u.email || ''; S.names[u.uid] = u.displayName || '';
+    S.isOwner = !!u.isOwner; S.teacherCapable = !!u.isTeacher; S.verifyNote = !!u.needsVerify;
+    S.assets = S.teacherCapable ? P.assets : null;
+    if (S.pendingProfile) { const pp = S.pendingProfile; S.pendingProfile = null; await upsert('profiles/' + S.me, pp); }
+    startApp();
+  });
+}
+function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
-  ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'members', 'bookings'].forEach(listenCol);
-  ['subs', 'prog', 'threads'].forEach(S.teacherCapable ? listenCol : listenOwn);
-  listenOwn('vocab'); listenOwn('media'); listenCol('audio'); listenCol('recs');
-  const t = setInterval(() => { if (ready()) { clearInterval(t); clearTimeout(slow); S.slow = false; } }, 300);
+  ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
+  ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(S.teacherCapable ? listenCol : listenOwn);
+  listenOwn('vocab'); listenOwn('media');
+  const t = setInterval(() => {
+    if (!ready() || !S.loaded.profiles) return;
+    clearInterval(t); clearTimeout(slow); S.slow = false;
+    const p = profileOf(S.me);   // record last visit at most once an hour, for the teacher's Students page
+    if (p && !S.demo && Date.now() - (p.lastSeen || 0) > 60 * MIN) upsert('profiles/' + S.me, {lastSeen:Date.now()});
+  }, 300);
   const slow = setTimeout(() => { if (!ready()) { S.slow = true; schedule(); } }, 10000);
   render(true);
 }
 boot();
 </script>
+<script src="/config.js"></script>
+<script type="module" src="/platform.js"></script>
 </body>
 </html>

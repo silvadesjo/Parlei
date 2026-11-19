@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Parlei database rules.
+// Before publishing, replace REPLACE_WITH_YOUR_EMAIL (lower case) with the teacher's email,
+// the same one as ownerEmail in public/config.js.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner() {
+      return signedIn() && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'replace_with_your_email'
+        && request.auth.token.email_verified == true;
+    }
+    function isTeacher() {
+      return isOwner() || (signedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid)));
+    }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Course content: every signed-in person can read it; only teachers change it.
+    match /classes/{id}       { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /lessons/{id}       { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /assignments/{id}   { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /decks/{id}         { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /events/{id}        { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /announcements/{id} { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /audio/{id}         { allow read: if signedIn(); allow write: if isTeacher(); }
+    match /recs/{id}          { allow read: if signedIn(); allow write: if isTeacher(); }
+
+    // Who teaches. Only the owner adds teachers.
+    match /teachers/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isOwner(); }
+
+    // Each student's own records: they and the teacher can read; the student writes.
+    match /members/{uid}      { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid) || isTeacher(); }
+    match /profiles/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
+    match /subs/{uid}         { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
+    match /prog/{uid}         { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
+    match /vocab/{uid}        { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
+    match /media/{uid}        { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
+    match /threads/{uid}      { allow read, write: if isSelf(uid) || isTeacher(); }
+
+    // Grades and feedback: only teachers write them; the student reads their own.
+    match /grades/{uid}       { allow read: if isSelf(uid) || isTeacher(); allow write: if isTeacher(); }
+
+    // Office-hour bookings: everyone sees which slots are taken; each person books for themselves.
+    match /bookings/{uid}     { allow read: if signedIn(); allow write: if isSelf(uid) || isTeacher(); }
+
+    // Devices that receive push notifications.
+    match /pushTokens/{uid}   { allow read, write: if isSelf(uid); }
+
+    // Server-only records (notification log, look-up counts).
+    match /notifLog/{id}      { allow read, write: if false; }
+    match /usage/{id}         { allow read, write: if false; }
+  }
+}
