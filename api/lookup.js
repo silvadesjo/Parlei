@@ -3,6 +3,7 @@
 import {admin, env, verifyUser, fail, timeZone} from './_lib/core.js';
 import {FieldValue} from 'firebase-admin/firestore';
 
+const ROMAN = {ar:'Franco-Arabic (Arabizi), using numbers such as 2, 3, 5, 7 and 9 for Arabic sounds, e.g. 7abibi', ja:'rōmaji', ko:'Revised Romanization', 'zh-CN':'pinyin with tone marks'};
 const LANGS = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$|^x-[a-z0-9-]{1,40}$/;
 
 export function buildPrompt({lang, langName, term, meaning}){
@@ -29,7 +30,9 @@ Reply with only this JSON object:
  "pos": "part of speech, e.g. noun, verb, adjective, expression",
  "note": "gender, register or regional usage worth knowing, at most 12 words, or empty",
  "example": "one short, natural example sentence in ${L}",
- "exampleEn": "the English translation of the example"}`;
+ "exampleEn": "the English translation of the example"${ROMAN[lang] ? `,
+ "roman": "the headword in Latin letters: ${ROMAN[lang]}"` : ''}}${ROMAN[lang] ? `
+The ${L} box may be written in ${L} script or in Latin letters; always give "term" in ${L} script.` : ''}`;
 }
 
 export function parseJson(text){
@@ -65,6 +68,6 @@ export default async function handler(req, res){
     const data = await r.json();
     const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
     const entry = parseJson(text);
-    res.status(200).json({found:entry.found !== false, term:String(entry.term || ''), meaning:String(entry.meaning || ''), pos:String(entry.pos || ''), note:String(entry.note || ''), example:String(entry.example || ''), exampleEn:String(entry.exampleEn || '')});
+    res.status(200).json({found:entry.found !== false, term:String(entry.term || ''), meaning:String(entry.meaning || ''), pos:String(entry.pos || ''), note:String(entry.note || ''), example:String(entry.example || ''), exampleEn:String(entry.exampleEn || ''), roman:String(entry.roman || '')});
   } catch (e) { fail(res, e); }
 }

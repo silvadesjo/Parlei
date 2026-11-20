@@ -9,10 +9,10 @@ A language learning portal for teachers and students: classes, lessons, assignme
 ## Features
 
 - **Accounts:** separate sign-ups for students and instructors (email and password, or Google). Students join a class with a six-character code; instructor accounts are approved by the owner. The teacher sees everyone enrolled on the **Students** page.
-- **Lessons:** plain-text lessons where lines like `bonjour = hello` become vocabulary rows with a listen button.
+- **Lessons:** plain-text lessons where lines like `bonjour = hello` become vocabulary rows with a listen button. For other scripts: `مرحبا | marhaba = hello`.
 - **Assignments:** written tasks graded with feedback, and quizzes that grade themselves.
 - **Flashcards:** spaced-repetition decks, with each student's progress visible to the teacher.
-- **Word Bank:** each student's own word bank, one tab per language, with look-up and dictionary links.
+- **Word Bank:** each student's own word bank, one tab per language, with look-up and dictionary links. Languages with their own script (Arabic, Japanese, Korean, Mandarin) take both forms, e.g. مرحبا and marhaba or Franco-Arabic like 7abibi, and search finds either.
 - **Media:** class audio recordings uploaded by the teacher, and each student's personal repertoire of songs, shows, podcasts and books, with teacher recommendations.
 - **Schedule:** class sessions and bookable 1:1 office-hour slots.
 - **Messages:** private conversations between a student and the teachers they choose (or a teacher and a student, optionally with co-teachers). Only the people listed can see them. Plus class announcements.

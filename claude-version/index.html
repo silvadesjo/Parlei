@@ -273,6 +273,12 @@ details.more[open] summary{margin-bottom:8px}
 .icon-btn .ic{width:17px;height:17px}
 .icon-btn[aria-pressed="true"]{color:var(--warn)}
 .icon-btn[aria-pressed="true"] .ic{fill:currentColor}
+.roman{display:block;font-size:13.5px;color:var(--muted);font-style:italic;font-weight:400}
+.roman.big{font-size:17px}
+.quick.three{grid-template-columns:1fr 1fr 1fr auto auto}
+@media (max-width:620px){.quick.three{grid-template-columns:1fr 1fr}}
+/* Right-to-left scripts (Arabic) set their own direction, paragraph by paragraph */
+.msg p,.answer,.lesson-body p,.lesson-body li,.ph .fr,.ph .en,.word .term,.word .mean,.word .ex,.flash .face,.flash .back,.ann p,textarea,input:not([type]),input[type=text],input[type=search]{unicode-bidi:plaintext;text-align:start}
 .lookup-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
 mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .au{display:flex;flex-direction:column;gap:10px}
@@ -330,7 +336,12 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const MIN = 6e4, DAY = 864e5;
 const BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];          // Leitner boxes: days until the next review
-const LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese', it:'Italian', de:'German', en:'English', ig:'Igbo', yo:'Yoruba'};
+const LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese', it:'Italian', de:'German', en:'English', ig:'Igbo', yo:'Yoruba', ar:'Arabic', ja:'Japanese', ko:'Korean', 'zh-CN':'Mandarin'};
+/* Languages written in their own script: words can be saved in the script and in Latin letters. */
+const ROMAN = {ar:'Franco-Arabic', ja:'Rōmaji', ko:'Romanization', 'zh-CN':'Pinyin'};
+const romanLabel = lang => ROMAN[lang] || ROMAN[String(lang || '').split('-')[0]] || '';
+/* Lessons and decks can write "script | latin letters = meaning". */
+const splitRoman = t => { const i = String(t).indexOf(' | '); return i < 0 ? {t:String(t).trim(), r:''} : {t:t.slice(0, i).trim(), r:t.slice(i + 3).trim()}; };
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const newCode = () => Array.from({length:6}, () => CODE_ALPHA[Math.floor(Math.random()*CODE_ALPHA.length)]).join('');
 const ICON = {
@@ -555,7 +566,7 @@ function renderBody(text, lang){
     if (!line.trim()) { flushP(); endL(); endPh(); continue; }
     if ((m = line.match(/^(#{1,3})\s+(.*)$/))) { flushP(); endL(); endPh(); const tag = m[1].length === 1 ? 'h3' : 'h4'; html += `<${tag}>${inline(m[2])}</${tag}>`; continue; }
     if ((m = line.match(/^\s*[-•]\s+(.*)$/))) { flushP(); endPh(); if (!list) { html += '<ul>'; list = true; } html += `<li>${inline(m[1])}</li>`; continue; }
-    if ((m = line.match(/^(.+?)\s+=\s+(.+)$/))) { flushP(); endL(); if (!ph) { html += '<div class="phrases">'; ph = true; } html += `<div class="ph"><span class="fr">${esc(m[1].trim())}</span><span class="en">${esc(m[2].trim())}</span>${sayBtn(m[1].trim(), lang) || '<span></span>'}</div>`; continue; }
+    if ((m = line.match(/^(.+?)\s+=\s+(.+)$/))) { flushP(); endL(); if (!ph) { html += '<div class="phrases">'; ph = true; } const w = splitRoman(m[1]); html += `<div class="ph"><span class="fr">${esc(w.t)}${w.r ? `<span class="roman">${esc(w.r)}</span>` : ''}</span><span class="en">${esc(m[2].trim())}</span>${sayBtn(w.t, lang) || '<span></span>'}</div>`; continue; }
     endL(); endPh(); para.push(inline(line));
   }
   flushP(); endL(); endPh();
@@ -578,9 +589,9 @@ function parseDeck(text, old){
   const known = new Map((old || []).map(c => [c.f, c.id])); const used = new Set();
   return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
     const i = l.indexOf('='); if (i < 0) return null;
-    const f = l.slice(0, i).trim(), b = l.slice(i + 1).trim(); if (!f || !b) return null;
+    const w = splitRoman(l.slice(0, i)), f = w.t, b = l.slice(i + 1).trim(); if (!f || !b) return null;
     let id = known.get(f); if (!id || used.has(id)) id = rid(); used.add(id);
-    return {id, f, b};
+    return w.r ? {id, f, r:w.r, b} : {id, f, b};
   }).filter(Boolean);
 }
 function scoreQuiz(a, answers){ const qs = a.questions || []; const right = qs.filter((q, i) => answers[i] === q.answer).length; return {right, total:qs.length, grade: qs.length ? Math.round(a.points * right / qs.length * 10) / 10 : 0}; }
@@ -747,6 +758,10 @@ const GREET = {
   de:{hi:h => h >= 18 || h < 4 ? 'Guten Abend' : h < 11 ? 'Guten Morgen' : 'Guten Tag', back:'Willkommen zurück'},
   en:{hi:h => h >= 18 || h < 4 ? 'Good evening' : h >= 12 ? 'Good afternoon' : 'Good morning', back:'Welcome back'},
   ig:{hi:() => 'Ndewo', back:'Nnọọ'},
+  ar:{hi:() => 'أهلاً', back:'أهلاً بعودتك', comma:'،'},
+  ja:{hi:h => h >= 18 || h < 4 ? 'こんばんは' : h < 11 ? 'おはようございます' : 'こんにちは', back:'おかえりなさい', comma:'、'},
+  ko:{hi:() => '안녕하세요', back:'다시 오신 것을 환영합니다'},
+  'zh-CN':{hi:h => h >= 18 || h < 4 ? '晚上好' : h < 11 ? '早上好' : '你好', back:'欢迎回来', comma:'，'},
   yo:{hi:h => h >= 19 || h < 4 ? 'Ẹ káalẹ́' : h >= 16 ? 'Ẹ kú ìrọ̀lẹ́' : h >= 12 ? 'Ẹ káàsán' : 'Ẹ káàárọ̀', back:'Ẹ kú àbọ̀'}
 };
 function greetingHTML(c){
@@ -756,7 +771,7 @@ function greetingHTML(c){
   const prof = profileOf(S.me); const raw = prof ? (prof.preferred || prof.first || '') : S.demo ? (S.me === 'demo-teacher' ? '' : DEMO.names[S.me] || '') : (S.names[S.me] || ''); nameOf(S.me);
   const first = raw.trim().split(/\s+/)[0] || '';
   const word = isNew ? g.hi(h) : g.back, sp = g.sp || '';
-  const line = `${g.open || ''}${word}${first ? ', ' + first : ''}${sp}!`;
+  const line = `${g.open || ''}${word}${first ? (g.comma || ',') + ' ' + first : ''}${sp}!`;
   const sub = isNew ? `Welcome to ${c.name}. Start with the newest lesson, then try the flashcards.` : `Welcome back to ${c.name}. Here's what's waiting for you.`;
   return `<section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(line)}</h1><p class="muted">${esc(sub)}</p></div></section>`;
 }
@@ -907,11 +922,11 @@ function markRead(){
 /* ---- vocabulary (each person's own word bank, one doc: vocab/<id>) ---- */
 const WORD_LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese (Brazil)', 'pt-PT':'Portuguese (Portugal)', it:'Italian', de:'German', en:'English', ht:'Haitian Creole', ja:'Japanese', ko:'Korean', 'zh-CN':'Mandarin', ar:'Arabic', sw:'Swahili', ig:'Igbo', yo:'Yoruba', tl:'Tagalog'};
 const WR_DICT = {fr:'fren', es:'esen', 'pt-BR':'pten', 'pt-PT':'pten', it:'iten', de:'deen'};
-const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').toLowerCase().trim();
 const vocabDoc = () => (D.vocab || {})[S.me] || {};
 const langName = code => WORD_LANGS[code] || (((vocabDoc().langs || {})[code] || {}).name) || code;
 const ttsLang = code => /^x-/.test(code) ? 'auto' : code;
-function myWords(lang){ return Object.entries(vocabDoc().words || {}).filter(([, w]) => w && w.term).map(([id, w]) => Object.assign({id}, w)).filter(w => !lang || w.lang === lang); }
+function myWords(lang){ return Object.entries(vocabDoc().words || {}).filter(([, w]) => w && (w.term || w.roman)).map(([id, w]) => Object.assign({id}, w)).filter(w => !lang || w.lang === lang); }
 function myLangs(){
   const ls = Object.entries(vocabDoc().langs || {}).filter(([, x]) => x).sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([k]) => k);
   myWords().forEach(w => { if (!ls.includes(w.lang)) ls.push(w.lang); });
@@ -919,9 +934,9 @@ function myLangs(){
 }
 function courseVocab(lang){
   const out = [], seen = new Set(), base = l => String(l || '').split('-')[0];
-  const push = (term, meaning, src) => { const k = norm(term); if (!k || seen.has(k)) return; seen.add(k); out.push({term, meaning, src}); };
+  const push = (term, meaning, src, roman) => { const w = roman == null ? splitRoman(term) : {t:term, r:roman}; const k = norm(w.t); if (!k || seen.has(k)) return; seen.add(k); out.push({term:w.t, roman:w.r || '', meaning, src}); };
   myClasses().filter(c => base(c.language) === base(lang)).forEach(c => {
-    inClass('decks', c.id).forEach(d => (d.cards || []).forEach(cd => push(cd.f, cd.b, d.title)));
+    inClass('decks', c.id).forEach(d => (d.cards || []).forEach(cd => push(cd.f, cd.b, d.title, cd.r || '')));
     visibleLessons(c.id).forEach(l => String(l.body || '').split('\n').forEach(line => { if (/^\s*[-•#]/.test(line)) return; const m = line.match(/^(.+?)\s+=\s+(.+)$/); if (m) push(m[1].trim(), m[2].trim(), l.title); }));
   });
   return out;
@@ -937,20 +952,20 @@ function currentWordLang(){
   const saved = store.get('wordLang'); return ls.includes(saved) ? saved : ls[0];
 }
 function wordRow(w, q, lang){
-  return `<div class="word"><div class="grow"><span class="term">${hl(w.term, q)} ${sayBtn(w.term, ttsLang(lang))}</span><span class="mean">${hl(w.meaning, q)}</span>${w.example ? `<span class="ex">${esc(w.example)}</span>` : ''}${w.note ? `<span class="src">${esc(w.note)}</span>` : ''}</div>
+  return `<div class="word"><div class="grow"><span class="term">${hl(w.term || w.roman, q)} ${w.term ? sayBtn(w.term, ttsLang(lang)) : ''}</span>${w.term && w.roman ? `<span class="roman">${hl(w.roman, q)}</span>` : ''}<span class="mean">${hl(w.meaning, q)}</span>${w.example ? `<span class="ex">${esc(w.example)}</span>` : ''}${w.note ? `<span class="src">${esc(w.note)}</span>` : ''}</div>
     <div class="tools"><button class="icon-btn" data-act="starWord" data-id="${esc(w.id)}" aria-pressed="${!!w.star}" aria-label="${w.star ? 'Unstar' : 'Star'} ${esc(w.term)}">${icon('star')}</button><button class="btn sm" data-act="editWord" data-id="${esc(w.id)}">Edit</button></div></div>`;
 }
 function wordResultsHTML(){
   const lang = currentWordLang(); if (!lang) return '';
   const q = norm(S.wordQ), mine = myWords(lang);
-  const match = w => !q || norm(w.term).includes(q) || norm(w.meaning).includes(q) || norm(w.example).includes(q);
+  const match = w => !q || norm(w.term).includes(q) || norm(w.roman).includes(q) || norm(w.meaning).includes(q) || norm(w.example).includes(q);
   let list = mine.filter(match);
   if (S.wordSort === 'az') list.sort((a, b) => norm(a.term).localeCompare(norm(b.term)));
   else if (S.wordSort === 'star') list = list.filter(w => w.star).sort((a, b) => (b.at || 0) - (a.at || 0));
   else list.sort((a, b) => (b.at || 0) - (a.at || 0));
-  const have = new Set(mine.map(w => norm(w.term)));
-  const course = courseVocab(lang).filter(x => !have.has(norm(x.term)) && (!q || norm(x.term).includes(q) || norm(x.meaning).includes(q)));
-  const courseRow = x => `<div class="word"><div class="grow"><span class="term">${hl(x.term, q)} ${sayBtn(x.term, ttsLang(lang))}</span><span class="mean">${hl(x.meaning, q)}</span><span class="src">From ${esc(x.src)}</span></div><div class="tools"><button class="btn sm" data-act="addCourseWord" data-term="${esc(x.term)}" data-meaning="${esc(x.meaning)}">${icon('plus')} Add</button></div></div>`;
+  const have = new Set(mine.map(w => norm(w.term || w.roman)));
+  const course = courseVocab(lang).filter(x => !have.has(norm(x.term)) && (!q || norm(x.term).includes(q) || norm(x.roman).includes(q) || norm(x.meaning).includes(q)));
+  const courseRow = x => `<div class="word"><div class="grow"><span class="term">${hl(x.term, q)} ${sayBtn(x.term, ttsLang(lang))}</span>${x.roman ? `<span class="roman">${hl(x.roman, q)}</span>` : ''}<span class="mean">${hl(x.meaning, q)}</span><span class="src">From ${esc(x.src)}</span></div><div class="tools"><button class="btn sm" data-act="addCourseWord" data-term="${esc(x.term)}" data-roman="${esc(x.roman || '')}" data-meaning="${esc(x.meaning)}">${icon('plus')} Add</button></div></div>`;
   let h = `<section class="card"><div class="card-head"><h3>${q ? 'In your words' : 'Your words'}</h3><span class="hint">${list.length} ${list.length === 1 ? 'word' : 'words'}</span></div>`;
   h += list.length ? `<div class="list">${list.map(w => wordRow(w, q, lang)).join('')}</div>` : `<p class="empty">${q ? 'Not in your list yet.' : S.wordSort === 'star' ? 'Star words you want to focus on.' : 'Add your first word above.'}</p>`;
   h += '</section>';
@@ -970,15 +985,17 @@ function viewWords(){
     return headHtml + `<section class="card narrow"><h2>Start your word bank</h2><p class="muted">Collect the words you meet in class, in books and out in the world. Each language you study gets its own tab.</p>
       <form class="stack" data-form="addLang"><label for="nlLang">First language</label>${langSelect('nlLang', sug, [])}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><button class="btn primary">Create tab</button></form></section>`;
   }
-  const mine = myWords(lang), ph = {fr:'le mot', es:'la palabra', 'pt-BR':'a palavra', 'pt-PT':'a palavra', it:'la parola', de:'das Wort'}[lang] || 'word';
+  const mine = myWords(lang), ph = {fr:'le mot', es:'la palabra', 'pt-BR':'a palavra', 'pt-PT':'a palavra', it:'la parola', de:'das Wort', ar:'مرحبا', ja:'こんにちは', ko:'안녕하세요', 'zh-CN':'你好'}[lang] || 'word';
   return headHtml + `
   <div class="tabs" role="tablist" aria-label="Languages">${langs.map(l => `<button class="tab" role="tab" aria-selected="${l === lang}" data-act="wordLang" data-lang="${esc(l)}">${esc(langName(l))} <span class="n">${myWords(l).length}</span></button>`).join('')}<button class="tab add" data-act="addLang">${icon('plus')} Language</button></div>
   <section class="card"><form class="stack" data-form="word" style="gap:10px">
-    <div class="quick"><div><label for="wTerm">${esc(langName(lang))}</label><input id="wTerm" name="term" required maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(ph)}"></div>
+    <div class="quick ${romanLabel(lang) ? 'three' : ''}"><div><label for="wTerm">${esc(langName(lang))}${romanLabel(lang) ? ' script' : ''}</label><input id="wTerm" name="term" ${romanLabel(lang) ? '' : 'required'} maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(ph)}"></div>
+    ${romanLabel(lang) ? `<div><label for="wRoman">${esc(romanLabel(lang))}</label><input id="wRoman" name="roman" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${lang === 'ar' ? 'e.g. marhaba, 7abibi' : 'Latin letters'}"></div>` : ''}
     <div><label for="wMean">Meaning</label><input id="wMean" name="meaning" required maxlength="200" autocomplete="off" placeholder="the word"></div>
     ${S.sample ? `<button type="button" class="btn" id="lookupBtn" data-act="lookupWord">${icon('search')} Look up</button>` : ''}<button class="btn primary">${icon('plus')} Add word</button></div>
     <div id="lookupOut"></div>
     <details class="more" id="wMore"><summary>Add an example or note</summary><div class="stack"><label for="wEx">Example sentence</label><textarea id="wEx" name="example" rows="2" maxlength="300" placeholder="J'apprends un nouveau mot chaque jour."></textarea><label for="wNote">Note</label><textarea id="wNote" name="note" rows="2" maxlength="200" placeholder="masculine · heard in class on Monday"></textarea></div></details>
+    ${romanLabel(lang) ? `<p class="hint">Fill in the script, the ${esc(romanLabel(lang))} spelling, or both. Search finds the word either way.</p>` : ''}
     <p class="lookup-note">${S.sample ? 'Type a word in either box and tap <b>Look up</b> to fill in the meaning, an example and notes. Check them in a dictionary:' : 'Check meanings in a dictionary:'} <span id="dictLinks">${dictLinks(lang, '')}</span></p>
   </form></section>
   <div class="toolbar"><div class="searchbox">${icon('search')}<label class="sr" for="wordSearch">Look up a word</label><input id="wordSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Look up a word in ${esc(langName(lang))} or English" value="${esc(S.wordQ)}"></div>
@@ -997,7 +1014,8 @@ function dictLinks(lang, q){
 }
 async function lookupWord(){
   const lang = currentWordLang(), f = document.querySelector('form[data-form="word"]'); if (!f || !S.sample) return;
-  const term = f.term.value.trim(), meaning = f.meaning.value.trim();
+  const roman0 = f.roman ? f.roman.value.trim() : '';
+  const term = f.term.value.trim() || roman0, meaning = f.meaning.value.trim();
   if (!term && !meaning) { toast('Type a word first, in either box.', true); f.term.focus(); return; }
   const btn = $('#lookupBtn'), out = $('#lookupOut'), L = langName(lang);
   btn.disabled = true; btn.lastChild.textContent = ' Looking up…';
@@ -1023,16 +1041,19 @@ Reply with only this JSON object:
  "pos": "part of speech, e.g. noun, verb, adjective, expression",
  "note": "gender, register or regional usage worth knowing, at most 12 words, or empty",
  "example": "one short, natural example sentence in ${L}",
- "exampleEn": "the English translation of the example"}`;
+ "exampleEn": "the English translation of the example"${romanLabel(lang) ? `,
+ "roman": "the headword in Latin letters (${lang === 'ar' ? 'Franco-Arabic / Arabizi, using numbers such as 2, 3, 5, 7 and 9 for Arabic sounds, e.g. 7abibi' : romanLabel(lang)})"` : ''}}${romanLabel(lang) ? `
+The ${L} box may be written in ${L} script or in Latin letters${lang === 'ar' ? ' (Franco-Arabic)' : ''}; always give "term" in ${L} script.` : ''}`;
   try {
     const r = await S.sample.json(prompt, {modelTier:'quick', cache:{gcTime:86400000}});
     if (!r || r.found === false || !r.term) { out.innerHTML = `<p class="found">No entry found for "${esc(term || meaning)}". Check the spelling, or try a dictionary below.</p>`; return; }
     f.term.value = String(r.term).slice(0, 120); f.meaning.value = String(r.meaning || '').slice(0, 200);
+    if (f.roman && r.roman) f.roman.value = String(r.roman).slice(0, 120);
     const tr = r.exampleEn && norm(r.exampleEn) !== norm(r.example) && !isEn ? '(' + r.exampleEn + ')' : '';
     const ex = [r.example, tr].filter(Boolean).join(' ');
     f.example.value = ex.slice(0, 300); f.note.value = [r.pos, r.note].filter(Boolean).join(' · ').slice(0, 200);
     $('#wMore').open = true;
-    out.innerHTML = `<p class="found"><b>${esc(r.term)}</b>${r.pos ? ' <span class="muted">' + esc(r.pos) + '</span>' : ''}<span>${esc(r.meaning || '')}</span><span class="muted">Filled in below. Edit anything, then tap Add word.</span></p>`;
+    out.innerHTML = `<p class="found"><b>${esc(r.term)}</b>${r.roman ? ` <span class="roman">${esc(r.roman)}</span>` : ''}${r.pos ? ' <span class="muted">' + esc(r.pos) + '</span>' : ''}<span>${esc(r.meaning || '')}</span><span class="muted">Filled in below. Edit anything, then tap Add word.</span></p>`;
     $('#dictLinks').innerHTML = dictLinks(lang, r.term);
   } catch (e) {
     const c = e && e.code;
@@ -1043,7 +1064,8 @@ Reply with only this JSON object:
 function wordForm(id){
   const w = Object.assign({id}, vocabDoc().words[id]);
   modal(`${head('Edit word')}<form class="stack" data-form="editWord" data-id="${esc(id)}">
-    <div class="grid2"><div><label for="ewTerm">Word</label><input id="ewTerm" name="term" required maxlength="120" value="${esc(w.term)}"></div><div><label for="ewMean">Meaning</label><input id="ewMean" name="meaning" required maxlength="200" value="${esc(w.meaning)}"></div></div>
+    <div class="grid2"><div><label for="ewTerm">Word</label><input id="ewTerm" name="term" maxlength="120" value="${esc(w.term)}"></div><div><label for="ewMean">Meaning</label><input id="ewMean" name="meaning" required maxlength="200" value="${esc(w.meaning)}"></div></div>
+    ${romanLabel(w.lang) || w.roman ? `<label for="ewRoman">${esc(romanLabel(w.lang) || 'Latin letters')}</label><input id="ewRoman" name="roman" maxlength="120" value="${esc(w.roman || '')}">` : ''}
     <label for="ewEx">Example sentence</label><input id="ewEx" name="example" maxlength="300" value="${esc(w.example || '')}">
     <label for="ewNote">Note</label><input id="ewNote" name="note" maxlength="200" value="${esc(w.note || '')}">
     <label for="ewLang">Language tab</label><select id="ewLang" name="lang">${myLangs().map(l => `<option value="${esc(l)}" ${l === w.lang ? 'selected' : ''}>${esc(langName(l))}</option>`).join('')}</select>
@@ -1249,7 +1271,7 @@ function lessonForm(id){
     <div class="grid2"><div><label for="lUnit">Unit</label><input id="lUnit" name="unit" list="unitList" maxlength="60" value="${esc(l ? l.unit : (units[units.length - 1] || ''))}" placeholder="Unit 1 · Se présenter"><datalist id="unitList">${units.map(u => `<option value="${esc(u)}">`).join('')}</datalist></div>
     <div><label for="lOrder">Order in unit</label><input id="lOrder" name="order" type="number" min="0" value="${esc(l ? l.order : inClass('lessons', c.id).length + 1)}"></div></div>
     <label for="lBody">Lesson</label>
-    <p class="hint">Lines like <code>bonjour = hello</code> become a vocabulary list with a listen button. Start a line with <code>#</code> for a heading or <code>-</code> for a bullet. Use <code>**bold**</code> and <code>*italics*</code>.</p>
+    <p class="hint">Lines like <code>bonjour = hello</code> become a vocabulary list with a listen button. For languages with their own script, add the Latin-letter form after a bar: <code>شكرا | shukran = thank you</code>. Start a line with <code>#</code> for a heading or <code>-</code> for a bullet. Use <code>**bold**</code> and <code>*italics*</code>.</p>
     <textarea id="lBody" name="body" rows="12">${esc(l ? l.body : '')}</textarea>
     <label for="lLinks">Links to materials, one per line</label><textarea id="lLinks" name="links" rows="3" placeholder="https://…">${esc(l ? (l.links || []).join('\n') : '')}</textarea>
     <label class="check"><input type="checkbox" id="lPub" name="published" ${!l || l.published !== false ? 'checked' : ''}> Students can see this lesson</label>
@@ -1274,8 +1296,8 @@ function deckForm(id){
   const d = id ? Object.assign({id}, D.decks[id]) : null;
   modal(`${head(d ? 'Edit deck' : 'New deck')}<form class="stack" data-form="deck" data-id="${esc(id || '')}">
     <label for="dTitle">Deck name</label><input id="dTitle" name="title" required maxlength="80" value="${esc(d ? d.title : '')}" placeholder="Food & drink">
-    <label for="dCards">Cards, one per line</label><p class="hint">Write the word, an equals sign, then its meaning: <code>le pain = bread</code>. Students keep their progress when you edit a card's meaning.</p>
-    <textarea id="dCards" name="cards" rows="14">${esc(d ? (d.cards || []).map(x => x.f + ' = ' + x.b).join('\n') : '')}</textarea>
+    <label for="dCards">Cards, one per line</label><p class="hint">Write the word, an equals sign, then its meaning: <code>le pain = bread</code>. For languages with their own script, add the Latin-letter form after a bar: <code>مرحبا | marhaba = hello</code>. Students keep their progress when you edit a card's meaning.</p>
+    <textarea id="dCards" name="cards" rows="14">${esc(d ? (d.cards || []).map(x => x.f + (x.r ? ' | ' + x.r : '') + ' = ' + x.b).join('\n') : '')}</textarea>
     <div class="actions">${d ? `<button type="button" class="btn bad" data-act="delDeck" data-id="${esc(d.id)}" style="margin-right:auto">Delete deck</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save deck</button></div></form>`, {label:'Deck'});
 }
 function eventForm(id){
@@ -1373,8 +1395,8 @@ function drawPractice(){
   const front = fwd ? cd.f : cd.b, back = fwd ? cd.b : cd.f;
   el.innerHTML = `<div class="pr-top"><span>${esc(st.title)} · ${st.i + 1} of ${st.q.length}</span><button class="link" data-act="flipDir">${fwd ? 'Showing word first' : 'Showing meaning first'} · switch</button><button class="x" data-act="closeModal" aria-label="Close">×</button></div>
     <div class="flash ${st.flipped ? 'flipped' : ''}" ${st.flipped ? '' : 'data-act="reveal" role="button" tabindex="0" aria-label="Show answer"'}>
-      <div class="face">${esc(front)} ${fwd ? sayBtn(cd.f, st.lang) : ''}</div>
-      ${st.flipped ? `<div class="back">${esc(back)} ${fwd ? '' : sayBtn(cd.f, st.lang)}</div>` : '<div class="tap">Say it out loud, then tap to check</div>'}
+      <div class="face">${esc(front)} ${fwd ? sayBtn(cd.f, st.lang) : ''}</div>${fwd && cd.r ? `<div class="roman big">${esc(cd.r)}</div>` : ''}
+      ${st.flipped ? `<div class="back">${esc(back)}${!fwd && cd.r ? ` <span class="roman">${esc(cd.r)}</span>` : ''} ${fwd ? '' : sayBtn(cd.f, st.lang)}</div>` : '<div class="tap">Say it out loud, then tap to check</div>'}
     </div>
     <div class="pr-actions">${st.flipped ? '<button class="btn bad" data-act="answer" data-ok="0">Missed it</button><button class="btn ok" data-act="answer" data-ok="1">Knew it</button>' : '<button class="btn primary wide" data-act="reveal">Show answer</button>'}</div>`;
   const b = el.querySelector('.pr-actions .btn'); if (b) b.focus();
@@ -1439,8 +1461,8 @@ const ACT = {
   starWord: d => { const w = vocabDoc().words[d.id]; if (w) upsert('vocab/' + S.me, {words:{[d.id]:{star:!w.star}}}); },
   editWord: d => wordForm(d.id),
   delWord: async d => { if (await askConfirm('Delete this word?')) upsert('vocab/' + S.me, {words:{[d.id]:null}}); },
-  addCourseWord: async d => { const lang = currentWordLang(); if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:{lang, term:d.term, meaning:d.meaning, at:Date.now()}}})) toast(`Added "${d.term}"`); },
-  practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term, b:w.meaning})), ttsLang(lang)); },
+  addCourseWord: async d => { const lang = currentWordLang(); if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:{lang, term:d.term, roman:d.roman || '', meaning:d.meaning, at:Date.now()}}})) toast(`Added "${d.term}"`); },
+  practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term || w.roman, r:w.term ? (w.roman || '') : '', b:w.meaning})), ttsLang(lang)); },
   moreNav: () => {
     const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? myClasses().reduce((n, x) => n + dueCardsCount(x.id), 0) : 0;
     modal(`${head('More')}<nav class="navsheet">${navViews().filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
@@ -1598,14 +1620,17 @@ const FORMS = {
     if (await upsert('vocab/' + S.me, {langs:{[code]:{at:Date.now(), name:name || WORD_LANGS[code]}}})) { S.wordLang = code; store.set('wordLang', code); if ($('#modalRoot').classList.contains('open')) closeModal(); render(true); }
   },
   word: async f => {
-    const lang = currentWordLang(), term = f.term.value.trim(), meaning = f.meaning.value.trim(); if (!term || !meaning) return;
-    if (myWords(lang).some(w => norm(w.term) === norm(term))) { toast(`"${term}" is already in your list.`, true); return; }
-    const w = {lang, term, meaning, at:Date.now()}; if (f.example.value.trim()) w.example = f.example.value.trim(); if (f.note.value.trim()) w.note = f.note.value.trim();
-    if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:w}})) { S.wordQ = ''; render(true); const t = $('#wTerm'); if (t) t.focus(); toast(`Added "${term}"`); }
+    const lang = currentWordLang(), term = f.term.value.trim(), roman = f.roman ? f.roman.value.trim() : '', meaning = f.meaning.value.trim();
+    if (!(term || roman) || !meaning) { toast(romanLabel(lang) ? 'Add the word (in either form) and its meaning.' : 'Add the word and its meaning.', true); return; }
+    const key = norm(term || roman);
+    if (myWords(lang).some(w => norm(w.term || w.roman) === key || (roman && norm(w.roman) === norm(roman)))) { toast(`"${term || roman}" is already in your list.`, true); return; }
+    const w = {lang, term, meaning, at:Date.now()}; if (roman) w.roman = roman; if (f.example.value.trim()) w.example = f.example.value.trim(); if (f.note.value.trim()) w.note = f.note.value.trim();
+    if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:w}})) { S.wordQ = ''; render(true); const t = $('#wTerm'); if (t) t.focus(); toast(`Added "${term || roman}"`); }
   },
   editWord: async f => {
     const w = {term:f.term.value.trim(), meaning:f.meaning.value.trim(), example:f.example.value.trim(), note:f.note.value.trim(), lang:f.lang.value};
-    if (!w.term || !w.meaning) return;
+    if (f.roman) w.roman = f.roman.value.trim();
+    if (!(w.term || w.roman) || !w.meaning) return;
     if (await upsert('vocab/' + S.me, {words:{[f.dataset.id]:w}})) { closeModal(); toast('Saved'); }
   },
   msg: async f => {
