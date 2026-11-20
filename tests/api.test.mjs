@@ -10,16 +10,19 @@ const FieldValue = { delete: () => ({__del:true}), increment: n => ({__inc:n}) }
 function snap(p){ const d = store.get(p); return {exists:!!d, id:p.split('/').pop(), data:() => d}; }
 function docRef(p){ return {
   get: async () => snap(p),
+  delete: async () => { store.delete(p); },
   create: async d => { if (store.has(p)) { const e = new Error('already exists'); e.code = 6; throw e; } store.set(p, d); },
   set: async (d, o) => { store.set(p, o && o.merge ? {...(store.get(p) || {}), ...d} : d); },
-  update: async (...args) => { const cur = structuredClone(store.get(p) || {}); for (let i = 0; i < args.length; i += 2) { const fp = args[i].s; let o = cur; for (let j = 0; j < fp.length - 1; j++) o = o[fp[j]] = o[fp[j]] || {}; if (args[i + 1] && args[i + 1].__del) delete o[fp.at(-1)]; else o[fp.at(-1)] = args[i + 1]; } store.set(p, cur); }
+  update: async (...args) => { const cur = structuredClone(store.get(p) || {}); if (args.length === 1 && !(args[0] instanceof FieldPath)) { store.set(p, Object.assign(cur, args[0])); return; } for (let i = 0; i < args.length; i += 2) { const fp = args[i].s; let o = cur; for (let j = 0; j < fp.length - 1; j++) o = o[fp[j]] = o[fp[j]] || {}; if (args[i + 1] && args[i + 1].__del) delete o[fp.at(-1)]; else o[fp.at(-1)] = args[i + 1]; } store.set(p, cur); }
 };}
 function col(path, filters = []){ return {
   where: (f, op, v) => col(path, filters.concat([[f, op, v]])),
-  get: async () => { const docs = [...store.keys()].filter(k => k.slice(0, k.lastIndexOf('/')) === path).filter(k => filters.every(([f, op, v]) => { const val = f.split('.').reduce((o, x) => o && o[x], store.get(k)); return op === '>' ? typeof val === 'number' && val > v : op === '==' ? val === v : op === '>=' ? val >= v : op === '<' ? val < v : false; })).map(k => ({id:k.split('/').pop(), data:() => store.get(k)})); return {docs, forEach:f => docs.forEach(f)}; }
+  limit: () => col(path, filters),
+  get: async () => { const docs = [...store.keys()].filter(k => k.slice(0, k.lastIndexOf('/')) === path).filter(k => filters.every(([f, op, v]) => { const val = f.split('.').reduce((o, x) => o && o[x], store.get(k)); return op === '>' ? typeof val === 'number' && val > v : op === '==' ? val === v : op === '>=' ? val >= v : op === '<' ? val < v : false; })).map(k => ({id:k.split('/').pop(), data:() => store.get(k)})); return {docs, empty:!docs.length, forEach:f => docs.forEach(f)}; }
 };}
 const db = {doc:docRef, collection:p => col(p), runTransaction: async fn => fn({get:r => r.get(), set:(r, d, o) => r.set(d, o)})};
-const users = {'tok-owner':{uid:'owner', email:'owner@example.com', email_verified:true}, 'tok-amara':{uid:'amara', email:'amara@example.com', email_verified:true}, 'tok-luis':{uid:'luis', email:'luis@example.com', email_verified:true}};
+const users = {'tok-owner':{uid:'owner', email:'owner@example.com', email_verified:true}, 'tok-amara':{uid:'amara', email:'amara@example.com', email_verified:true}, 'tok-luis':{uid:'luis', email:'luis@example.com', email_verified:true},
+  'tok-tina':{uid:'tina', email:'tina@example.com', email_verified:true}, 'tok-carl':{uid:'carl', email:'carl@example.com', email_verified:true}};
 
 mock.module('firebase-admin/app', {namedExports:{initializeApp(){}, getApps:() => [1], cert:x => x}});
 mock.module('firebase-admin/auth', {namedExports:{getAuth:() => ({
@@ -35,10 +38,11 @@ Object.assign(process.env, {OWNER_EMAIL:'owner@example.com', RESEND_API_KEY:'re_
 const {default: notify} = await import('../api/notify.js');
 const {default: cron} = await import('../api/cron-daily.js');
 const {default: lookup} = await import('../api/lookup.js');
+const {default: access} = await import('../api/access.js');
 const call = async (h, token, body, method = 'POST', headers = {}) => { let status = 200, json; const res = {status(s){ status = s; return res; }, json(j){ json = j; return res; }}; await h({method, headers:Object.assign(token ? {authorization:'Bearer ' + token} : {}, headers), body}, res); return {status, json}; };
 
 const now = Date.now();
-store.set('classes/c1', {name:'Français A1', code:'ABC'});
+store.set('classes/c1', {name:'Français A1', code:'ABC', teacherId:'owner'});
 store.set('members/amara', {classIds:{c1:now}}); store.set('members/luis', {classIds:{c1:false}});
 store.set('profiles/amara', {first:'Amara', last:'Okafor', email:'amara@example.com', notify:{email:{message:false}}});
 store.set('pushTokens/amara', {tokens:{'tokA':{}, 'tokDead':{}}});
@@ -115,4 +119,53 @@ test('instructor requests go to the owner; only the owner can announce approval'
   sentEmails.length = 0;
   await call(notify, 'tok-owner', {type:'instructorApproved', uid:'luis'});
   assert.match(sentEmails[0].subject, /instructor account is ready/);
+});
+
+test('per-class access: co-teachers, removal, and who gets told', async () => {
+  // Tina and Carl are approved instructors; Tina owns class c2.
+  store.set('teachers/tina', {name:'Tina T', email:'tina@example.com'}); store.set('teachers/carl', {name:'Carl C', email:'carl@example.com'});
+  store.set('classes/c2', {name:'Português A2', teacherId:'tina'});
+  store.set('members/mei', {classIds:{c2:Date.now()}});
+  store.set('profiles/mei', {first:'Mei', last:'Chen', email:'mei@example.com'});
+  users['tok-mei'] = {uid:'mei', email:'mei@example.com', email_verified:true};
+
+  // Joining gives the class's teacher access, and tells only her.
+  sentEmails.length = 0;
+  await call(notify, 'tok-mei', {type:'joined', cid:'c2'});
+  assert.deepEqual(store.get('members/mei').teacherIds, ['tina']);
+  assert.deepEqual(sentEmails.map(e => e.to[0]), ['tina@example.com']);
+
+  // Carl can't act on Tina's class or her student.
+  store.set('announcements/an2', {classId:'c2', text:'Olá'});
+  assert.equal((await call(notify, 'tok-carl', {type:'announcement', id:'an2'})).status, 403);
+  assert.equal((await call(access, 'tok-carl', {action:'addCoTeacher', cid:'c2', email:'carl@example.com'})).status, 403);
+  assert.equal((await call(access, 'tok-carl', {action:'removeStudent', cid:'c2', uid:'mei'})).status, 403);
+  store.set('grades/mei', {items:{a9:{grade:1, gradedAt:2}}}); store.set('assignments/a9', {classId:'c2', title:'T', points:5});
+  assert.equal((await call(notify, 'tok-carl', {type:'grade', uid:'mei', aid:'a9'})).status, 403);
+
+  // Only approved instructors can be added; Tina adds Carl and he gets access and an email.
+  assert.equal((await call(access, 'tok-tina', {action:'addCoTeacher', cid:'c2', email:'amara@example.com'})).json.code, 'not_instructor');
+  sentEmails.length = 0;
+  const add = await call(access, 'tok-tina', {action:'addCoTeacher', cid:'c2', email:'Carl@Example.com'});
+  assert.equal(add.status, 200);
+  assert.ok(store.get('classes/c2').coTeachers.carl);
+  assert.deepEqual(store.get('members/mei').teacherIds, ['carl', 'tina']);
+  assert.match(sentEmails[0].subject, /co-teacher of Português A2/);
+  assert.equal((await call(notify, 'tok-carl', {type:'announcement', id:'an2'})).status, 200);
+
+  // A co-teacher can't add others, but can leave; removing access updates the student.
+  assert.equal((await call(access, 'tok-carl', {action:'addCoTeacher', cid:'c2', email:'owner@example.com'})).status, 403);
+  await call(access, 'tok-carl', {action:'removeCoTeacher', cid:'c2', uid:'carl'});
+  assert.equal(store.get('classes/c2').coTeachers.carl, undefined);
+  assert.deepEqual(store.get('members/mei').teacherIds, ['tina']);
+
+  // Removing a student ends access; deleting a class does too.
+  await call(access, 'tok-tina', {action:'removeStudent', cid:'c2', uid:'mei'});
+  assert.equal(store.get('members/mei').classIds.c2, false);
+  assert.deepEqual(store.get('members/mei').teacherIds, []);
+  store.set('members/mei', {classIds:{c2:Date.now()}, teacherIds:['tina']});
+  assert.equal((await call(access, 'tok-carl', {action:'deleteClass', cid:'c2'})).status, 403);
+  await call(access, 'tok-tina', {action:'deleteClass', cid:'c2'});
+  assert.equal(store.get('classes/c2'), undefined);
+  assert.deepEqual(store.get('members/mei').teacherIds, []);
 });

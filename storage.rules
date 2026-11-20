@@ -1,23 +1,28 @@
 rules_version = '2';
 
 // Parlei file storage rules (class audio recordings).
-// Replace replace_with_your_email (lower case) with the teacher's email, as in firestore.rules.
+// Replace replace_with_your_email (lower case) with the owner's email, as in firestore.rules.
 service firebase.storage {
   match /b/{bucket}/o {
     match /audio/{classId}/{file} {
       allow read: if request.auth != null;
-      allow delete: if isTeacher();
-      allow create, update: if isTeacher()
+      allow delete: if teachesClass(classId);
+      allow create, update: if teachesClass(classId)
         && request.resource.size < 50 * 1024 * 1024
         && request.resource.contentType.matches('audio/.*|video/mp4|video/webm|application/octet-stream');
     }
 
-    function isTeacher() {
-      return request.auth != null && (
-        (request.auth.token.email != null
-          && request.auth.token.email.lower() == 'replace_with_your_email'
-          && request.auth.token.email_verified == true)
-        || firestore.exists(/databases/(default)/documents/teachers/$(request.auth.uid)));
+    function isOwner() {
+      return request.auth != null && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'replace_with_your_email'
+        && request.auth.token.email_verified == true;
+    }
+    // Only the class's own instructor and its co-teachers (and the owner) upload to a class.
+    function teachesClass(classId) {
+      return isOwner() || (request.auth != null
+        && firestore.exists(/databases/(default)/documents/teachers/$(request.auth.uid))
+        && (firestore.get(/databases/(default)/documents/classes/$(classId)).data.teacherId == request.auth.uid
+          || firestore.get(/databases/(default)/documents/classes/$(classId)).data.get('coTeachers', {}).keys().hasAny([request.auth.uid])));
     }
   }
 }

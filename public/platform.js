@@ -182,6 +182,7 @@ async function init(){
       }
     },
     notify:evt => api('/api/notify', evt),
+    access:async body => { try { return await api('/api/access', body); } catch (e) { throw {code:e.code, message:e.message || "Couldn't make that change."}; } },
     push
   });
 }

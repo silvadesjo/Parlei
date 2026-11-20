@@ -97,15 +97,22 @@ Send students your site's address and the class **join code**. They tap **I'm a 
 
 Everyone can turn each one on or off, separately for email and push, under **Settings**. Reminders go out once a day at 7 a.m. Toronto time (12:00 UTC; change it in `vercel.json`).
 
-## Students and instructors
+## Students, instructors and co-teachers
 
 The first screen asks everyone whether they're a **student** or an **instructor**.
 
 - **Students** create an account, confirm their email and enter a class join code.
-- **Instructors** fill in a short request. You get an email, and the request appears under **Settings → Instructors**, where you **Approve** or **Decline** it. Approved instructors get an email and can create and run their own classes. Until then they see a "waiting for approval" page. You can remove an instructor there at any time; their classes stay.
-- Your own teacher email (`ownerEmail`) is always the main teacher and never needs approval.
+- **Instructors** fill in a short request. You get an email, and the request appears under **Settings → Instructors**, where you **Approve** or **Decline** it. Approved instructors get an email and can create their own classes. Until then they see a "waiting for approval" page. You can remove an instructor there at any time; their classes stay.
+- Your own email (`ownerEmail`) is the administrator: it never needs approval and can see every class.
 
-Approved instructors can also see student records across Parlei, so approve only people you trust.
+**Who sees what**
+
+- Each instructor sees only the classes they own or co-teach, and only the students enrolled in those classes.
+- **Co-teachers:** the instructor who owns a class opens **Edit class and co-teachers** and adds another *approved* instructor by email. That person is emailed and can then post, grade and message in that class only. The class owner (or you) can remove them, and co-teachers can leave on their own.
+- Access follows enrolment: when a student leaves or is removed, or a co-teacher is removed, that access ends right away.
+- Students' word banks and media lists stay private to them.
+
+These permissions are enforced by `firestore.rules` and `storage.rules` together with the server, so they hold even if someone tampers with the app.
 
 ## Making changes
 

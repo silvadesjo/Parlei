@@ -148,3 +148,56 @@ export function fmtWhen(iso){
   try { return new Date(iso).toLocaleString('en-CA', {timeZone:timeZone(), weekday:'long', month:'long', day:'numeric', hour:'numeric', minute:'2-digit'}); }
   catch (e) { return iso; }
 }
+
+/* ---------- class access ---------- */
+export const isOwnerUser = user => !!(user.email && user.email === ownerEmail() && user.emailVerified);
+
+/** The class's own instructor plus its co-teachers. */
+export async function teachersOfClass(cid){
+  const c = await docData('classes/' + cid);
+  if (!c) return [];
+  return [...new Set([c.teacherId, ...Object.keys(c.coTeachers || {})].filter(Boolean))];
+}
+
+/** Can this user teach (and see the students of) this class? */
+export async function teachesClass(user, cid){
+  if (isOwnerUser(user)) return true;
+  if (!(await isTeacher(user))) return false;
+  return (await teachersOfClass(cid)).includes(user.uid);
+}
+
+/** Can this user see this student's records? */
+export async function teachesStudent(user, uid){
+  if (isOwnerUser(user)) return true;
+  const m = await docData('members/' + uid);
+  return !!(m && (m.teacherIds || []).includes(user.uid));
+}
+
+/** The people to tell about something a student did: their teachers, or the owner if they have none yet. */
+export async function teachersOfStudent(uid){
+  const m = await docData('members/' + uid);
+  const ids = (m && m.teacherIds) || [];
+  if (ids.length) return ids;
+  try { return ownerEmail() ? [(await admin().auth.getUserByEmail(ownerEmail())).uid] : []; } catch (e) { return []; }
+}
+
+/**
+ * Recomputes members/{uid}.teacherIds from the classes each student is in.
+ * The database rules use that list to decide which instructors can see a student's records.
+ */
+export async function syncAccess(uids){
+  const {db} = admin(), cache = {};
+  for (const uid of [...new Set(uids)].filter(Boolean)) {
+    const ref = db.doc('members/' + uid), snap = await ref.get();
+    if (!snap.exists) continue;
+    const ids = new Set();
+    for (const [cid, v] of Object.entries(snap.data().classIds || {})) {
+      if (typeof v !== 'number') continue;
+      if (!cache[cid]) cache[cid] = await teachersOfClass(cid);
+      cache[cid].forEach(t => ids.add(t));
+    }
+    ids.delete(uid);
+    const next = [...ids].sort(), prev = [...(snap.data().teacherIds || [])].sort();
+    if (JSON.stringify(next) !== JSON.stringify(prev)) await ref.update({teacherIds:next});
+  }
+}

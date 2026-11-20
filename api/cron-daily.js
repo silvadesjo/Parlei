@@ -1,6 +1,6 @@
 // GET /api/cron-daily — run once a day by Vercel Cron (see vercel.json).
 // Sends reminders for assignments due tomorrow and for classes and booked 1:1s in the next 24 hours.
-import {admin, env, studentsOf, teacherUids, docData, firstTime, deliver, fail, appUrl, timeZone, fmtWhen} from './_lib/core.js';
+import {admin, env, studentsOf, teachersOfClass, docData, firstTime, deliver, fail, appUrl, timeZone, fmtWhen} from './_lib/core.js';
 
 const ymd = d => new Intl.DateTimeFormat('en-CA', {timeZone:timeZone(), year:'numeric', month:'2-digit', day:'2-digit'}).format(d);
 
@@ -26,11 +26,10 @@ export default async function handler(req, res){
     // Sessions in the next 24 hours.
     const from = new Date(now).toISOString(), to = new Date(now + 864e5).toISOString();
     const events = await db.collection('events').where('start', '>=', from).where('start', '<', to).get();
-    const teachers = await teacherUids();
     for (const doc of events.docs) {
       const e = doc.data();
       if (!(await firstTime(`session-${doc.id}`))) continue;
-      const when = fmtWhen(e.start), link = appUrl() + '/#calendar';
+      const when = fmtWhen(e.start), link = appUrl() + '/#calendar', teachers = await teachersOfClass(e.classId);
       const body = `${when} (${e.mins || 60} min).${e.link ? '\nJoin: ' + e.link : ''}`;
       if (e.kind === 'slot') {
         const booked = (await db.collection('bookings').get()).docs.filter(d => d.data().slots && d.data().slots[doc.id] === true).map(d => d.id);

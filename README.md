@@ -29,14 +29,16 @@ A language learning portal for teachers and students: classes, lessons, assignme
 | Data | Cloud Firestore, protected by `firestore.rules` |
 | Audio files | Cloud Storage for Firebase, protected by `storage.rules` |
 | Push notifications | Firebase Cloud Messaging and a service worker (`public/firebase-messaging-sw.js`) |
-| Server | Vercel serverless functions in `api/`: `notify` (email and push for each event), `cron-daily` (reminders), `lookup` (vocabulary look-up through the Anthropic API) |
+| Server | Vercel serverless functions in `api/`: `notify` (email and push for each event), `access` (class access and co-teachers), `cron-daily` (reminders), `lookup` (vocabulary look-up through the Anthropic API) |
 | Email | Resend |
 
 ### Privacy and permissions
 
-- Course content (classes, lessons, assignments, decks, schedule, recordings) is readable by signed-in users and editable only by teachers.
-- Each student's profile, submissions, flashcard progress, word bank, repertoire and messages are readable only by that student and the teacher.
-- Grades and feedback are written only by the teacher.
+- The owner (administrator) approves instructors and can see everything.
+- Each class has one owning instructor, plus co-teachers that only the class owner (or the administrator) can add. Instructors see only their own classes and those classes' students.
+- Course content is readable by signed-in users and editable only by the teachers of its class.
+- Each student's profile, submissions, flashcard progress and messages are readable only by that student and their teachers; grades are written only by their teachers. Word banks and media lists are private to the student.
+- Access lists (`members/{uid}.teacherIds`) and co-teacher changes are maintained only by the server (`/api/access`), so no one can grant themselves access.
 - Notifications are sent by the server only after it checks the event against the database, and each event is sent once.
 
 ### Data model

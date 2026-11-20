@@ -1,62 +1,142 @@
 rules_version = '2';
 
 // Parlei database rules.
-// Before publishing, replace REPLACE_WITH_YOUR_EMAIL (lower case) with the teacher's email,
+// Before publishing, replace replace_with_your_email (lower case) with the owner's email,
 // the same one as ownerEmail in public/config.js.
+//
+// Who can see what:
+// - The owner (the email below) is the administrator and can see everything.
+// - Instructors must be approved by the owner (teachers/{uid}).
+// - Each class has one owning instructor (classes/{cid}.teacherId) and optional co-teachers
+//   (classes/{cid}.coTeachers), which only the server adds or removes.
+// - A student's records are readable only by the student, the owner, and the teachers of the
+//   student's classes. That list (members/{uid}.teacherIds) is kept up to date by the server.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
     function isOwner() {
       return signedIn() && request.auth.token.email != null
         && request.auth.token.email.lower() == 'replace_with_your_email'
         && request.auth.token.email_verified == true;
     }
     function isTeacher() {
-      return isOwner() || (signedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid)));
+      return isOwner() || (signedIn() && exists(/databases/$(database)/documents/teachers/$(me())));
     }
-    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isSelf(uid) { return signedIn() && me() == uid; }
 
-    // Course content: every signed-in person can read it; only teachers change it.
-    match /classes/{id}       { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /lessons/{id}       { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /assignments/{id}   { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /decks/{id}         { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /events/{id}        { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /announcements/{id} { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /audio/{id}         { allow read: if signedIn(); allow write: if isTeacher(); }
-    match /recs/{id}          { allow read: if signedIn(); allow write: if isTeacher(); }
+    // Does the signed-in instructor own or co-teach this class?
+    function teachesClass(cid) {
+      return isOwner() || (isTeacher()
+        && exists(/databases/$(database)/documents/classes/$(cid))
+        && (get(/databases/$(database)/documents/classes/$(cid)).data.teacherId == me()
+          || get(/databases/$(database)/documents/classes/$(cid)).data.get('coTeachers', {}).keys().hasAny([me()])));
+    }
+    // Is the signed-in instructor one of this student's teachers?
+    function teachesStudent(uid) {
+      return isOwner() || (signedIn()
+        && exists(/databases/$(database)/documents/members/$(uid))
+        && get(/databases/$(database)/documents/members/$(uid)).data.get('teacherIds', []).hasAny([me()]));
+    }
 
-    // Who teaches. Only the owner adds teachers.
-    match /teachers/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isOwner(); }
+    // Classes: the owning instructor (or the owner) edits the details. Co-teachers and the
+    // owning instructor can't be changed here; the server does that, and also deletes classes.
+    match /classes/{cid} {
+      allow read: if signedIn();
+      allow create: if isTeacher() && request.resource.data.teacherId == me()
+        && !('coTeachers' in request.resource.data);
+      allow update: if (isOwner() || resource.data.teacherId == me())
+        && request.resource.data.teacherId == resource.data.teacherId
+        && request.resource.data.get('coTeachers', {}) == resource.data.get('coTeachers', {});
+      allow delete: if false;
+    }
 
-    // Instructor sign-ups: the applicant creates a pending request; only the owner approves or declines it.
+    // Course content: readable by signed-in users; written only by the teachers of its class,
+    // and it can't be moved to another class.
+    match /lessons/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /assignments/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /decks/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /events/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /announcements/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /audio/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+    match /recs/{id} {
+      allow read: if signedIn();
+      allow create: if teachesClass(request.resource.data.classId);
+      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+      allow delete: if teachesClass(resource.data.classId);
+    }
+
+    // Approved instructors. Only the owner approves (or removes) them.
+    match /teachers/{uid} { allow read: if isSelf(uid) || isOwner(); allow write: if isOwner(); }
+
+    // Instructor sign-ups: the applicant creates a pending request; only the owner decides.
     match /instructorRequests/{uid} {
       allow read: if isSelf(uid) || isOwner();
       allow create: if isSelf(uid) && request.resource.data.status == 'pending';
       allow update, delete: if isOwner();
     }
 
-    // Each student's own records: they and the teacher can read; the student writes.
-    match /members/{uid}      { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid) || isTeacher(); }
-    match /profiles/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
-    match /subs/{uid}         { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
-    match /prog/{uid}         { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
-    match /vocab/{uid}        { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
-    match /media/{uid}        { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
-    match /threads/{uid}      { allow read, write: if isSelf(uid) || isTeacher(); }
+    // Class membership. Students join and leave themselves; teacherIds is set only by the server.
+    // Teachers list their students with: where('teacherIds', 'array-contains', <their uid>).
+    match /members/{uid} {
+      allow read: if isSelf(uid) || isOwner() || (signedIn() && me() in resource.data.teacherIds);
+      allow create: if isSelf(uid) && !('teacherIds' in request.resource.data);
+      allow update: if isSelf(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['teacherIds']);
+      allow delete: if isOwner();
+    }
 
-    // Grades and feedback: only teachers write them; the student reads their own.
-    match /grades/{uid}       { allow read: if isSelf(uid) || isTeacher(); allow write: if isTeacher(); }
+    // Each student's own records: readable by the student and their teachers; written by the student.
+    match /profiles/{uid} { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
+    match /subs/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
+    match /prog/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
+    match /threads/{uid}  { allow read, write: if isSelf(uid) || teachesStudent(uid); }
+
+    // Grades and feedback: written only by the student's teachers.
+    match /grades/{uid}   { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if teachesStudent(uid); }
+
+    // Personal word bank and media repertoire: private to the student (and the owner).
+    match /vocab/{uid}    { allow read: if isSelf(uid) || isOwner(); allow write: if isSelf(uid); }
+    match /media/{uid}    { allow read: if isSelf(uid) || isOwner(); allow write: if isSelf(uid); }
 
     // Office-hour bookings: everyone sees which slots are taken; each person books for themselves.
-    match /bookings/{uid}     { allow read: if signedIn(); allow write: if isSelf(uid) || isTeacher(); }
+    match /bookings/{uid} { allow read: if signedIn(); allow write: if isSelf(uid) || isOwner(); }
 
     // Devices that receive push notifications.
-    match /pushTokens/{uid}   { allow read, write: if isSelf(uid); }
+    match /pushTokens/{uid} { allow read, write: if isSelf(uid); }
 
     // Server-only records (notification log, look-up counts).
-    match /notifLog/{id}      { allow read, write: if false; }
-    match /usage/{id}         { allow read, write: if false; }
+    match /notifLog/{id} { allow read, write: if false; }
+    match /usage/{id}    { allow read, write: if false; }
   }
 }

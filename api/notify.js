@@ -1,7 +1,7 @@
 // POST /api/notify — called by the app right after something happens (a grade is saved, a message is sent…).
 // The server checks the event against the database before sending anything, so a user can only
 // trigger the notifications their own real actions justify, and each event is sent once.
-import {admin, verifyUser, isTeacher, teacherUids, studentsOf, docData, nameOf, firstTime, deliver, fail, clip, appUrl, fmtWhen} from './_lib/core.js';
+import {admin, verifyUser, studentsOf, docData, nameOf, firstTime, deliver, fail, clip, appUrl, fmtWhen, teachesClass, teachesStudent, teachersOfClass, teachersOfStudent, syncAccess} from './_lib/core.js';
 
 const HOUR = 36e5;
 const bad = msg => Object.assign(new Error(msg), {status:400});
@@ -13,7 +13,6 @@ export default async function handler(req, res){
   try {
     const user = await verifyUser(req);
     const evt = req.body || {};
-    const teacher = await isTeacher(user);
     const link = page => appUrl() + '/#' + page;
     let sent = 0;
 
@@ -23,9 +22,9 @@ export default async function handler(req, res){
         break;
       }
       case 'announcement': case 'assignment': case 'lesson': case 'audio': {
-        if (!teacher) throw forbidden();
         const id = safeId(evt.id), col = {announcement:'announcements', assignment:'assignments', lesson:'lessons', audio:'audio'}[evt.type];
         const d = await docData(`${col}/${id}`); if (!d) throw bad('Not found');
+        if (!(await teachesClass(user, d.classId))) throw forbidden();
         if ((evt.type === 'lesson' || evt.type === 'audio') && d.published === false) break;
         if (!(await firstTime(`${evt.type}-${id}`))) break;
         const cls = (await docData('classes/' + d.classId)) || {};
@@ -40,8 +39,8 @@ export default async function handler(req, res){
         break;
       }
       case 'grade': {
-        if (!teacher) throw forbidden();
         const uid = safeId(evt.uid), aid = safeId(evt.aid);
+        if (!(await teachesStudent(user, uid))) throw forbidden();
         const g = await docData('grades/' + uid), item = g && g.items && g.items[aid];
         const a = await docData('assignments/' + aid);
         if (!item || !a) throw bad('Not found');
@@ -51,13 +50,13 @@ export default async function handler(req, res){
       }
       case 'message': {
         const sid = safeId(evt.sid);
-        if (sid !== user.uid && !teacher) throw forbidden();
+        if (sid !== user.uid && !(await teachesStudent(user, sid))) throw forbidden();
         const t = await docData('threads/' + sid);
         const msgs = Object.entries((t && t.msgs) || {}).map(([id, m]) => Object.assign({id}, m)).sort((x, y) => (y.at || 0) - (x.at || 0));
         const last = msgs[0];
         if (!last || last.from !== user.uid || Date.now() - last.at > HOUR) break;
         if (!(await firstTime(`msg-${sid}-${last.id}`))) break;
-        if (user.uid === sid) sent = await deliver(await teacherUids(), 'message', {title:`Message from ${await nameOf(sid)}`, body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
+        if (user.uid === sid) sent = await deliver(await teachersOfStudent(sid), 'message', {title:`Message from ${await nameOf(sid)}`, body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
         else sent = await deliver([sid], 'message', {title:'New message from your teacher', body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
         break;
       }
@@ -68,17 +67,18 @@ export default async function handler(req, res){
         if (!item || !a || Date.now() - item.submittedAt > HOUR) break;
         if (!(await firstTime(`sub-${user.uid}-${aid}-${item.submittedAt}`))) break;
         const score = a.kind === 'quiz' && item.total ? ` Quiz score: ${item.right} / ${item.total}.` : '';
-        sent = await deliver(await teacherUids(), 'submission', {title:`${await nameOf(user.uid)} handed in ${a.title}`, body:`${a.kind === 'quiz' ? 'Quiz completed.' : 'Ready for you to grade.'}${score}`, link:link('work'), linkLabel:a.kind === 'quiz' ? 'See results' : 'Grade it'});
+        sent = await deliver(await teachersOfClass(a.classId), 'submission', {title:`${await nameOf(user.uid)} handed in ${a.title}`, body:`${a.kind === 'quiz' ? 'Quiz completed.' : 'Ready for you to grade.'}${score}`, link:link('work'), linkLabel:a.kind === 'quiz' ? 'See results' : 'Grade it'});
         break;
       }
       case 'joined': {
         const cid = safeId(evt.cid);
         const m = await docData('members/' + user.uid), at = m && m.classIds && m.classIds[cid];
         if (typeof at !== 'number' || Date.now() - at > 24 * HOUR) break;
+        await syncAccess([user.uid]);   // give this class's teachers access to the new student's records
         if (!(await firstTime(`join-${user.uid}-${cid}-${at}`))) break;
         const cls = (await docData('classes/' + cid)) || {};
         const p = (await docData('profiles/' + user.uid)) || {};
-        sent = await deliver(await teacherUids(), 'joined', {title:`${await nameOf(user.uid)} joined ${cls.name || 'your class'}`, body:[p.email, p.native ? 'Speaks ' + p.native : '', p.goals ? 'Learning because: ' + p.goals : ''].filter(Boolean).join('\n') || 'A new student joined.', link:link('students'), linkLabel:'See your students'});
+        sent = await deliver(await teachersOfClass(cid), 'joined', {title:`${await nameOf(user.uid)} joined ${cls.name || 'your class'}`, body:[p.email, p.native ? 'Speaks ' + p.native : '', p.goals ? 'Learning because: ' + p.goals : ''].filter(Boolean).join('\n') || 'A new student joined.', link:link('students'), linkLabel:'See your students'});
         break;
       }
       case 'booking': {
@@ -86,7 +86,7 @@ export default async function handler(req, res){
         const b = await docData('bookings/' + user.uid), e = await docData('events/' + eid);
         if (!b || !b.slots || b.slots[eid] !== true || !e) break;
         if (!(await firstTime(`book-${user.uid}-${eid}`))) break;
-        sent = await deliver(await teacherUids(), 'booking', {title:`${await nameOf(user.uid)} booked ${e.title}`, body:`${fmtWhen(e.start)} (${e.mins || 60} min)`, link:link('calendar'), linkLabel:'Open the schedule'});
+        sent = await deliver(await teachersOfClass(e.classId), 'booking', {title:`${await nameOf(user.uid)} booked ${e.title}`, body:`${fmtWhen(e.start)} (${e.mins || 60} min)`, link:link('calendar'), linkLabel:'Open the schedule'});
         break;
       }
       case 'instructorRequest': {

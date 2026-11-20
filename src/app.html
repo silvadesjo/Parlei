@@ -412,7 +412,7 @@ function memoryDB(){
     collection(c){ return colRef(p + '/' + c); }
   });
   const colRef = (p, filters = []) => {
-    const run = () => { const out = []; for (const [k, d] of docs) { if (k.slice(0, k.lastIndexOf('/')) === p && filters.every(([f, , v]) => d[f] === v)) out.push(snap(k)); } out.sort((a, b) => a.id < b.id ? -1 : 1); return {docs:out, size:out.length, empty:!out.length, docChanges:() => [], metadata:meta}; };
+    const run = () => { const out = []; for (const [k, d] of docs) { if (k.slice(0, k.lastIndexOf('/')) === p && filters.every(([f, op, v]) => op === 'array-contains' ? Array.isArray(d[f]) && d[f].includes(v) : d[f] === v)) out.push(snap(k)); } out.sort((a, b) => a.id < b.id ? -1 : 1); return {docs:out, size:out.length, empty:!out.length, docChanges:() => [], metadata:meta}; };
     const q = { path:p,
       doc(id){ return docRef(p + '/' + (id || rid())); },
       async add(d){ const r = docRef(p + '/' + rid()); await r.set(d); return r; },
@@ -459,6 +459,24 @@ function listenCol(name){
     schedule();
   }, () => { markLoaded(name); schedule(); });
 }
+/* Instructors (other than the owner) only receive their own students: the database allows nothing else. */
+function listenMyStudents(){
+  D.members = {}; let fromQuery = {}, own = null;
+  const merge = () => { D.members = Object.assign({}, fromQuery); if (own) D.members[S.me] = own; markLoaded('members'); syncStudentListeners(); schedule(); };
+  S.db.collection('members').where('teacherIds', 'array-contains', S.me).onSnapshot(snap => { fromQuery = {}; snap.docs.forEach(d => { if (d.exists) fromQuery[d.id] = d.data(); }); merge(); }, () => merge());
+  S.db.doc('members/' + S.me).onSnapshot(sn => { own = sn.exists ? sn.data() : null; merge(); }, () => merge());
+}
+const studentSubs = {};
+function syncStudentListeners(){
+  const uids = new Set(Object.keys(D.members || {})); uids.add(S.me);
+  for (const name of ['subs', 'prog', 'threads', 'profiles', 'grades']) {
+    const subs = studentSubs[name] = studentSubs[name] || {}; D[name] = D[name] || {};
+    for (const uid of uids) if (!subs[uid]) subs[uid] = S.db.doc(name + '/' + uid).onSnapshot(sn => {
+      const next = Object.assign({}, D[name]); if (sn.exists) next[uid] = sn.data(); else delete next[uid]; D[name] = next; markLoaded(name); schedule();
+    }, () => { markLoaded(name); schedule(); });
+    for (const uid of Object.keys(subs)) if (!uids.has(uid)) { subs[uid](); delete subs[uid]; const next = Object.assign({}, D[name]); delete next[uid]; D[name] = next; }
+  }
+}
 function listenOwn(name){
   D[name] = {};
   S.db.doc(name + '/' + S.me).onSnapshot(s => {
@@ -496,7 +514,7 @@ const initials = uid => { const n = nameOf(uid).replace(/\s*\(you\)$/, ''); retu
 /* domain helpers */
 function myClasses(){
   const all = rows('classes').sort(byCreated);
-  if (S.role === 'teacher') return S.isOwner ? all : all.filter(c => c.teacherId === S.me);
+  if (S.role === 'teacher') return S.isOwner ? all : all.filter(c => c.teacherId === S.me || (c.coTeachers || {})[S.me]);
   const m = (D.members || {})[S.me]; const ids = m && m.classIds ? Object.keys(m.classIds).filter(k => m.classIds[k]) : [];
   return all.filter(c => ids.includes(c.id));
 }
@@ -506,6 +524,13 @@ function currentClass(){
 }
 const inClass = (col, cid) => rows(col).filter(x => x.classId === cid);
 const classOf = id => { const c = (D.classes || {})[id]; return c ? Object.assign({id}, c) : null; };
+const ownsClass = c => !!c && (S.isOwner || c.teacherId === S.me);           // can change class settings and co-teachers
+const coTeaches = c => !!c && !ownsClass(c) && !!(c.coTeachers || {})[S.me];
+async function access(body){                                                 // class access changes go through the server
+  if (S.demo || !S.platform || !S.platform.access) return {ok:true};
+  try { return await S.platform.access(body); }
+  catch (e) { toast((e && e.message) || "Couldn't make that change. Try again.", true); return null; }
+}
 function studentsOf(cid){ return Object.entries(D.members || {}).filter(([, m]) => m.classIds && m.classIds[cid]).map(([uid, m]) => ({uid, joined:m.classIds[cid]})).sort((a, b) => a.joined - b.joined); }
 function subOf(uid, aid){
   const s = (D.subs || {})[uid], g = (D.grades || {})[uid];
@@ -755,7 +780,7 @@ function viewHomeT(c){
       ${studs.length ? `<div class="list">${studs.map(({uid}) => rosterRow(uid, c, asg, decks)).join('')}</div>` : `<p class="empty">No students yet. Share the join code <b>${esc(c.code)}</b> and the link to this page.</p>`}
     </section>
   </div>
-  <div class="row-actions"><button class="btn" data-act="editClass" data-id="${esc(c.id)}">Edit class</button><button class="btn" data-act="editClass">${icon('plus')} New class</button></div>`;
+  <div class="row-actions">${ownsClass(c) ? `<button class="btn" data-act="editClass" data-id="${esc(c.id)}">Edit class and co-teachers</button>` : `<span class="pill acc" style="align-self:center">You co-teach this class</span><button class="btn" data-act="leaveCoTeach" data-id="${esc(c.id)}">Stop co-teaching</button>`}<button class="btn" data-act="editClass">${icon('plus')} New class</button></div>`;
 }
 function rosterRow(uid, c, asg, decks){
   const done = asg.filter(a => { const s = subOf(uid, a.id); return s && s.submittedAt; }).length;
@@ -1258,7 +1283,7 @@ function instructorAdminHTML(){
   return `<section class="card"><div class="card-head"><h3>Instructors</h3>${reqs.length ? `<span class="pill warn">${reqs.length} waiting</span>` : ''}</div>
     ${reqs.length ? `<p class="unit-label">Requests</p><div class="list">${reqs.map(r => `<div class="item"><span class="grow"><span class="t">${esc(r.name || 'New instructor')}</span><span class="s">${esc([r.email, r.teaches ? 'Teaches ' + r.teaches : '', r.org].filter(Boolean).join(' · '))}</span></span><button class="btn sm primary" data-act="approveInstructor" data-uid="${esc(r.id)}">Approve</button><button class="btn sm" data-act="declineInstructor" data-uid="${esc(r.id)}">Decline</button></div>`).join('')}</div>` : '<p class="hint">New instructor sign-ups appear here for you to approve.</p>'}
     ${teachers.length ? `<p class="unit-label">Approved</p><div class="list">${teachers.map(t => `<div class="item"><span class="grow"><span class="t">${esc(t.name || 'Instructor')}</span><span class="s">${esc(t.email || '')}</span></span><button class="link danger" data-act="removeInstructor" data-uid="${esc(t.id)}">Remove</button></div>`).join('')}</div>` : ''}
-    <p class="hint">Approved instructors create and run their own classes. They can also see student records across Parlei, so approve only people you trust.</p></section>`;
+    <p class="hint">Approved instructors create and run their own classes and see only the students in them. A class's instructor can add other approved instructors as co-teachers.</p></section>`;
 }
 function authErrText(e){
   const c = (e && e.code) || '';
@@ -1328,7 +1353,15 @@ function classForm(id){
     <div><label for="cLevel">Level</label><input id="cLevel" name="level" maxlength="20" value="${esc(c ? c.level : '')}" placeholder="A1"></div></div>
     <label for="cDesc">Description</label><textarea id="cDesc" name="description" rows="2" maxlength="300">${esc(c ? c.description : '')}</textarea>
     ${c ? `<p class="hint">Join code <b>${esc(c.code)}</b> · <button type="button" class="link" data-act="newCode" data-id="${esc(c.id)}">Make a new code</button> (the old one stops working)</p>` : ''}
+    ${c ? coTeacherSection(c) : ''}
     <div class="actions">${c ? `<button type="button" class="btn bad" data-act="delClass" data-id="${esc(c.id)}" style="margin-right:auto">Delete class</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">${c ? 'Save' : 'Create class'}</button></div></form>`, {label:'Class'});
+}
+function coTeacherSection(c){
+  const co = Object.entries(c.coTeachers || {});
+  return `<div class="card" style="padding:14px;gap:8px;background:var(--sunk)"><h3>Co-teachers</h3>
+    <p class="hint">Co-teachers can post lessons and work, grade, and message the students of this class only. Add an approved instructor by their email.</p>
+    ${co.length ? `<div class="list">${co.map(([uid, t]) => `<div class="item"><span class="grow"><span class="t">${esc(t.name || t.email)}</span><span class="s">${esc(t.email || '')}</span></span><button type="button" class="link danger" data-act="removeCoTeacher" data-cid="${esc(c.id)}" data-uid="${esc(uid)}">Remove</button></div>`).join('')}</div>` : ''}
+    <div class="composer"><label class="sr" for="coEmail">Co-teacher email</label><input id="coEmail" type="email" placeholder="instructor@example.com" autocomplete="off"><button type="button" class="btn" data-act="addCoTeacher" data-cid="${esc(c.id)}">Add</button></div></div>`;
 }
 function lessonForm(id){
   const l = id ? Object.assign({id}, D.lessons[id]) : null;
@@ -1479,7 +1512,7 @@ const ACT = {
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
-  delClass: async d => { const c = classOf(d.id); if (await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class')) { await delDoc('classes/' + d.id); toast('Class deleted'); } },
+  delClass: async d => { const c = classOf(d.id); if (!(await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class'))) return; const ok = S.demo ? await delDoc('classes/' + d.id) : await access({action:'deleteClass', cid:d.id}); if (ok) { closeModal(); toast('Class deleted'); } },
   newAnn: () => modal(`${head('Post an announcement', 'Everyone in the class sees this on their home page.')}<form class="stack" data-form="ann"><label for="anText">Message</label><textarea id="anText" name="text" rows="5" required maxlength="2000"></textarea><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Post</button></div></form>`, {label:'Announcement'}),
   delAnn: async d => { if (await askConfirm('Delete this announcement?')) delDoc('announcements/' + d.id); },
   student: d => studentDialog(d.uid),
@@ -1568,7 +1601,7 @@ const ACT = {
   becomeStudent: async () => { if (await upsert('profiles/' + S.me, {role:'student'})) render(true); },
   approveInstructor: async d => {
     const r = D.instructorRequests[d.uid]; if (!r) return;
-    if (!(await setDoc('teachers/' + d.uid, {name:r.name || '', email:r.email || '', approvedAt:Date.now()}))) return;
+    if (!(await setDoc('teachers/' + d.uid, {name:r.name || '', email:String(r.email || '').toLowerCase(), approvedAt:Date.now()}))) return;
     await setDoc('instructorRequests/' + d.uid, Object.assign({}, r, {status:'approved', decidedAt:Date.now()}));
     notify({type:'instructorApproved', uid:d.uid}); toast((r.name || 'Instructor') + ' approved');
   },
@@ -1591,9 +1624,25 @@ const ACT = {
   removeStudent: async d => {
     const c = classOf(d.cid); if (!c) return;
     if (!(await askConfirm(`Remove ${nameOf(d.uid)} from ${c.name}? Their work is kept, and they can rejoin with the code unless you make a new one.`, 'Remove'))) return;
-    if (await upsert('members/' + d.uid, {classIds:{[d.cid]:false}})) toast('Student removed from ' + c.name);
+    if (S.demo) { if (await upsert('members/' + d.uid, {classIds:{[d.cid]:false}})) toast('Student removed from ' + c.name); return; }
+    if (await access({action:'removeStudent', cid:d.cid, uid:d.uid})) toast('Student removed from ' + c.name);
   },
-  leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) upsert('members/' + S.me, {classIds:{[d.id]:false}}); }
+  leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) { if (await upsert('members/' + S.me, {classIds:{[d.id]:false}})) access({action:'sync'}); } },
+  addCoTeacher: async (d, el) => {
+    const box = $('#coEmail'), email = box ? box.value.trim() : ''; if (!email) { toast('Type the instructor\'s email.', true); return; }
+    if (S.demo) { toast('In the demo, co-teachers can\'t be added. On your own site, approved instructors can.'); return; }
+    el.disabled = true; const r = await access({action:'addCoTeacher', cid:d.cid, email}); el.disabled = false;
+    if (r) { toast(`${r.name || email} is now a co-teacher. They've been emailed.`); closeModal(); }
+  },
+  removeCoTeacher: async d => {
+    const c = classOf(d.cid), t = c && (c.coTeachers || {})[d.uid];
+    if (!(await askConfirm(`Remove ${(t && (t.name || t.email)) || 'this co-teacher'}? They lose access to this class and its students.`, 'Remove'))) return;
+    if (await access({action:'removeCoTeacher', cid:d.cid, uid:d.uid})) toast('Co-teacher removed');
+  },
+  leaveCoTeach: async d => {
+    const c = classOf(d.id); if (!c || !(await askConfirm(`Stop co-teaching ${c.name}? You'll lose access to it and its students.`, 'Stop co-teaching'))) return;
+    if (await access({action:'removeCoTeacher', cid:d.id, uid:S.me})) toast('You no longer co-teach ' + c.name);
+  }
 };
 
 const FORMS = {
@@ -1630,6 +1679,7 @@ const FORMS = {
     const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
     const doc = {name:f.name.value.trim(), language:f.language.value, level:f.level.value.trim(), description:f.description.value.trim(),
       code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, createdAt: old ? old.createdAt : Date.now()};
+    if (old && old.coTeachers) doc.coTeachers = old.coTeachers;   // co-teachers only change through the server
     if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
   },
   ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); const id = 'an-' + rid(); if (await setDoc('announcements/' + id, {classId:c.id, text:t, at:Date.now(), by:S.me})) { notify({type:'announcement', id}); closeModal(); toast('Posted'); } },
@@ -1822,7 +1872,9 @@ async function demoStart(role){
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
   ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
-  ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(S.teacherCapable ? listenCol : listenOwn);
+  if (S.isOwner) ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(listenCol);
+  else if (S.teacherCapable) listenMyStudents();
+  else ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(listenOwn);
   listenOwn('vocab'); listenOwn('media');
   if (S.isOwner) { listenCol('instructorRequests'); listenCol('teachers'); } else if (!S.teacherCapable) listenOwn('instructorRequests');
   const t = setInterval(() => {
