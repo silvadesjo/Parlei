@@ -651,8 +651,9 @@ function renderNav(){
   const c = !S.fatal && ready() ? currentClass() : null;
   const badge = {};
   if (c) {
-    badge.work = S.role === 'teacher' ? toGradeCount(c.id) : todoCount(c.id);
-    badge.practice = S.role === 'student' ? dueCardsCount(c.id) : 0;
+    const all = myClasses(), sum = f => all.reduce((n, x) => n + f(x.id), 0);   // counts cover every class, not just the one selected
+    badge.work = S.role === 'teacher' ? sum(toGradeCount) : sum(todoCount);
+    badge.practice = S.role === 'student' ? sum(dueCardsCount) : 0;
     badge.inbox = unreadCount(c.id);
   }
   const b = n => n ? `<span class="badge" aria-label="${n} pending">${n > 99 ? '99+' : n}</span>` : '';
@@ -712,6 +713,7 @@ function viewHomeT(c){
   return `
   <section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(c.name)}</h1>${c.description ? `<p class="muted">${esc(c.description)}</p>` : ''}</div>
     <div class="codebox"><span class="label">Join code</span><button class="code" data-act="copyCode" data-code="${esc(c.code)}" aria-label="Copy join code ${esc(c.code)}">${esc(c.code)}</button><span class="hint">Tap to copy for students</span></div></section>
+  ${otherClassesNote(c)}
   <div class="tiles">
     <div class="tile"><span class="k">Students</span><span class="v">${studs.length}</span></div>
     <a class="tile ${tg ? 'alert' : ''}" href="#work"><span class="k">To grade</span><span class="v">${tg}</span></a>
@@ -756,6 +758,17 @@ function greetingHTML(c){
   const sub = isNew ? `Welcome to ${c.name}. Start with the newest lesson, then try the flashcards.` : `Welcome back to ${c.name}. Here's what's waiting for you.`;
   return `<section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(line)}</h1><p class="muted">${esc(sub)}</p></div></section>`;
 }
+/* "Also waiting in your other classes" — so nothing hides behind the class switcher. */
+function otherClassesNote(c){
+  const others = myClasses().filter(x => x.id !== c.id).map(x => {
+    const parts = S.role === 'teacher'
+      ? [toGradeCount(x.id) && `${toGradeCount(x.id)} to grade`]
+      : [todoCount(x.id) && `${todoCount(x.id)} to do`, dueCardsCount(x.id) && `${dueCardsCount(x.id)} cards to review`];
+    return {x, text:parts.filter(Boolean).join(' · ')};
+  }).filter(o => o.text);
+  if (!others.length) return '';
+  return `<section class="card" style="gap:6px"><h3>In your other classes</h3><div class="list">${others.map(o => `<button class="item" data-act="switchClass" data-id="${esc(o.x.id)}"><span class="grow"><span class="t">${esc(o.x.name)}</span><span class="s">${esc(o.text)}</span></span><span class="pill acc">Open</span></button>`).join('')}</div></section>`;
+}
 function viewHomeS(c){
   const anns = inClass('announcements', c.id).sort((a, b) => b.at - a.at);
   const next = eventsOf(c.id).filter(e => e.kind === 'class' || bookerOf(e.id) === S.me)[0];
@@ -765,6 +778,7 @@ function viewHomeS(c){
   const lessons = visibleLessons(c.id);
   return `
   ${greetingHTML(c)}
+  ${otherClassesNote(c)}
   <div class="tiles">
     <a class="tile ${todo.length ? 'alert' : ''}" href="#work"><span class="k">Assignments to do</span><span class="v">${todo.length}</span></a>
     <a class="tile" href="#practice"><span class="k">Cards to review</span><span class="v">${due}</span></a>
@@ -1426,7 +1440,7 @@ const ACT = {
   addCourseWord: async d => { const lang = currentWordLang(); if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:{lang, term:d.term, meaning:d.meaning, at:Date.now()}}})) toast(`Added "${d.term}"`); },
   practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term, b:w.meaning})), ttsLang(lang)); },
   moreNav: () => {
-    const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? dueCardsCount(c.id) : 0;
+    const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? myClasses().reduce((n, x) => n + dueCardsCount(x.id), 0) : 0;
     modal(`${head('More')}<nav class="navsheet">${navViews().filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
   },
   navTo: d => { closeModal(); go(d.v); },
@@ -1447,6 +1461,7 @@ const ACT = {
   addRec: () => mediaForm(null, true),
   delRec: async d => { if (await askConfirm('Remove this recommendation?', 'Remove')) delDoc('recs/' + d.id); },
   addFromRec: async d => { const r = D.recs[d.id]; if (!r) return; const lang = currentWordLang(); if (await upsert('media/' + S.me, {items:{['m' + rid()]:{lang, type:r.type, title:r.title, creator:r.creator || '', url:r.url || '', status:'want', notes:r.note ? 'Teacher: ' + r.note : '', at:Date.now()}}})) toast(`Added "${r.title}"`); },
+  switchClass: d => { S.classId = d.id; store.set('class', d.id); S.lessonId = null; render(true); $('#main').scrollTop = 0; toast('Switched to ' + ((classOf(d.id) || {}).name || 'class')); },
   editProfile: () => profileForm(),
   joinAnother: () => modal(`${head('Join another class')}<form class="stack" data-form="join"><label for="joinCode2">Join code</label><input id="joinCode2" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Join class</button></div></form>`, {label:'Join class'}),
   copyText: async d => { try { await navigator.clipboard.writeText(d.text); toast('Copied'); } catch (e) { toast(d.text); } },

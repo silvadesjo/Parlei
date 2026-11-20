@@ -456,20 +456,21 @@ function listenCol(name){
   S.db.collection(name).onSnapshot(snap => {
     const m = {}; snap.docs.forEach(d => { if (d.exists) m[d.id] = d.data(); });
     D[name] = m; if (!snap.metadata || !snap.metadata.fromCache) markLoaded(name); else if (!S.loaded[name]) S.loaded[name] = 'cache';
+    if (name === 'classes' || name === 'members') syncRecordListeners();
     schedule();
   }, () => { markLoaded(name); schedule(); });
 }
 /* Instructors (other than the owner) only receive their own students: the database allows nothing else. */
 function listenMyStudents(){
   D.members = {}; let fromQuery = {}, own = null;
-  const merge = () => { D.members = Object.assign({}, fromQuery); if (own) D.members[S.me] = own; markLoaded('members'); syncStudentListeners(); schedule(); };
+  const merge = () => { D.members = Object.assign({}, fromQuery); if (own) D.members[S.me] = own; markLoaded('members'); syncStudentListeners(); syncRecordListeners(); schedule(); };
   S.db.collection('members').where('teacherIds', 'array-contains', S.me).onSnapshot(snap => { fromQuery = {}; snap.docs.forEach(d => { if (d.exists) fromQuery[d.id] = d.data(); }); merge(); }, () => merge());
   S.db.doc('members/' + S.me).onSnapshot(sn => { own = sn.exists ? sn.data() : null; merge(); }, () => merge());
 }
 const studentSubs = {};
 function syncStudentListeners(){
   const uids = new Set(Object.keys(D.members || {})); uids.add(S.me);
-  for (const name of ['subs', 'prog', 'profiles', 'grades']) {
+  for (const name of ['profiles']) {
     const subs = studentSubs[name] = studentSubs[name] || {}; D[name] = D[name] || {};
     for (const uid of uids) if (!subs[uid]) subs[uid] = S.db.doc(name + '/' + uid).onSnapshot(sn => {
       const next = Object.assign({}, D[name]); if (sn.exists) next[uid] = sn.data(); else delete next[uid]; D[name] = next; markLoaded(name); schedule();
@@ -477,11 +478,28 @@ function syncStudentListeners(){
     for (const uid of Object.keys(subs)) if (!uids.has(uid)) { subs[uid](); delete subs[uid]; const next = Object.assign({}, D[name]); delete next[uid]; D[name] = next; }
   }
 }
+/* Per-class records: listen to exactly the documents this person may read. */
+const recSubs = {};
+function syncRecordListeners(){
+  if (S.isOwner || S.demo) return;              // the owner (and the demo) read whole collections
+  const keys = new Set([recKey(S.me, 'self')]);
+  const mine = (D.members || {})[S.me];
+  Object.entries((mine && mine.classIds) || {}).forEach(([cid, v]) => { if (v) keys.add(recKey(S.me, cid)); });
+  if (S.teacherCapable) rows('classes').filter(c => c.teacherId === S.me || (c.coTeachers || {})[S.me]).forEach(c => studentsOf(c.id).forEach(st => keys.add(recKey(st.uid, c.id))));
+  for (const name of ['subs', 'grades', 'prog']) {
+    const subs = recSubs[name] = recSubs[name] || {}; D[name] = D[name] || {};
+    for (const k of keys) if (!subs[k]) subs[k] = S.db.doc(name + '/' + k).onSnapshot(sn => {
+      const next = Object.assign({}, D[name]); if (sn.exists) next[k] = sn.data(); else delete next[k]; D[name] = next; markLoaded(name); schedule();
+    }, () => { markLoaded(name); schedule(); });
+    for (const k of Object.keys(subs)) if (!keys.has(k)) { subs[k](); delete subs[k]; const next = Object.assign({}, D[name]); delete next[k]; D[name] = next; }
+  }
+}
 function listenOwn(name){
   D[name] = {};
   S.db.doc(name + '/' + S.me).onSnapshot(s => {
     D[name] = s.exists ? {[S.me]: s.data()} : {};
     if (!s.metadata || !s.metadata.fromCache) markLoaded(name); else if (!S.loaded[name]) S.loaded[name] = 'cache';
+    if (name === 'members') syncRecordListeners();
     schedule();
   }, () => { markLoaded(name); schedule(); });
 }
@@ -533,8 +551,13 @@ async function access(body){                                                 // 
   catch (e) { toast((e && e.message) || "Couldn't make that change. Try again.", true); return null; }
 }
 function studentsOf(cid){ return Object.entries(D.members || {}).filter(([, m]) => m.classIds && m.classIds[cid]).map(([uid, m]) => ({uid, joined:m.classIds[cid]})).sort((a, b) => a.joined - b.joined); }
+/* Submissions, grades and flashcard progress are stored per student per class: subs/{uid}__{classId}.
+   The database lets only the student and that class's teachers read each one. */
+const recKey = (uid, cid) => uid + '__' + cid;
+const recsOf = (name, uid) => Object.entries(D[name] || {}).filter(([k]) => k.startsWith(uid + '__')).map(([, v]) => v);
 function subOf(uid, aid){
-  const s = (D.subs || {})[uid], g = (D.grades || {})[uid];
+  const cls = ((D.assignments || {})[aid] || {}).classId;
+  const s = (D.subs || {})[recKey(uid, cls)], g = (D.grades || {})[recKey(uid, cls)];
   const item = s && s.items && s.items[aid], gr = g && g.items && g.items[aid];
   if (!item && !gr) return null;
   const out = Object.assign({}, item || {}, gr || {});
@@ -544,7 +567,7 @@ function subOf(uid, aid){
   }
   return out;
 }
-const progOf = uid => { const p = (D.prog || {})[uid]; return (p && p.cards) || {}; };
+const progOf = (uid, cid) => { const p = (D.prog || {})[recKey(uid, cid || 'self')]; return (p && p.cards) || {}; };
 const visibleLessons = cid => inClass('lessons', cid).filter(l => S.role === 'teacher' || l.published !== false);
 function dueDate(due){ if (!due) return null; const [y, m, d] = due.split('-').map(Number); return new Date(y, m - 1, d, 23, 59, 59); }
 function dueLabel(due){
@@ -568,7 +591,7 @@ const fmtNum = n => (Math.round(n * 10) / 10).toString();
 function toGradeCount(cid){ let n = 0; const studs = studentsOf(cid); inClass('assignments', cid).forEach(a => studs.forEach(({uid}) => { const s = subOf(uid, a.id); if (s && s.submittedAt && s.gradedAt == null) n++; })); return n; }
 function todoCount(cid){ return inClass('assignments', cid).filter(a => ['todo', 'late'].includes(statusOf(a, S.me).k)).length; }
 function deckStats(deck, uid){
-  const p = progOf(uid), now = Date.now(); let due = 0, mastered = 0, seen = 0;
+  const p = progOf(uid, deck.classId), now = Date.now(); let due = 0, mastered = 0, seen = 0;
   (deck.cards || []).forEach(cd => { const x = p[deck.id + '~' + cd.id]; if (!x || x.d <= now) due++; if (x) seen++; if (x && x.b >= 4) mastered++; });
   return {total:(deck.cards || []).length, due, mastered, seen};
 }
@@ -723,8 +746,9 @@ function renderNav(){
   const c = !S.fatal && ready() ? currentClass() : null;
   const badge = {};
   if (c) {
-    badge.work = S.role === 'teacher' ? toGradeCount(c.id) : todoCount(c.id);
-    badge.practice = S.role === 'student' ? dueCardsCount(c.id) : 0;
+    const all = myClasses(), sum = f => all.reduce((n, x) => n + f(x.id), 0);   // counts cover every class, not just the one selected
+    badge.work = S.role === 'teacher' ? sum(toGradeCount) : sum(todoCount);
+    badge.practice = S.role === 'student' ? sum(dueCardsCount) : 0;
     badge.inbox = unreadCount(c.id);
   }
   if (S.isOwner && S.role === 'teacher') badge.account = rows('instructorRequests').filter(r => r.status === 'pending').length;
@@ -788,6 +812,7 @@ function viewHomeT(c){
   return `
   <section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(c.name)}</h1>${c.description ? `<p class="muted">${esc(c.description)}</p>` : ''}</div>
     <div class="codebox"><span class="label">Join code</span><button class="code" data-act="copyCode" data-code="${esc(c.code)}" aria-label="Copy join code ${esc(c.code)}">${esc(c.code)}</button><span class="hint">Tap to copy for students</span></div></section>
+  ${otherClassesNote(c)}
   <div class="tiles">
     <div class="tile"><span class="k">Students</span><span class="v">${studs.length}</span></div>
     <a class="tile ${tg ? 'alert' : ''}" href="#work"><span class="k">To grade</span><span class="v">${tg}</span></a>
@@ -832,6 +857,17 @@ function greetingHTML(c){
   const sub = isNew ? `Welcome to ${c.name}. Start with the newest lesson, then try the flashcards.` : `Welcome back to ${c.name}. Here's what's waiting for you.`;
   return `<section class="hero"><div><p class="eyebrow">${esc(LANGS[c.language] || c.language)}${c.level ? ' · ' + esc(c.level) : ''}</p><h1>${esc(line)}</h1><p class="muted">${esc(sub)}</p></div></section>`;
 }
+/* "Also waiting in your other classes" — so nothing hides behind the class switcher. */
+function otherClassesNote(c){
+  const others = myClasses().filter(x => x.id !== c.id).map(x => {
+    const parts = S.role === 'teacher'
+      ? [toGradeCount(x.id) && `${toGradeCount(x.id)} to grade`]
+      : [todoCount(x.id) && `${todoCount(x.id)} to do`, dueCardsCount(x.id) && `${dueCardsCount(x.id)} cards to review`];
+    return {x, text:parts.filter(Boolean).join(' · ')};
+  }).filter(o => o.text);
+  if (!others.length) return '';
+  return `<section class="card" style="gap:6px"><h3>In your other classes</h3><div class="list">${others.map(o => `<button class="item" data-act="switchClass" data-id="${esc(o.x.id)}"><span class="grow"><span class="t">${esc(o.x.name)}</span><span class="s">${esc(o.text)}</span></span><span class="pill acc">Open</span></button>`).join('')}</div></section>`;
+}
 function viewHomeS(c){
   const anns = inClass('announcements', c.id).sort((a, b) => b.at - a.at);
   const next = eventsOf(c.id).filter(e => e.kind === 'class' || bookerOf(e.id) === S.me)[0];
@@ -841,6 +877,7 @@ function viewHomeS(c){
   const lessons = visibleLessons(c.id);
   return `
   ${greetingHTML(c)}
+  ${otherClassesNote(c)}
   <div class="tiles">
     <a class="tile ${todo.length ? 'alert' : ''}" href="#work"><span class="k">Assignments to do</span><span class="v">${todo.length}</span></a>
     <a class="tile" href="#practice"><span class="k">Cards to review</span><span class="v">${due}</span></a>
@@ -1251,9 +1288,9 @@ function enrolment(){
   Object.keys(D.profiles || {}).forEach(uid => { if (!people.has(uid)) people.set(uid, {uid, classes:[]}); });
   return [...people.values()].filter(x => x.uid !== S.me || x.classes.length).map(x => {
     const p = profileOf(x.uid) || {}, joined = x.classes.length ? Math.min(...x.classes.map(c => c.joined)) : (p.createdAt || 0);
-    const prog = (D.prog || {})[x.uid], sub = (D.subs || {})[x.uid];
-    const subTimes = sub && sub.items ? Object.values(sub.items).map(i => i && i.submittedAt || 0) : [];
-    const active = Math.max(p.lastSeen || 0, (prog && prog.updated) || 0, ...subTimes, 0);
+    const progTimes = recsOf('prog', x.uid).map(r => r.updated || 0);
+    const subTimes = recsOf('subs', x.uid).flatMap(r => Object.values(r.items || {}).map(i => (i && i.submittedAt) || 0));
+    const active = Math.max(p.lastSeen || 0, ...progTimes, ...subTimes, 0);
     return Object.assign(x, {p, joined, active});
   });
 }
@@ -1516,17 +1553,18 @@ function studentDialog(uid){
 /* ---- flashcard session ---- */
 function startPractice(deckId){
   const deck = Object.assign({id:deckId}, D.decks[deckId]);
-  runPractice(deckId, deck.title, deck.cards || [], (classOf(deck.classId) || {}).language || 'fr');
+  runPractice(deckId, deck.title, deck.cards || [], (classOf(deck.classId) || {}).language || 'fr', deck.classId);
 }
-function runPractice(deckId, title, cards, lang){
-  const p = progOf(S.me), now = Date.now();
+function runPractice(deckId, title, cards, lang, cid){
+  cid = cid || 'self';
+  const p = progOf(S.me, cid), now = Date.now();
   let q = cards.filter(cd => { const x = p[deckId + '~' + cd.id]; return !x || x.d <= now; });
   q = q.length ? q.slice(0, 25) : shuffle(cards).slice(0, 25);
   if (!q.length) { toast('There are no cards to practise yet.'); return; }
-  const st = {deckId, q, i:0, flipped:false, pending:{}, again:new Set(), right:0, wrong:0, lang, title};
+  const st = {deckId, cid, q, i:0, flipped:false, pending:{}, again:new Set(), right:0, wrong:0, lang, title};
   modal('<div id="pr" class="stack" style="gap:14px"></div>', {label:'Practice ' + title});
   S.practice = st;
-  S.onModalClose = () => { const n = Object.keys(st.pending).length; if (n && !S.readOnly) upsert('prog/' + S.me, {cards:st.pending, updated:Date.now()}); };
+  S.onModalClose = () => { const n = Object.keys(st.pending).length; if (n && !S.readOnly) upsert('prog/' + recKey(S.me, st.cid), {cards:st.pending, updated:Date.now(), student:S.me, classId:st.cid}); };
   drawPractice();
 }
 function drawPractice(){
@@ -1579,7 +1617,7 @@ const ACT = {
   flipDir: () => { S.dir = S.dir === 'fwd' ? 'rev' : 'fwd'; if (S.practice) { S.practice.flipped = false; drawPractice(); } },
   answer: d => {
     const st = S.practice; if (!st) return; const cd = st.q[st.i], key = st.deckId + '~' + cd.id, ok = d.ok === '1';
-    st.pending[key] = nextBox(st.pending[key] || progOf(S.me)[key], ok, Date.now());
+    st.pending[key] = nextBox(st.pending[key] || progOf(S.me, st.cid)[key], ok, Date.now());
     if (ok) st.right++; else { st.wrong++; if (!st.again.has(cd.id)) { st.again.add(cd.id); st.q.push(cd); } }
     st.i++; st.flipped = false; drawPractice();
   },
@@ -1612,7 +1650,7 @@ const ACT = {
   addCourseWord: async d => { const lang = currentWordLang(); if (await upsert('vocab/' + S.me, {words:{['w' + rid()]:{lang, term:d.term, meaning:d.meaning, at:Date.now()}}})) toast(`Added "${d.term}"`); },
   practiseWords: () => { const lang = currentWordLang(); let ws = myWords(lang); if (S.wordSort === 'star' && ws.some(w => w.star)) ws = ws.filter(w => w.star); runPractice('my-' + lang, 'My ' + langName(lang) + ' words', ws.map(w => ({id:w.id, f:w.term, b:w.meaning})), ttsLang(lang)); },
   moreNav: () => {
-    const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? dueCardsCount(c.id) : 0;
+    const c = !S.fatal && ready() ? currentClass() : null; const due = c && S.role === 'student' ? myClasses().reduce((n, x) => n + dueCardsCount(x.id), 0) : 0;
     modal(`${head('More')}<nav class="navsheet">${navViews().filter(v => v.sec).map(v => `<a href="#${v.id}" data-act="navTo" data-v="${v.id}">${icon(v.icon)} ${v.long}${v.id === 'practice' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('')}</nav>`, {label:'More sections'});
   },
   navTo: d => { closeModal(); go(d.v); },
@@ -1641,6 +1679,7 @@ const ACT = {
     }
     if (ok) { S.classId = 'fr-a1'; store.set('class', 'fr-a1'); toast('Sample class added. Its join code is ' + code); render(true); }
   },
+  switchClass: d => { S.classId = d.id; store.set('class', d.id); S.lessonId = null; render(true); $('#main').scrollTop = 0; toast('Switched to ' + ((classOf(d.id) || {}).name || 'class')); },
   editProfile: () => profileForm(),
   authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
   googleSignIn: d => { S.signupRole = d.role || ''; return authRun(() => S.platform.signInGoogle()); },
@@ -1764,15 +1803,17 @@ const FORMS = {
     const a = Object.assign({id:f.dataset.id}, D.assignments[f.dataset.id]); const answers = (a.questions || []).map((q, i) => { const r = f.querySelector(`input[name="q${i}"]:checked`); return r ? Number(r.value) : -1; });
     if (answers.includes(-1)) { toast('Answer every question before you submit.', true); return; }
     const sc = scoreQuiz(a, answers), now = Date.now();
-    if (await upsert('subs/' + S.me, {items:{[a.id]:{answers, right:sc.right, total:sc.total, submittedAt:now}}})) { notify({type:'submission', aid:a.id}); toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
+    if (await upsert('subs/' + recKey(S.me, a.classId), {student:S.me, classId:a.classId, items:{[a.id]:{answers, right:sc.right, total:sc.total, submittedAt:now}}})) { notify({type:'submission', aid:a.id}); toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
   },
   written: async f => {
     const t = f.text.value.trim(); if (!t) { toast('Write your answer first.', true); return; }
-    if (await upsert('subs/' + S.me, {items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { notify({type:'submission', aid:f.dataset.id}); closeModal(); toast('Handed in. Merci !'); }
+    const cls = (D.assignments[f.dataset.id] || {}).classId;
+    if (await upsert('subs/' + recKey(S.me, cls), {student:S.me, classId:cls, items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { notify({type:'submission', aid:f.dataset.id}); closeModal(); toast('Handed in. Merci !'); }
   },
   grade: async f => {
     const g = f.grade.value === '' ? null : Number(f.grade.value); if (g == null || isNaN(g)) { toast('Enter a grade first.', true); return; }
-    if (await upsert('grades/' + f.dataset.uid, {items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) { notify({type:'grade', uid:f.dataset.uid, aid:f.dataset.id}); toast('Grade saved for ' + nameOf(f.dataset.uid)); }
+    const gcls = (D.assignments[f.dataset.id] || {}).classId;
+    if (await upsert('grades/' + recKey(f.dataset.uid, gcls), {student:f.dataset.uid, classId:gcls, items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) { notify({type:'grade', uid:f.dataset.uid, aid:f.dataset.id}); toast('Grade saved for ' + nameOf(f.dataset.uid)); }
   },
   audio: async f => {
     const id = f.dataset.id, c = currentClass(), btn = $('#auSave');
@@ -1933,9 +1974,9 @@ async function demoStart(role){
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
   ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
-  if (S.isOwner) ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenCol);
+  if (S.isOwner || S.demo) ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenCol);
   else if (S.teacherCapable) listenMyStudents();
-  else ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenOwn);
+  else ['members', 'profiles'].forEach(listenOwn);
   listenConvos();
   listenOwn('vocab'); listenOwn('media');
   if (S.isOwner) { listenCol('instructorRequests'); listenCol('teachers'); } else if (!S.teacherCapable) listenOwn('instructorRequests');

@@ -88,12 +88,12 @@ test('messages reach only the people listed in the conversation', async () => {
 test('grade and submission are checked against the database', async () => {
   sentEmails.length = 0;
   assert.equal((await call(notify, 'tok-owner', {type:'grade', uid:'amara', aid:'a1'})).status, 400);
-  store.set('grades/amara', {items:{a1:{grade:4, feedback:'Bien', gradedAt:1}}});
+  store.set('grades/amara__c1', {student:'amara', classId:'c1', items:{a1:{grade:4, feedback:'Bien', gradedAt:1}}});
   await call(notify, 'tok-owner', {type:'grade', uid:'amara', aid:'a1'});
   assert.match(sentEmails[0].subject, /Graded: Quiz 1/); assert.match(sentEmails[0].text, /4 \/ 5/);
   sentEmails.length = 0;
   await call(notify, 'tok-amara', {type:'submission', aid:'a1'}); assert.equal(sentEmails.length, 0);   // nothing handed in yet
-  store.set('subs/amara', {items:{a1:{answers:[1], right:4, total:5, submittedAt:Date.now()}}});
+  store.set('subs/amara__c1', {student:'amara', classId:'c1', items:{a1:{answers:[1], right:4, total:5, submittedAt:Date.now()}}});
   await call(notify, 'tok-amara', {type:'submission', aid:'a1'});
   assert.match(sentEmails[0].subject, /Amara Okafor handed in Quiz 1/);
 });
@@ -149,7 +149,7 @@ test('per-class access: co-teachers, removal, and who gets told', async () => {
   assert.equal((await call(notify, 'tok-carl', {type:'announcement', id:'an2'})).status, 403);
   assert.equal((await call(access, 'tok-carl', {action:'addCoTeacher', cid:'c2', email:'carl@example.com'})).status, 403);
   assert.equal((await call(access, 'tok-carl', {action:'removeStudent', cid:'c2', uid:'mei'})).status, 403);
-  store.set('grades/mei', {items:{a9:{grade:1, gradedAt:2}}}); store.set('assignments/a9', {classId:'c2', title:'T', points:5});
+  store.set('grades/mei__c2', {items:{a9:{grade:1, gradedAt:2}}}); store.set('assignments/a9', {classId:'c2', title:'T', points:5});
   assert.equal((await call(notify, 'tok-carl', {type:'grade', uid:'mei', aid:'a9'})).status, 403);
 
   // Only approved instructors can be added; Tina adds Carl and he gets access and an email.
@@ -177,4 +177,12 @@ test('per-class access: co-teachers, removal, and who gets told', async () => {
   await call(access, 'tok-tina', {action:'deleteClass', cid:'c2'});
   assert.equal(store.get('classes/c2'), undefined);
   assert.deepEqual(store.get('members/mei').teacherIds, []);
+});
+test('a student shared between two classes: each teacher only reaches their own class work', async () => {
+  store.set('classes/c4', {name:'Español B1', teacherId:'tina'}); store.set('classes/c5', {name:'Italiano A1', teacherId:'carl'});
+  store.set('members/zoe', {classIds:{c4:Date.now(), c5:Date.now()}, teacherIds:['carl', 'tina']});
+  store.set('assignments/a4', {classId:'c4', title:'Ensayo', points:10}); store.set('assignments/a5', {classId:'c5', title:'Tema', points:10});
+  store.set('grades/zoe__c4', {items:{a4:{grade:9, gradedAt:5}}});
+  assert.equal((await call(notify, 'tok-carl', {type:'grade', uid:'zoe', aid:'a4'})).status, 403);   // Carl teaches Zoe, but not Español B1
+  assert.equal((await call(notify, 'tok-tina', {type:'grade', uid:'zoe', aid:'a4'})).status, 200);
 });

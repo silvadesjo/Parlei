@@ -17,7 +17,7 @@ export default async function handler(req, res){
       if (!(await firstTime(`due-${doc.id}-${tomorrow}`))) continue;
       const pending = [];
       for (const uid of await studentsOf(a.classId)) {
-        const s = await docData('subs/' + uid);
+        const s = await docData(`subs/${uid}__${a.classId}`);
         if (!(s && s.items && s.items[doc.id] && s.items[doc.id].submittedAt)) pending.push(uid);
       }
       sent += await deliver(pending, 'due', {title:`Due tomorrow: ${a.title}`, body:`Hand it in by the end of the day tomorrow (${tomorrow}).`, link:appUrl() + '/#work', linkLabel:'Open the assignment'});

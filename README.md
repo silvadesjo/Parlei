@@ -37,7 +37,7 @@ A language learning portal for teachers and students: classes, lessons, assignme
 - The owner (administrator) approves instructors and can see everything.
 - Each class has one owning instructor, plus co-teachers that only the class owner (or the administrator) can add. Instructors see only their own classes and those classes' students.
 - Course content is readable by signed-in users and editable only by the teachers of its class.
-- Each student's profile, submissions and flashcard progress are readable only by that student and their teachers; grades are written only by their teachers. Word banks and media lists are private to the student.
+- Submissions, grades and flashcard progress are stored per student per class (`{student}__{class}`), so only the student and the teachers of that class can read them, even when a student is shared between instructors. Grades are written only by the class's teachers. A student's profile is readable by any of their teachers. Word banks and media lists are private to the student.
 - Messages are visible only to the people listed in each conversation (the owner included). Everyone listed must be the student or one of their teachers, and the list can't change once the conversation starts.
 - Access lists (`members/{uid}.teacherIds`) and co-teacher changes are maintained only by the server (`/api/access`), so no one can grant themselves access.
 - Notifications are sent by the server only after it checks the event against the database, and each event is sent once.
@@ -46,7 +46,8 @@ A language learning portal for teachers and students: classes, lessons, assignme
 
 Conversations: `convos` (`student`, `participants`, messages).
 Course content: `classes`, `lessons`, `assignments`, `decks`, `events`, `announcements`, `audio`, `recs`.
-One document per person: `members` (classes joined), `profiles` (details and notification settings), `subs` (submissions), `grades`, `prog` (flashcards), `bookings`, `vocab`, `media`, `pushTokens`.
+One document per person: `members` (classes joined), `profiles` (details and notification settings), `bookings`, `vocab`, `media`, `pushTokens`.
+One document per person per class (`{uid}__{classId}`): `subs` (submissions), `grades`, `prog` (flashcards; personal Word Bank practice uses `{uid}__self`).
 Teachers: `teachers/{uid}` (plus the owner email set in config); instructor sign-ups wait in `instructorRequests/{uid}`.
 
 ## Repository layout

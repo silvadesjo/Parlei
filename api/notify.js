@@ -41,9 +41,11 @@ export default async function handler(req, res){
       case 'grade': {
         const uid = safeId(evt.uid), aid = safeId(evt.aid);
         if (!(await teachesStudent(user, uid))) throw forbidden();
-        const g = await docData('grades/' + uid), item = g && g.items && g.items[aid];
         const a = await docData('assignments/' + aid);
-        if (!item || !a) throw bad('Not found');
+        if (!a) throw bad('Not found');
+        if (!(await teachesClass(user, a.classId))) throw forbidden();
+        const g = await docData(`grades/${uid}__${a.classId}`), item = g && g.items && g.items[aid];
+        if (!item) throw bad('Not found');
         if (!(await firstTime(`grade-${uid}-${aid}-${item.gradedAt}`))) break;
         sent = await deliver([uid], 'grade', {title:`Graded: ${a.title}`, body:`You got ${item.grade} / ${a.points}.${item.feedback ? '\n\n' + clip(item.feedback, 800) : ''}`, link:link('work'), linkLabel:'See your feedback'});
         break;
@@ -67,8 +69,8 @@ export default async function handler(req, res){
       }
       case 'submission': {
         const aid = safeId(evt.aid);
-        const s = await docData('subs/' + user.uid), item = s && s.items && s.items[aid];
         const a = await docData('assignments/' + aid);
+        const s = a && await docData(`subs/${user.uid}__${a.classId}`), item = s && s.items && s.items[aid];
         if (!item || !a || Date.now() - item.submittedAt > HOUR) break;
         if (!(await firstTime(`sub-${user.uid}-${aid}-${item.submittedAt}`))) break;
         const score = a.kind === 'quiz' && item.total ? ` Quiz score: ${item.right} / ${item.total}.` : '';

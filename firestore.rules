@@ -117,10 +117,8 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
-    // Each student's own records: readable by the student and their teachers; written by the student.
+    // A student's profile: readable by the student and any of their teachers; written by the student.
     match /profiles/{uid} { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
-    match /subs/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
-    match /prog/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
 
     // Messages: each conversation is visible only to the people listed in it (participants),
     // the owner included. Everyone listed must be the student or one of the student's teachers,
@@ -145,8 +143,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Grades and feedback: written only by the student's teachers.
-    match /grades/{uid}   { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if teachesStudent(uid); }
+    // Submissions, grades and flashcard progress are stored per student per class, with the id
+    // {studentUid}__{classId}. Only the student and the teachers of THAT class can read them, so a
+    // teacher never sees a shared student's work from another teacher's class.
+    function recStudent(key) { return key.split('__')[0]; }
+    function recClass(key) { return key.split('__')[1]; }
+    match /subs/{key}   { allow read: if isSelf(recStudent(key)) || teachesClass(recClass(key)); allow write: if isSelf(recStudent(key)); }
+    match /prog/{key}   { allow read: if isSelf(recStudent(key)) || teachesClass(recClass(key)); allow write: if isSelf(recStudent(key)); }
+    match /grades/{key} { allow read: if isSelf(recStudent(key)) || teachesClass(recClass(key)); allow write: if teachesClass(recClass(key)); }
 
     // Personal word bank and media repertoire: private to the student (and the owner).
     match /vocab/{uid}    { allow read: if isSelf(uid) || isOwner(); allow write: if isSelf(uid); }
