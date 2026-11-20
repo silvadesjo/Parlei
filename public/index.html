@@ -343,7 +343,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const MIN = 6e4, DAY = 864e5;
 const BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];          // Leitner boxes: days until the next review
-const LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese', it:'Italian', de:'German', en:'English'};
+const LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese', it:'Italian', de:'German', en:'English', ig:'Igbo', yo:'Yoruba'};
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const newCode = () => Array.from({length:6}, () => CODE_ALPHA[Math.floor(Math.random()*CODE_ALPHA.length)]).join('');
 const ICON = {
@@ -844,7 +844,9 @@ const GREET = {
   'pt-BR':{hi:h => h >= 18 || h < 4 ? 'Boa noite' : h >= 12 ? 'Boa tarde' : 'Bom dia', back:'Que bom te ver de novo'},
   it:{hi:h => h >= 18 || h < 4 ? 'Buonasera' : 'Buongiorno', back:'Ciao di nuovo'},
   de:{hi:h => h >= 18 || h < 4 ? 'Guten Abend' : h < 11 ? 'Guten Morgen' : 'Guten Tag', back:'Willkommen zurück'},
-  en:{hi:h => h >= 18 || h < 4 ? 'Good evening' : h >= 12 ? 'Good afternoon' : 'Good morning', back:'Welcome back'}
+  en:{hi:h => h >= 18 || h < 4 ? 'Good evening' : h >= 12 ? 'Good afternoon' : 'Good morning', back:'Welcome back'},
+  ig:{hi:() => 'Ndewo', back:'Nnọọ'},
+  yo:{hi:h => h >= 19 || h < 4 ? 'Ẹ káalẹ́' : h >= 16 ? 'Ẹ kú ìrọ̀lẹ́' : h >= 12 ? 'Ẹ káàsán' : 'Ẹ káàárọ̀', back:'Ẹ kú àbọ̀'}
 };
 function greetingHTML(c){
   const m = (D.members || {})[S.me], joined = m && m.classIds && m.classIds[c.id];
@@ -1027,7 +1029,7 @@ async function sendInConvo(id, student, participants, text){
 }
 
 /* ---- vocabulary (each person's own word bank, one doc: vocab/<id>) ---- */
-const WORD_LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese (Brazil)', 'pt-PT':'Portuguese (Portugal)', it:'Italian', de:'German', en:'English', ht:'Haitian Creole', ja:'Japanese', ko:'Korean', 'zh-CN':'Mandarin', ar:'Arabic', sw:'Swahili', yo:'Yoruba', tl:'Tagalog'};
+const WORD_LANGS = {fr:'French', es:'Spanish', 'pt-BR':'Portuguese (Brazil)', 'pt-PT':'Portuguese (Portugal)', it:'Italian', de:'German', en:'English', ht:'Haitian Creole', ja:'Japanese', ko:'Korean', 'zh-CN':'Mandarin', ar:'Arabic', sw:'Swahili', ig:'Igbo', yo:'Yoruba', tl:'Tagalog'};
 const WR_DICT = {fr:'fren', es:'esen', 'pt-BR':'pten', 'pt-PT':'pten', it:'iten', de:'deen'};
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const vocabDoc = () => (D.vocab || {})[S.me] || {};
@@ -1417,7 +1419,7 @@ window.parleiToast = m => toast(m);
 function notify(evt){ if (S.platform && S.platform.notify) Promise.resolve(S.platform.notify(evt)).catch(() => {}); }
 function browserTTS(){
   if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return null;
-  const LOCALE = {fr:'fr-FR', es:'es-ES', 'pt-BR':'pt-BR', 'pt-PT':'pt-PT', it:'it-IT', de:'de-DE', en:'en-US', ja:'ja-JP', ko:'ko-KR', 'zh-CN':'zh-CN', ar:'ar-SA', ht:'fr-HT', sw:'sw-KE', tl:'fil-PH', yo:'yo-NG'};
+  const LOCALE = {fr:'fr-FR', es:'es-ES', 'pt-BR':'pt-BR', 'pt-PT':'pt-PT', it:'it-IT', de:'de-DE', en:'en-US', ja:'ja-JP', ko:'ko-KR', 'zh-CN':'zh-CN', ar:'ar-SA', ht:'fr-HT', sw:'sw-KE', tl:'fil-PH', ig:'ig-NG', yo:'yo-NG'};
   return { speak(text, o){
     o = o || {}; return new Promise((res, rej) => {
       const u = new SpeechSynthesisUtterance(text), loc = LOCALE[o.language] || o.language;
