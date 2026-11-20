@@ -6,14 +6,14 @@
 <title>Parlei Language Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
 /* Layout: app shell. Header across the top; nav is a left rail on wide screens and a bottom tab bar on phones. */
 :root{
   --bg:#EDF0F4; --surface:#FFFFFF; --sunk:#F5F7FA; --ink:#14202B; --muted:#5A6777; --line:#D8DEE6;
   --accent:#2445C4; --accent-ink:#FFFFFF; --accent-soft:#E2E8FB;
   --ok:#1C7448; --ok-soft:#DCF0E4; --warn:#9A5700; --warn-soft:#FBEACF; --bad:#B0222E; --bad-soft:#F8DDE0;
-  --display:'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --display:'DM Serif Display', 'Iowan Old Style', Georgia, serif;
   --body:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --r:12px; --shadow:0 1px 2px rgba(20,32,43,.06), 0 6px 24px rgba(20,32,43,.06);
   color-scheme:light;
@@ -51,7 +51,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);-webkit-fo
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
 h1,h2,h3,h4{text-wrap:balance;margin:0}
-h1{font:400 34px/1.1 var(--display);letter-spacing:-.01em}
+h1{font:400 32px/1.15 var(--display);letter-spacing:0}
 h2{font:400 26px/1.15 var(--display)}
 h3{font-size:17px;font-weight:600}
 h4{font-size:15px;font-weight:600}
@@ -311,7 +311,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 <body>
 <div id="app">
   <header class="top">
-    <div class="brand"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.8,5.5) scale(0.93)"><path fill="var(--accent-ink)" d="M8 40 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 40 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></div>
+    <div class="brand"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.4,5.6) scale(1,0.86)"><path fill="var(--accent-ink)" d="M8 46 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 46 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></div>
     <div id="classSwitch"></div>
     <div id="roleBox"></div>
     <button type="button" class="theme-btn" id="themeBtn" data-act="toggleDay" aria-pressed="false" aria-label="Daylight mode" title="Daylight mode: a brighter display"></button>
