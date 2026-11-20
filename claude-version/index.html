@@ -77,6 +77,7 @@ p{margin:0}
 #nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;text-decoration:none;color:var(--muted);font-size:11px;border-radius:10px;position:relative;min-width:0}
 #nav a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
 #nav .long{display:none}
+#nav .short{white-space:nowrap}
 #nav .sec{display:none}
 #nav .more-btn{display:flex}
 .navsheet{display:flex;flex-direction:column;gap:6px}
@@ -356,7 +357,7 @@ const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON
 const VIEWS = [
   {id:'home', long:'Home', short:'Home', icon:'home'},
   {id:'lessons', long:'Lessons', short:'Lessons', icon:'book'},
-  {id:'words', long:'WordBank', short:'WordBank', icon:'abc'},
+  {id:'words', long:'Word Bank', short:'Word Bank', icon:'abc'},
   {id:'media', long:'Media', short:'Media', icon:'media', sec:true},
   {id:'work', long:'Assignments', short:'Work', icon:'check'},
   {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
@@ -946,7 +947,7 @@ function wordResultsHTML(){
 }
 function viewWords(){
   const langs = myLangs(), lang = currentWordLang();
-  const headHtml = `<div class="page-head"><div><p class="eyebrow">Your personal word bank</p><h1>WordBank</h1></div></div>`;
+  const headHtml = `<div class="page-head"><div><p class="eyebrow">Your personal word bank</p><h1>Word Bank</h1></div></div>`;
   if (!lang) {
     const c = currentClass(); const sug = c && c.language ? c.language : 'fr';
     return headHtml + `<section class="card narrow"><h2>Start your word bank</h2><p class="muted">Collect the words you meet in class, in books and out in the world. Each language you study gets its own tab.</p>
@@ -1069,7 +1070,7 @@ function mediaRow(m){
 }
 function viewRepertoire(c){
   const langs = myLangs(), lang = currentWordLang();
-  if (!lang) return `<section class="card narrow"><h2>Build your repertoire</h2><p class="muted">Keep track of songs, shows, podcasts and books in the languages you're learning. Language tabs are shared with WordBank.</p>
+  if (!lang) return `<section class="card narrow"><h2>Build your repertoire</h2><p class="muted">Keep track of songs, shows, podcasts and books in the languages you're learning. Language tabs are shared with Word Bank.</p>
     <form class="stack" data-form="addLang"><label for="nlLang">First language</label>${langSelect('nlLang', (c && c.language) || 'fr', [])}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><button class="btn primary">Create tab</button></form></section>`;
   const all = myMedia(lang), haveTitles = new Set(all.map(m => norm(m.title)));
   const items = all.filter(m => (S.mediaType === 'all' || m.type === S.mediaType) && (S.mediaStatus === 'all' || m.status === S.mediaStatus));
