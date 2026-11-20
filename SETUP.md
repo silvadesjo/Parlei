@@ -110,6 +110,7 @@ The first screen asks everyone whether they're a **student** or an **instructor*
 - Each instructor sees only the classes they own or co-teach, and only the students enrolled in those classes.
 - **Co-teachers:** the instructor who owns a class opens **Edit class and co-teachers** and adds another *approved* instructor by email. That person is emailed and can then post, grade and message in that class only. The class owner (or you) can remove them, and co-teachers can leave on their own.
 - Access follows enrolment: when a student leaves or is removed, or a co-teacher is removed, that access ends right away.
+- **Messages** are visible only to the people listed in each conversation. A co-teacher sees a conversation only if they were included when it started, and the same goes for you as owner.
 - Students' word banks and media lists stay private to them.
 
 These permissions are enforced by `firestore.rules` and `storage.rules` together with the server, so they hold even if someone tampers with the app.

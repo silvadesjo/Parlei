@@ -15,7 +15,7 @@ A language learning portal for teachers and students: classes, lessons, assignme
 - **Word Bank:** each student's own word bank, one tab per language, with look-up and dictionary links.
 - **Media:** class audio recordings uploaded by the teacher, and each student's personal repertoire of songs, shows, podcasts and books, with teacher recommendations.
 - **Schedule:** class sessions and bookable 1:1 office-hour slots.
-- **Messages:** a private thread between each student and the teacher, plus class announcements.
+- **Messages:** private conversations between a student and the teachers they choose (or a teacher and a student, optionally with co-teachers). Only the people listed can see them. Plus class announcements.
 - **Notifications:** email and push for announcements, new work, grades, messages, due-date and class reminders, and, for the teacher, hand-ins, new students and bookings. Everyone chooses what they get under **Settings**.
 - **Installable:** add Parlei to a phone's home screen; it opens like an app and can receive push notifications.
 
@@ -37,14 +37,16 @@ A language learning portal for teachers and students: classes, lessons, assignme
 - The owner (administrator) approves instructors and can see everything.
 - Each class has one owning instructor, plus co-teachers that only the class owner (or the administrator) can add. Instructors see only their own classes and those classes' students.
 - Course content is readable by signed-in users and editable only by the teachers of its class.
-- Each student's profile, submissions, flashcard progress and messages are readable only by that student and their teachers; grades are written only by their teachers. Word banks and media lists are private to the student.
+- Each student's profile, submissions and flashcard progress are readable only by that student and their teachers; grades are written only by their teachers. Word banks and media lists are private to the student.
+- Messages are visible only to the people listed in each conversation (the owner included). Everyone listed must be the student or one of their teachers, and the list can't change once the conversation starts.
 - Access lists (`members/{uid}.teacherIds`) and co-teacher changes are maintained only by the server (`/api/access`), so no one can grant themselves access.
 - Notifications are sent by the server only after it checks the event against the database, and each event is sent once.
 
 ### Data model
 
+Conversations: `convos` (`student`, `participants`, messages).
 Course content: `classes`, `lessons`, `assignments`, `decks`, `events`, `announcements`, `audio`, `recs`.
-One document per person: `members` (classes joined), `profiles` (details and notification settings), `subs` (submissions), `grades`, `prog` (flashcards), `threads` (messages), `bookings`, `vocab`, `media`, `pushTokens`.
+One document per person: `members` (classes joined), `profiles` (details and notification settings), `subs` (submissions), `grades`, `prog` (flashcards), `bookings`, `vocab`, `media`, `pushTokens`.
 Teachers: `teachers/{uid}` (plus the owner email set in config); instructor sign-ups wait in `instructorRequests/{uid}`.
 
 ## Repository layout

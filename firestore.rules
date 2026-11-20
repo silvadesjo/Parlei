@@ -11,6 +11,7 @@ rules_version = '2';
 //   (classes/{cid}.coTeachers), which only the server adds or removes.
 // - A student's records are readable only by the student, the owner, and the teachers of the
 //   student's classes. That list (members/{uid}.teacherIds) is kept up to date by the server.
+// - Messages are visible only to the people listed in each conversation.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -120,7 +121,29 @@ service cloud.firestore {
     match /profiles/{uid} { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
     match /subs/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
     match /prog/{uid}     { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if isSelf(uid); }
-    match /threads/{uid}  { allow read, write: if isSelf(uid) || teachesStudent(uid); }
+
+    // Messages: each conversation is visible only to the people listed in it (participants),
+    // the owner included. Everyone listed must be the student or one of the student's teachers,
+    // and the list can't change after the conversation starts.
+    function allowedIn(student) {
+      return get(/databases/$(database)/documents/members/$(student)).data.get('teacherIds', []).concat([student]);
+    }
+    match /convos/{id} {
+      allow read: if signedIn() && me() in resource.data.participants;
+      allow create: if signedIn()
+        && request.resource.data.student is string
+        && me() in request.resource.data.participants
+        && request.resource.data.student in request.resource.data.participants
+        && request.resource.data.participants.size() >= 2
+        && request.resource.data.participants.size() <= 12
+        && exists(/databases/$(database)/documents/members/$(request.resource.data.student))
+        && (request.resource.data.participants.hasOnly(allowedIn(request.resource.data.student))
+          || (isOwner() && request.resource.data.participants.hasOnly(allowedIn(request.resource.data.student).concat([me()]))));
+      allow update: if signedIn() && me() in resource.data.participants
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.student == resource.data.student;
+      allow delete: if false;
+    }
 
     // Grades and feedback: written only by the student's teachers.
     match /grades/{uid}   { allow read: if isSelf(uid) || teachesStudent(uid); allow write: if teachesStudent(uid); }

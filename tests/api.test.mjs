@@ -64,17 +64,26 @@ test('announcement reaches enrolled students only, once', async () => {
   const again = await call(notify, 'tok-owner', {type:'announcement', id:'an1'});
   assert.equal(again.json.sent, 0);
 });
-test('message prefs: email off, push on; student message goes to teacher', async () => {
-  store.set('threads/amara', {msgs:{m1:{from:'owner', text:'Salut Amara', at:Date.now()}}});
+test('messages reach only the people listed in the conversation', async () => {
+  store.set('convos/amara__owner', {student:'amara', participants:['amara', 'owner'], msgs:{m1:{from:'owner', text:'Salut Amara', at:Date.now()}}});
   sentEmails.length = 0; sentPush.length = 0;
-  await call(notify, 'tok-owner', {type:'message', sid:'amara'});
-  assert.equal(sentEmails.length, 0); assert.equal(sentPush.length, 1);
-  store.set('threads/amara', {msgs:{m1:{from:'owner', text:'Salut', at:Date.now() - 1000}, m2:{from:'amara', text:'Merci !', at:Date.now()}}});
+  await call(notify, 'tok-owner', {type:'message', cid:'amara__owner'});
+  assert.equal(sentEmails.length, 0); assert.equal(sentPush.length, 1);   // Amara turned message emails off; push still on
+  store.set('convos/amara__owner', {student:'amara', participants:['amara', 'owner'], msgs:{m1:{from:'owner', text:'Salut', at:Date.now() - 1000}, m2:{from:'amara', text:'Merci !', at:Date.now()}}});
   sentEmails.length = 0;
-  await call(notify, 'tok-amara', {type:'message', sid:'amara'});
+  await call(notify, 'tok-amara', {type:'message', cid:'amara__owner'});
   assert.deepEqual(sentEmails.map(e => e.to[0]), ['owner@example.com']);
   assert.match(sentEmails[0].subject, /Message from Amara Okafor/);
-  assert.equal((await call(notify, 'tok-luis', {type:'message', sid:'amara'})).status, 403);
+  // someone not in the conversation can't trigger or receive anything from it
+  assert.equal((await call(notify, 'tok-luis', {type:'message', cid:'amara__owner'})).status, 403);
+  // a three-way conversation tells the other two only
+  users['tok-ted'] = {uid:'ted', email:'ted@example.com', email_verified:true};
+  store.set('convos/amara__owner_ted', {student:'amara', participants:['amara', 'owner', 'ted'], msgs:{m1:{from:'ted', text:'Bonjour à tous', at:Date.now()}}});
+  sentEmails.length = 0; sentPush.length = 0;
+  await call(notify, 'tok-ted', {type:'message', cid:'amara__owner_ted'});
+  assert.deepEqual(sentEmails.map(e => e.to[0]), ['owner@example.com']);   // Amara gets push (emails off), the owner gets email
+  assert.match(sentEmails[0].subject, /wrote about Amara Okafor/);
+  assert.equal(sentPush.length, 1);
 });
 test('grade and submission are checked against the database', async () => {
   sentEmails.length = 0;

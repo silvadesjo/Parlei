@@ -386,7 +386,7 @@ const navViews = () => VIEWS.filter(v => !v.teacher || S.role === 'teacher');
 const S = {
   db:null, user:null, tts:null, me:null, isOwner:false, teacherIds:[], teacherCapable:false, role:'student',
   demo:false, fatal:null, slow:false, readOnly:false, data:{}, loaded:{}, names:{},
-  classId:null, view:'home', lessonId:null, threadId:null, showPast:false, dirty:false, practice:null, dir:'fwd',
+  classId:null, view:'home', lessonId:null, convoId:null, compose:null, showPast:false, dirty:false, practice:null, dir:'fwd',
   wordLang:null, wordQ:'', wordSort:'new', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
 };
 const D = S.data;
@@ -469,7 +469,7 @@ function listenMyStudents(){
 const studentSubs = {};
 function syncStudentListeners(){
   const uids = new Set(Object.keys(D.members || {})); uids.add(S.me);
-  for (const name of ['subs', 'prog', 'threads', 'profiles', 'grades']) {
+  for (const name of ['subs', 'prog', 'profiles', 'grades']) {
     const subs = studentSubs[name] = studentSubs[name] || {}; D[name] = D[name] || {};
     for (const uid of uids) if (!subs[uid]) subs[uid] = S.db.doc(name + '/' + uid).onSnapshot(sn => {
       const next = Object.assign({}, D[name]); if (sn.exists) next[uid] = sn.data(); else delete next[uid]; D[name] = next; markLoaded(name); schedule();
@@ -574,13 +574,34 @@ function deckStats(deck, uid){
 const dueCardsCount = cid => inClass('decks', cid).reduce((n, d) => n + deckStats(d, S.me).due, 0);
 function eventsOf(cid, past){ const now = Date.now(); return inClass('events', cid).filter(e => { const end = new Date(e.start).getTime() + (e.mins || 60) * MIN; return past ? true : end > now; }).sort((a, b) => new Date(a.start) - new Date(b.start)); }
 function bookerOf(eid){ for (const [uid, b] of Object.entries(D.bookings || {})) if (b.slots && b.slots[eid]) return uid; return null; }
-const msgsOf = sid => Object.entries(((D.threads || {})[sid] || {}).msgs || {}).map(([id, m]) => Object.assign({id}, m)).sort((a, b) => a.at - b.at);
-function unreadFor(sid){
-  const t = (D.threads || {})[sid] || {};
-  if (S.role === 'teacher') return msgsOf(sid).filter(m => m.from !== S.me && m.at > (t.readT || 0)).length;
-  return msgsOf(sid).filter(m => m.from !== S.me && m.at > (t.readS || 0)).length;
+/* ---- messages: conversations visible only to the people listed in them ---- */
+function listenConvos(){
+  D.convos = {};
+  S.db.collection('convos').where('participants', 'array-contains', S.me).onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { if (d.exists) m[d.id] = d.data(); }); D.convos = m; markLoaded('convos'); schedule();
+  }, () => { markLoaded('convos'); schedule(); });
 }
-const unreadCount = cid => S.role === 'teacher' ? studentsOf(cid).reduce((n, s) => n + unreadFor(s.uid), 0) : unreadFor(S.me);
+const myConvos = () => rows('convos').filter(c => (c.participants || []).includes(S.me)).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+const convoMsgs = c => Object.entries((c && c.msgs) || {}).map(([id, m]) => Object.assign({id}, m)).filter(m => m.text).sort((a, b) => a.at - b.at);
+const convoUnread = c => convoMsgs(c).filter(m => m.from !== S.me && m.at > (((c.read || {})[S.me]) || 0)).length;
+const unreadFor = uid => myConvos().filter(c => c.student === uid).reduce((n, c) => n + convoUnread(c), 0);   // a student's conversations, for the roster dot
+const unreadCount = () => myConvos().reduce((n, c) => n + convoUnread(c), 0);
+const convoKey = (student, teachers) => student + '__' + [...new Set(teachers)].filter(t => t && t !== student).sort().join('_');
+const isTeacherId = uid => rows('classes').some(c => c.teacherId === uid || (c.coTeachers || {})[uid]);
+function teacherName(uid){
+  if (uid === S.me) return 'You';
+  for (const c of rows('classes')) { if (c.teacherId === uid && c.teacherName) return c.teacherName; const co = (c.coTeachers || {})[uid]; if (co && co.name) return co.name; }
+  const n = nameOf(uid); return n === 'Student' ? 'Teacher' : n;
+}
+const personName = uid => uid === S.me ? 'You' : isTeacherId(uid) ? teacherName(uid) : nameOf(uid);
+/** The teachers a student can write to (or a teacher can include): the teachers of the student's classes. */
+function teachersFor(student){
+  const m = (D.members || {})[student] || {}, ids = new Set();
+  Object.entries(m.classIds || {}).forEach(([cid, v]) => { const c = (D.classes || {})[cid]; if (v && c) { if (c.teacherId) ids.add(c.teacherId); Object.keys(c.coTeachers || {}).forEach(t => ids.add(t)); } });
+  ids.delete(student); return [...ids];
+}
+const nameInitials = n => (String(n).match(/\b\p{L}/gu) || ['?']).slice(0, 2).join('').toUpperCase();
+const convoTitle = c => (c.participants || []).filter(u => u !== S.me).map(personName).join(', ') || 'Conversation';
 const fmtWhen = ts => { const d = new Date(ts); const same = d.toDateString() === new Date().toDateString(); return same ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); };
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 const fmtDay = iso => new Date(iso).toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
@@ -922,24 +943,49 @@ function eventRow(e, now){
 }
 
 /* ---- messages ---- */
-function threadHTML(sid, title){
-  const ms = msgsOf(sid);
-  return `<section class="card thread"><div class="card-head"><h3>${esc(title)}</h3>${S.role === 'teacher' ? `<button class="link" data-act="closeThread">${icon('back')} All students</button>` : ''}</div>
-    <div class="msgs" id="msgs">${ms.length ? ms.map(m => `<div class="msg ${m.from === S.me ? 'mine' : ''}"><p>${esc(m.text)}</p><time>${esc(m.from === S.me ? 'You' : nameOf(m.from))} · ${esc(fmtWhen(m.at))}</time></div>`).join('') : '<p class="empty">No messages yet. Say bonjour !</p>'}</div>
-    <form class="composer" data-form="msg" data-sid="${esc(sid)}"><label class="sr" for="msgText">Message</label><textarea id="msgText" name="text" rows="2" placeholder="Write a message"></textarea><button class="btn primary">Send</button></form></section>`;
+function convoPane(c){
+  const ms = convoMsgs(c), others = (c.participants || []).filter(u => u !== S.me);
+  return `<section class="card thread"><div class="card-head"><div><h3>${esc(convoTitle(c))}</h3><span class="hint">Only ${esc(others.map(personName).join(', '))} and you can see this conversation</span></div><button class="link" data-act="closeConvo">${icon('back')} All messages</button></div>
+    <div class="msgs" id="msgs">${ms.length ? ms.map(m => `<div class="msg ${m.from === S.me ? 'mine' : ''}"><p>${esc(m.text)}</p><time>${esc(personName(m.from))} · ${esc(fmtWhen(m.at))}</time></div>`).join('') : '<p class="empty">No messages yet. Say bonjour !</p>'}</div>
+    <form class="composer" data-form="msg" data-cid="${esc(c.id)}"><label class="sr" for="msgText">Message</label><textarea id="msgText" name="text" rows="2" placeholder="Write a message"></textarea><button class="btn primary">Send</button></form></section>`;
+}
+function composePane(){
+  const k = S.compose || {}; let who = '';
+  if (S.role === 'teacher') {
+    const c = currentClass(), studs = c ? studentsOf(c.id) : [];
+    const student = k.student || '';
+    const others = student ? teachersFor(student).filter(t => t !== S.me) : [];
+    who = `<label for="cmpStudent">Student</label><select id="cmpStudent"><option value="">Choose a student</option>${studs.map(x => `<option value="${esc(x.uid)}" ${x.uid === student ? 'selected' : ''}>${esc(nameOf(x.uid))}</option>`).join('')}</select>
+      ${others.length ? `<p class="hint" style="margin-top:6px">Also include (they'll see the whole conversation):</p>${others.map(t => `<label class="check"><input type="checkbox" data-cmp-teacher="${esc(t)}" ${(k.teachers || []).includes(t) ? 'checked' : ''}> ${esc(teacherName(t))}</label>`).join('')}` : ''}`;
+  } else {
+    const ts = teachersFor(S.me);
+    who = ts.length ? `<p class="hint">Send to:</p>${ts.map(t => `<label class="check"><input type="checkbox" data-cmp-teacher="${esc(t)}" ${(k.teachers || []).includes(t) ? 'checked' : ''}> ${esc(teacherName(t))}</label>`).join('')}` : '<p class="empty">Join a class to message your teacher.</p>';
+  }
+  return `<section class="card"><div class="card-head"><h3>New message</h3><button class="link" data-act="closeConvo">${icon('back')} All messages</button></div>
+    <form class="stack" data-form="compose">${who}<label for="cmpText">Message</label><textarea id="cmpText" name="text" rows="4" placeholder="Write a message">${esc(k.text || '')}</textarea>
+    <p class="hint">Only the people you choose can see this conversation.</p><div class="actions"><button class="btn primary">Send</button></div></form></section>`;
 }
 function viewInbox(c){
-  if (S.role === 'student') return `<div class="page-head"><h1>Messages</h1></div><p class="muted">Only you and your teacher can see this conversation.</p>${threadHTML(S.me, 'Your teacher')}`;
-  const studs = studentsOf(c.id).map(s => Object.assign({last:msgsOf(s.uid).slice(-1)[0], un:unreadFor(s.uid)}, s)).sort((a, b) => ((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0));
-  const list = `<section class="card"><h3>Students</h3>${studs.length ? `<div class="list">${studs.map(s => `<button class="item" data-act="openThread" data-uid="${esc(s.uid)}" ${S.threadId === s.uid ? 'aria-current="true"' : ''}><span class="avatar">${esc(initials(s.uid))}</span><span class="grow"><span class="t">${esc(nameOf(s.uid))}</span><span class="s">${s.last ? esc(s.last.text.slice(0, 60)) : 'No messages yet'}</span></span>${s.un ? '<span class="dot" title="Unread"></span>' : ''}</button>`).join('')}</div>` : '<p class="empty">Students appear here once they join.</p>'}</section>`;
-  const pane = S.threadId ? threadHTML(S.threadId, nameOf(S.threadId)) : '<section class="card"><p class="empty">Choose a student to read and reply.</p></section>';
-  const narrow = window.matchMedia('(max-width: 979px)').matches;
-  return `<div class="page-head"><h1>Messages</h1><button class="btn" data-act="newAnn">Post to whole class</button></div><div class="inbox">${narrow && S.threadId ? pane : list + (narrow ? '' : pane)}</div>`;
+  const list = myConvos();
+  const listHtml = `<section class="card"><div class="card-head"><h3>Conversations</h3><button class="btn sm primary" data-act="newConvo">${icon('plus')} New message</button></div>
+    ${list.length ? `<div class="list">${list.map(x => { const last = convoMsgs(x).slice(-1)[0], un = convoUnread(x); return `<button class="item" data-act="openConvo" data-cid="${esc(x.id)}" ${S.convoId === x.id ? 'aria-current="true"' : ''}><span class="avatar">${esc(nameInitials(personName(S.role === 'teacher' && x.student !== S.me ? x.student : (x.participants.find(u => u !== S.me) || ''))))}</span><span class="grow"><span class="t">${esc(convoTitle(x))}</span><span class="s">${last ? esc((last.from === S.me ? 'You: ' : '') + last.text.slice(0, 60)) : 'No messages yet'}</span></span>${un ? '<span class="dot" title="Unread"></span>' : ''}</button>`; }).join('')}</div>` : '<p class="empty">No conversations yet.</p>'}</section>`;
+  const open = S.convoId && (D.convos || {})[S.convoId] ? Object.assign({id:S.convoId}, D.convos[S.convoId]) : null;
+  const pane = S.compose ? composePane() : open ? convoPane(open) : `<section class="card"><p class="empty">Choose a conversation, or start a new message.</p></section>`;
+  const narrow = window.matchMedia('(max-width: 979px)').matches, focused = S.compose || open;
+  return `<div class="page-head"><h1>Messages</h1>${S.role === 'teacher' ? '<button class="btn" data-act="newAnn">Post to whole class</button>' : ''}</div><div class="inbox">${narrow && focused ? pane : listHtml + (narrow ? '' : pane)}</div>`;
 }
 function markRead(){
-  const c = currentClass(); if (!c || S.view !== 'inbox' || S.readOnly) return;
-  if (S.role === 'teacher' && S.threadId && unreadFor(S.threadId)) upsert('threads/' + S.threadId, {readT:Date.now()});
-  if (S.role === 'student' && unreadFor(S.me)) upsert('threads/' + S.me, {readS:Date.now()});
+  if (S.view !== 'inbox' || !S.convoId) return; const c = (D.convos || {})[S.convoId];
+  if (c && convoUnread(Object.assign({id:S.convoId}, c))) queue('convos/' + S.convoId, () => S.db.doc('convos/' + S.convoId).update({read:{[S.me]:Date.now()}}));
+}
+async function sendInConvo(id, student, participants, text){
+  const now = Date.now(), msg = {from:S.me, text:text.slice(0, 4000), at:now};
+  const exists = !!(D.convos || {})[id];
+  const ok = await queue('convos/' + id, () => exists
+    ? S.db.doc('convos/' + id).update({msgs:{[rid()]:msg}, lastAt:now, read:{[S.me]:now}})
+    : S.db.doc('convos/' + id).set({student, participants, msgs:{[rid()]:msg}, lastAt:now, read:{[S.me]:now}, createdAt:now}));
+  if (ok) notify({type:'message', cid:id});
+  return ok;
 }
 
 /* ---- vocabulary (each person's own word bank, one doc: vocab/<id>) ---- */
@@ -1508,7 +1554,7 @@ const ACT = {
   toggleDay: () => { const on = !document.documentElement.classList.contains('daylight'); applyDaylight(on); store.set('daylight', on ? '1' : '0'); toast(on ? 'Daylight mode on' : 'Daylight mode off'); },
   cfYes: () => S.confirm && S.confirm(true),
   cfNo: () => S.confirm && S.confirm(false),
-  role: d => { S.role = d.role; if (S.view === 'students' && d.role !== 'teacher') { S.view = 'home'; location.hash = 'home'; } store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.threadId = null; render(true); },
+  role: d => { S.role = d.role; if (S.view === 'students' && d.role !== 'teacher') { S.view = 'home'; location.hash = 'home'; } store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.convoId = null; S.compose = null; render(true); },
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
@@ -1516,7 +1562,7 @@ const ACT = {
   newAnn: () => modal(`${head('Post an announcement', 'Everyone in the class sees this on their home page.')}<form class="stack" data-form="ann"><label for="anText">Message</label><textarea id="anText" name="text" rows="5" required maxlength="2000"></textarea><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Post</button></div></form>`, {label:'Announcement'}),
   delAnn: async d => { if (await askConfirm('Delete this announcement?')) delDoc('announcements/' + d.id); },
   student: d => studentDialog(d.uid),
-  msgStudent: d => { closeModal(); S.threadId = d.uid; go('inbox'); },
+  msgStudent: d => { closeModal(); S.convoId = null; S.compose = {student:d.uid, teachers:[], text:''}; go('inbox'); },
   openLesson: d => { S.lessonId = d.id; render(true); $('#main').scrollTop = 0; },
   closeLesson: () => { S.lessonId = null; render(true); },
   editLesson: d => lessonForm(d.id),
@@ -1547,8 +1593,9 @@ const ACT = {
   togglePast: () => { S.showPast = !S.showPast; render(true); },
   book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) { notify({type:'booking', eid:d.id}); toast('Booked. See you then !'); } },
   unbook: d => upsert('bookings/' + S.me, {slots:{[d.id]:false}}),
-  openThread: d => { S.threadId = d.uid; render(true); markRead(); },
-  closeThread: () => { S.threadId = null; render(true); },
+  openConvo: d => { S.compose = null; S.convoId = d.cid; render(true); markRead(); },
+  closeConvo: () => { S.compose = null; S.convoId = null; render(true); },
+  newConvo: () => { S.convoId = null; S.compose = {student:'', teachers:S.role === 'student' && teachersFor(S.me).length === 1 ? teachersFor(S.me) : [], text:''}; render(true); },
   lookupWord: () => lookupWord(),
   wordLang: d => { S.wordLang = d.lang; store.set('wordLang', d.lang); S.wordQ = ''; render(true); },
   addLang: () => modal(`${head('Add a language tab')}<form class="stack" data-form="addLang"><label for="nlLang">Language</label>${langSelect('nlLang', '', myLangs())}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Add tab</button></div></form>`, {label:'Add language'}),
@@ -1588,7 +1635,7 @@ const ACT = {
   loadSample: async () => {
     const code = newCode(); let ok = true;
     for (const [path, v] of Object.entries(SEED)) {
-      const doc = Object.assign({}, v, path.startsWith('classes/') ? {teacherId:S.me, code, createdAt:Date.now()} : {});
+      const doc = Object.assign({}, v, path.startsWith('classes/') ? {teacherId:S.me, teacherName:profName(S.me) || S.names[S.me] || '', code, createdAt:Date.now()} : {});
       ok = (await setDoc(path, doc)) && ok;
     }
     if (ok) { S.classId = 'fr-a1'; store.set('class', 'fr-a1'); toast('Sample class added. Its join code is ' + code); render(true); }
@@ -1678,7 +1725,7 @@ const FORMS = {
   class: async f => {
     const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
     const doc = {name:f.name.value.trim(), language:f.language.value, level:f.level.value.trim(), description:f.description.value.trim(),
-      code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, createdAt: old ? old.createdAt : Date.now()};
+      code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, teacherName: old ? (old.teacherName || '') : (profName(S.me) || S.names[S.me] || ''), createdAt: old ? old.createdAt : Date.now()};
     if (old && old.coTeachers) doc.coTeachers = old.coTeachers;   // co-teachers only change through the server
     if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
   },
@@ -1773,11 +1820,20 @@ const FORMS = {
     if (await upsert('vocab/' + S.me, {words:{[f.dataset.id]:w}})) { closeModal(); toast('Saved'); }
   },
   msg: async f => {
-    const t = f.text.value.trim(); if (!t) return; const sid = f.dataset.sid, now = Date.now();
-    const part = {msgs:{[rid()]:{from:S.me, text:t.slice(0, 4000), at:now}}, lastAt:now};
-    part[S.role === 'teacher' ? 'readT' : 'readS'] = now;
+    const t = f.text.value.trim(); if (!t) return; const id = f.dataset.cid, c = (D.convos || {})[id]; if (!c) return;
     f.text.value = '';
-    if (await upsert('threads/' + sid, part)) { notify({type:'message', sid}); render(true); const box = $('#msgText'); if (box) box.focus(); } else f.text.value = t;
+    if (await sendInConvo(id, c.student, c.participants, t)) { render(true); const box = $('#msgText'); if (box) box.focus(); } else f.text.value = t;
+  },
+  compose: async f => {
+    const t = f.text.value.trim(), k = S.compose || {};
+    const teachers = [...document.querySelectorAll('[data-cmp-teacher]:checked')].map(x => x.dataset.cmpTeacher);
+    const student = S.role === 'teacher' ? k.student : S.me;
+    if (!student) { toast('Choose a student first.', true); return; }
+    const people = S.role === 'teacher' ? [S.me, ...teachers] : teachers;
+    if (!people.length) { toast('Choose at least one teacher.', true); return; }
+    if (!t) { toast('Write your message first.', true); return; }
+    const id = convoKey(student, people), participants = [student, ...new Set(people)].sort();
+    if (await sendInConvo(id, student, participants, t)) { S.compose = null; S.convoId = id; render(true); }
   }
 };
 
@@ -1792,9 +1848,11 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('submit', e => { const f = e.target; e.preventDefault(); const h = FORMS[f.dataset.form]; if (h) h(f); });
 document.addEventListener('change', e => {
-  if (e.target.id === 'classSel') { S.classId = e.target.value; store.set('class', S.classId); S.lessonId = null; S.threadId = null; render(true); }
+  if (e.target.id === 'classSel') { S.classId = e.target.value; store.set('class', S.classId); S.lessonId = null; S.convoId = null; S.compose = null; render(true); }
   if (e.target.id === 'nlLang') { const o = $('#nlOther'); if (o) o.hidden = e.target.value !== 'other'; }
   if (e.target.dataset && e.target.dataset.notify) { const [ch, type] = e.target.dataset.notify.split(':'); upsert('profiles/' + S.me, {notify:{[ch]:{[type]:e.target.checked}}}); }
+  if (e.target.id === 'cmpStudent') { S.compose = Object.assign({}, S.compose, {student:e.target.value, teachers:[]}); render(true); }
+  if (e.target.dataset && e.target.dataset.cmpTeacher && S.compose) { const set = new Set(S.compose.teachers || []); e.target.checked ? set.add(e.target.dataset.cmpTeacher) : set.delete(e.target.dataset.cmpTeacher); S.compose.teachers = [...set]; }
   if (e.target.id === 'stuClass') { S.stuClass = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'mediaType') { S.mediaType = e.target.value; render(true); }
   if (e.target.id === 'mediaStatus') { S.mediaStatus = e.target.value; render(true); }
@@ -1807,6 +1865,7 @@ document.addEventListener('change', e => {
 ['pause', 'ended'].forEach(ev => document.addEventListener(ev, () => { if (S.dirty) setTimeout(() => render(), 0); }, true));
 document.addEventListener('input', e => {
   if (e.target.id === 'wTerm' && $('#dictLinks')) { $('#dictLinks').innerHTML = dictLinks(currentWordLang(), e.target.value); const o = $('#lookupOut'); if (o) o.innerHTML = ''; }
+  if (e.target.id === 'cmpText' && S.compose) S.compose.text = e.target.value;
   if (e.target.id === 'stuSearch') { S.stuQ = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'wordSearch') { S.wordQ = e.target.value; $('#wordResults').innerHTML = wordResultsHTML(); }
 });
@@ -1815,7 +1874,7 @@ function go(v){ if (location.hash !== '#' + v) location.hash = v; else route(); 
 function route(){
   const v = location.hash.slice(1); S.view = navViews().some(x => x.id === v) ? v : 'home';
   if (S.view !== 'lessons') S.lessonId = null;
-  if (S.view !== 'inbox') S.threadId = null;
+  if (S.view !== 'inbox') { S.convoId = null; S.compose = null; }
   render(true); $('#main').scrollTop = 0; markRead();
 }
 window.addEventListener('hashchange', route);
@@ -1863,6 +1922,7 @@ async function demoStart(role){
   {
     for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
     for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
+    await S.db.doc('classes/fr-a1').update({teacherId:'demo-teacher', teacherName:'Madame Silva'});
     S.assets = !S.teacherCapable ? null : { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
     S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
     await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
@@ -1872,9 +1932,10 @@ async function demoStart(role){
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
   ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
-  if (S.isOwner) ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(listenCol);
+  if (S.isOwner) ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenCol);
   else if (S.teacherCapable) listenMyStudents();
-  else ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(listenOwn);
+  else ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenOwn);
+  listenConvos();
   listenOwn('vocab'); listenOwn('media');
   if (S.isOwner) { listenCol('instructorRequests'); listenCol('teachers'); } else if (!S.teacherCapable) listenOwn('instructorRequests');
   const t = setInterval(() => {

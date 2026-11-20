@@ -1,7 +1,7 @@
 // POST /api/notify — called by the app right after something happens (a grade is saved, a message is sent…).
 // The server checks the event against the database before sending anything, so a user can only
 // trigger the notifications their own real actions justify, and each event is sent once.
-import {admin, verifyUser, studentsOf, docData, nameOf, firstTime, deliver, fail, clip, appUrl, fmtWhen, teachesClass, teachesStudent, teachersOfClass, teachersOfStudent, syncAccess} from './_lib/core.js';
+import {admin, verifyUser, studentsOf, docData, nameOf, firstTime, deliver, fail, clip, appUrl, fmtWhen, teachesClass, teachesStudent, teachersOfClass, syncAccess} from './_lib/core.js';
 
 const HOUR = 36e5;
 const bad = msg => Object.assign(new Error(msg), {status:400});
@@ -49,15 +49,20 @@ export default async function handler(req, res){
         break;
       }
       case 'message': {
-        const sid = safeId(evt.sid);
-        if (sid !== user.uid && !(await teachesStudent(user, sid))) throw forbidden();
-        const t = await docData('threads/' + sid);
-        const msgs = Object.entries((t && t.msgs) || {}).map(([id, m]) => Object.assign({id}, m)).sort((x, y) => (y.at || 0) - (x.at || 0));
+        // Only the people listed in the conversation are told, and only by someone in it.
+        const cid = safeId(evt.cid);
+        const c = await docData('convos/' + cid);
+        if (!c || !(c.participants || []).includes(user.uid)) throw forbidden();
+        const msgs = Object.entries(c.msgs || {}).map(([id, m]) => Object.assign({id}, m)).sort((x, y) => (y.at || 0) - (x.at || 0));
         const last = msgs[0];
         if (!last || last.from !== user.uid || Date.now() - last.at > HOUR) break;
-        if (!(await firstTime(`msg-${sid}-${last.id}`))) break;
-        if (user.uid === sid) sent = await deliver(await teachersOfStudent(sid), 'message', {title:`Message from ${await nameOf(sid)}`, body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
-        else sent = await deliver([sid], 'message', {title:'New message from your teacher', body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
+        if (!(await firstTime(`msg-${cid}-${last.id}`))) break;
+        const from = await nameOf(user.uid), recipients = c.participants.filter(u => u !== user.uid);
+        const fromStudent = user.uid === c.student, about = fromStudent ? '' : await nameOf(c.student);
+        for (const uid of recipients) {
+          const title = fromStudent ? `Message from ${from}` : uid === c.student ? `New message from ${from}` : `${from} wrote about ${about}`;
+          sent += await deliver([uid], 'message', {title, body:clip(last.text, 600), link:link('inbox'), linkLabel:'Reply'});
+        }
         break;
       }
       case 'submission': {
