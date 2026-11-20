@@ -8,11 +8,11 @@ A language learning portal for teachers and students: classes, lessons, assignme
 
 ## Features
 
-- **Accounts:** students create an account (email and password, or Google), confirm their email, and join a class with a six-character code. The teacher sees everyone enrolled on the **Students** page.
+- **Accounts:** separate sign-ups for students and instructors (email and password, or Google). Students join a class with a six-character code; instructor accounts are approved by the owner. The teacher sees everyone enrolled on the **Students** page.
 - **Lessons:** plain-text lessons where lines like `bonjour = hello` become vocabulary rows with a listen button.
 - **Assignments:** written tasks graded with feedback, and quizzes that grade themselves.
 - **Flashcards:** spaced-repetition decks, with each student's progress visible to the teacher.
-- **Vocabulary:** each student's own word bank, one tab per language, with look-up and dictionary links.
+- **Word Bank:** each student's own word bank, one tab per language, with look-up and dictionary links.
 - **Media:** class audio recordings uploaded by the teacher, and each student's personal repertoire of songs, shows, podcasts and books, with teacher recommendations.
 - **Schedule:** class sessions and bookable 1:1 office-hour slots.
 - **Messages:** a private thread between each student and the teacher, plus class announcements.
@@ -43,7 +43,7 @@ A language learning portal for teachers and students: classes, lessons, assignme
 
 Course content: `classes`, `lessons`, `assignments`, `decks`, `events`, `announcements`, `audio`, `recs`.
 One document per person: `members` (classes joined), `profiles` (details and notification settings), `subs` (submissions), `grades`, `prog` (flashcards), `threads` (messages), `bookings`, `vocab`, `media`, `pushTokens`.
-Teachers: `teachers/{uid}` (plus the owner email set in config).
+Teachers: `teachers/{uid}` (plus the owner email set in config); instructor sign-ups wait in `instructorRequests/{uid}`.
 
 ## Repository layout
 

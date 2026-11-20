@@ -89,6 +89,23 @@ export default async function handler(req, res){
         sent = await deliver(await teacherUids(), 'booking', {title:`${await nameOf(user.uid)} booked ${e.title}`, body:`${fmtWhen(e.start)} (${e.mins || 60} min)`, link:link('calendar'), linkLabel:'Open the schedule'});
         break;
       }
+      case 'instructorRequest': {
+        const r = await docData('instructorRequests/' + user.uid);
+        if (!r || r.status !== 'pending' || Date.now() - (r.at || 0) > 24 * HOUR) break;
+        if (!(await firstTime(`instreq-${user.uid}-${r.at}`))) break;
+        const {auth} = admin(); let ownerUid = null;
+        try { ownerUid = (await auth.getUserByEmail(process.env.OWNER_EMAIL)).uid; } catch (e) {}
+        sent = await deliver([ownerUid], 'joined', {title:`Instructor request: ${r.name || r.email}`, body:[r.email, r.teaches ? 'Teaches ' + r.teaches : '', r.org].filter(Boolean).join('\n') || 'Someone asked for an instructor account.', link:link('account'), linkLabel:'Review the request'});
+        break;
+      }
+      case 'instructorApproved': {
+        if (!(user.email === (process.env.OWNER_EMAIL || '').trim().toLowerCase() && user.emailVerified)) throw forbidden();
+        const uid = safeId(evt.uid);
+        const t = await docData('teachers/' + uid); if (!t) throw bad('Not found');
+        if (!(await firstTime(`instok-${uid}-${t.approvedAt}`))) break;
+        sent = await deliver([uid], 'joined', {title:'Your Parlei instructor account is ready', body:'You can now create classes, post lessons and invite students. Sign in to get started.', link:link('home'), linkLabel:'Open Parlei'}, {force:true});
+        break;
+      }
       default: throw bad('Unknown event');
     }
     res.status(200).json({ok:true, sent});

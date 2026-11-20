@@ -48,6 +48,11 @@
 }
 .daylight .top{background:linear-gradient(180deg,#FFFFFF,#F3F9FF)}
 .daylight #nav{background:#FFFFFF}
+.choice{display:flex;gap:14px;align-items:center;text-align:left;width:100%;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer;color:inherit}
+.choice:hover{border-color:var(--accent);background:var(--accent-soft)}
+.choice b{font-size:16px;display:block}
+.choice .s{font-size:13.5px;color:var(--muted)}
+.choice-ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
 .theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--sunk);color:var(--muted);display:grid;place-items:center;cursor:pointer;flex:none}
 .theme-btn:hover{color:var(--ink)}
 .theme-btn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
@@ -663,7 +668,7 @@ function renderTop(){
   let r = '';
   if (S.teacherCapable) r = `<div class="seg" role="group" aria-label="View as"><button data-act="role" data-role="teacher" aria-pressed="${S.role === 'teacher'}">Teacher</button><button data-act="role" data-role="student" aria-pressed="${S.role === 'student'}">Student view</button></div>`;
   else if (S.me) r = '<span class="chip">Student</span>';
-  if (S.demo) r = '<span class="chip" title="Opened outside claude.ai, so changes are not saved">Demo · not saved</span> ' + r;
+  if (S.demo && !S.authScreen) r = '<button class="chip" style="border:0;cursor:pointer" data-act="reloadApp" title="Nothing in the demo is saved">Demo · start over</button> ' + r;
   $('#roleBox').innerHTML = r;
 }
 function renderNav(){
@@ -675,6 +680,7 @@ function renderNav(){
     badge.practice = S.role === 'student' ? dueCardsCount(c.id) : 0;
     badge.inbox = unreadCount(c.id);
   }
+  if (S.isOwner && S.role === 'teacher') badge.account = rows('instructorRequests').filter(r => r.status === 'pending').length;
   const b = n => n ? `<span class="badge" aria-label="${n} pending">${n > 99 ? '99+' : n}</span>` : '';
   const secOn = navViews().some(v => v.sec && v.id === S.view), secBadge = navViews().filter(v => v.sec).reduce((n, v) => n + (badge[v.id] || 0), 0);
   $('#nav').innerHTML = navViews().map(v => `<a href="#${v.id}" class="${v.sec ? 'sec' : ''}" ${S.view === v.id ? 'aria-current="page"' : ''}>${icon(v.icon)}<span class="long">${v.long}</span><span class="short">${v.short}</span>${b(badge[v.id])}</a>`).join('')
@@ -689,6 +695,7 @@ function renderMain(){
   if (S.view === 'words') return out + viewWords();
   if (S.view === 'media') return out + viewMedia(c);
   if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
+  if (!S.teacherCapable && (profileOf(S.me) || {}).role === 'instructor' && S.view !== 'account') return out + viewPending();
   if (S.view === 'account') return out + viewAccount();
   if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
   if (S.role === 'student' && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account. <button class="link" data-act="editProfile">Add your details</button></p>`;
@@ -1209,22 +1216,49 @@ function profileForm(){
 
 /* ---- sign in / create account ---- */
 function viewAuth(){
-  const mode = S.authMode || 'signin', busy = S.authBusy ? 'disabled' : '';
-  const google = `<button type="button" class="btn wide" data-act="googleSignIn" ${busy}><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.1a4.4 4.4 0 0 1-1.9 2.9v2.4h3.1c1.8-1.7 2.7-4.1 2.7-7z" fill="#4285F4" stroke="none"/><path d="M12 21.5c2.6 0 4.7-.9 6.3-2.3l-3.1-2.4c-.9.6-2 .9-3.2.9-2.5 0-4.6-1.7-5.3-3.9H3.5v2.5A9.5 9.5 0 0 0 12 21.5z" fill="#34A853" stroke="none"/><path d="M6.7 13.8a5.7 5.7 0 0 1 0-3.6V7.7H3.5a9.5 9.5 0 0 0 0 8.6z" fill="#FBBC05" stroke="none"/><path d="M12 6.3c1.4 0 2.6.5 3.6 1.4l2.7-2.7A9.5 9.5 0 0 0 3.5 7.7l3.2 2.5C7.4 8 9.5 6.3 12 6.3z" fill="#EA4335" stroke="none"/></svg> Continue with Google</button>`;
+  const mode = S.authMode || 'choose', busy = S.authBusy ? 'disabled' : '';
+  const google = role => `<button type="button" class="btn wide" data-act="googleSignIn" data-role="${role || ''}" ${busy}><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.1a4.4 4.4 0 0 1-1.9 2.9v2.4h3.1c1.8-1.7 2.7-4.1 2.7-7z" fill="#4285F4" stroke="none"/><path d="M12 21.5c2.6 0 4.7-.9 6.3-2.3l-3.1-2.4c-.9.6-2 .9-3.2.9-2.5 0-4.6-1.7-5.3-3.9H3.5v2.5A9.5 9.5 0 0 0 12 21.5z" fill="#34A853" stroke="none"/><path d="M6.7 13.8a5.7 5.7 0 0 1 0-3.6V7.7H3.5a9.5 9.5 0 0 0 0 8.6z" fill="#FBBC05" stroke="none"/><path d="M12 6.3c1.4 0 2.6.5 3.6 1.4l2.7-2.7A9.5 9.5 0 0 0 3.5 7.7l3.2 2.5C7.4 8 9.5 6.3 12 6.3z" fill="#EA4335" stroke="none"/></svg> Continue with Google</button>`;
   const err = S.authError ? `<p class="banner">${esc(S.authError)}</p>` : '';
-  if (mode === 'reset') return `<section class="card narrow"><p class="eyebrow">Parlei</p><h1>Reset your password</h1><p class="muted">We'll email you a link to choose a new password.</p>${err}
-    <form class="stack" data-form="authReset"><label for="auEmail">Email</label><input id="auEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}"><button class="btn primary" ${busy}>Send reset link</button></form>
-    <button class="link" data-act="authMode" data-mode="signin">Back to sign in</button></section>`;
-  if (mode === 'signup') return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your Parlei account</h1><p class="muted">For students joining a class. You'll enter your teacher's join code next.</p>${err}
-    <form class="stack" data-form="authSignup"><div class="grid2"><div><label for="suFirst">First name</label><input id="suFirst" name="first" required maxlength="40" autocomplete="given-name"></div><div><label for="suLast">Last name</label><input id="suLast" name="last" required maxlength="40" autocomplete="family-name"></div></div>
-    <label for="suEmail">Email</label><input id="suEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
-    <label for="suPw">Password</label><input id="suPw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
-    <button class="btn primary" ${busy}>Create account</button></form>${google}
+  const back = `<button class="link" data-act="authMode" data-mode="choose">${icon('back')} Back</button>`;
+  const nameFields = p => `<div class="grid2"><div><label for="${p}First">First name</label><input id="${p}First" name="first" required maxlength="40" autocomplete="given-name"></div><div><label for="${p}Last">Last name</label><input id="${p}Last" name="last" required maxlength="40" autocomplete="family-name"></div></div>
+    <label for="${p}Email">Email</label><input id="${p}Email" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
+    <label for="${p}Pw">Password</label><input id="${p}Pw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">`;
+  if (mode === 'choose') return `<section class="card narrow" style="gap:16px"><p class="eyebrow">Bienvenue · Bienvenido · Bem-vindo</p><h1>Welcome to Parlei</h1>
+    ${S.demo ? '<p class="banner">This is a demo with a sample French class. Nothing you do is saved.</p>' : '<p class="muted">Lessons, practice and messages for your language class.</p>'}
+    <button class="choice" data-act="${S.demo ? 'demoAs' : 'authMode'}" data-mode="student" data-role="student"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>I'm a student</b><span class="s">${S.demo ? 'See Parlei the way students do' : 'Create an account and join your class with a code'}</span></span></button>
+    <button class="choice" data-act="${S.demo ? 'demoAs' : 'authMode'}" data-mode="instructor" data-role="teacher"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>I'm an instructor</b><span class="s">${S.demo ? 'Try the teacher tools' : 'Teach your classes on Parlei'}</span></span></button>
+    ${S.demo ? '' : '<p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p>'}</section>`;
+  if (mode === 'reset') return `<section class="card narrow">${back}<h1>Reset your password</h1><p class="muted">We'll email you a link to choose a new password.</p>${err}
+    <form class="stack" data-form="authReset"><label for="auEmail">Email</label><input id="auEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}"><button class="btn primary" ${busy}>Send reset link</button></form></section>`;
+  if (mode === 'student') return `<section class="card narrow">${back}<p class="eyebrow">Students</p><h1>Create your student account</h1><p class="muted">You'll enter your teacher's join code next.</p>${err}
+    <form class="stack" data-form="authSignup" data-role="student">${nameFields('su')}<button class="btn primary" ${busy}>Create student account</button></form>${google('student')}
     <p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p></section>`;
-  return `<section class="card narrow"><p class="eyebrow">Parlei</p><h1>Sign in</h1>${err}
+  if (mode === 'instructor') return `<section class="card narrow">${back}<p class="eyebrow">Instructors</p><h1>Create your instructor account</h1><p class="muted">Instructor accounts are approved before they can create classes. We'll email you as soon as yours is ready.</p>${err}
+    <form class="stack" data-form="authSignup" data-role="instructor">${nameFields('in')}
+    <label for="inTeach">Languages you teach</label><input id="inTeach" name="teaches" maxlength="80" placeholder="French, Portuguese">
+    <label for="inOrg">School or organization <span class="hint">(optional)</span></label><input id="inOrg" name="org" maxlength="80">
+    <button class="btn primary" ${busy}>Request instructor account</button></form>${google('instructor')}
+    <p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p></section>`;
+  return `<section class="card narrow">${back}<h1>Sign in</h1>${err}
     <form class="stack" data-form="authSignin"><label for="siEmail">Email</label><input id="siEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <label for="siPw">Password</label><input id="siPw" name="password" type="password" required autocomplete="current-password"><button class="btn primary" ${busy}>Sign in</button></form>
-    ${google}<div class="row-actions" style="justify-content:space-between"><button class="link" data-act="authMode" data-mode="signup">New student? Create an account</button><button class="link" data-act="authMode" data-mode="reset">Forgot password?</button></div></section>`;
+    ${google('')}<div class="row-actions" style="justify-content:space-between"><button class="link" data-act="authMode" data-mode="choose">New here? Create an account</button><button class="link" data-act="authMode" data-mode="reset">Forgot password?</button></div></section>`;
+}
+function viewPending(){
+  const r = (D.instructorRequests || {})[S.me] || {};
+  if (r.status === 'declined') return `<section class="card narrow"><p class="eyebrow">Instructor account</p><h1>Your request wasn't approved</h1><p class="muted">If you think this is a mistake, contact the Parlei administrator. You can still use Parlei as a student.</p>
+    <div class="row-actions"><button class="btn primary" data-act="becomeStudent">Continue as a student</button><button class="btn" data-act="signOut">Sign out</button></div></section>`;
+  return `<section class="card narrow"><p class="eyebrow">Instructor account</p><h1>Almost there</h1><p class="muted">Your instructor account is waiting for approval. We'll email ${esc(S.email || 'you')} as soon as it's ready, usually within a day.</p>
+    <div class="row-actions"><button class="btn primary" data-act="reloadApp">Check again</button><button class="btn" data-act="signOut">Sign out</button></div></section>`;
+}
+function instructorAdminHTML(){
+  if (!S.isOwner || S.demo && !S.teacherCapable) return '';
+  const reqs = rows('instructorRequests').filter(r => r.status === 'pending').sort((a, b) => (a.at || 0) - (b.at || 0));
+  const teachers = rows('teachers').sort((a, b) => (a.approvedAt || 0) - (b.approvedAt || 0));
+  return `<section class="card"><div class="card-head"><h3>Instructors</h3>${reqs.length ? `<span class="pill warn">${reqs.length} waiting</span>` : ''}</div>
+    ${reqs.length ? `<p class="unit-label">Requests</p><div class="list">${reqs.map(r => `<div class="item"><span class="grow"><span class="t">${esc(r.name || 'New instructor')}</span><span class="s">${esc([r.email, r.teaches ? 'Teaches ' + r.teaches : '', r.org].filter(Boolean).join(' · '))}</span></span><button class="btn sm primary" data-act="approveInstructor" data-uid="${esc(r.id)}">Approve</button><button class="btn sm" data-act="declineInstructor" data-uid="${esc(r.id)}">Decline</button></div>`).join('')}</div>` : '<p class="hint">New instructor sign-ups appear here for you to approve.</p>'}
+    ${teachers.length ? `<p class="unit-label">Approved</p><div class="list">${teachers.map(t => `<div class="item"><span class="grow"><span class="t">${esc(t.name || 'Instructor')}</span><span class="s">${esc(t.email || '')}</span></span><button class="link danger" data-act="removeInstructor" data-uid="${esc(t.id)}">Remove</button></div>`).join('')}</div>` : ''}
+    <p class="hint">Approved instructors create and run their own classes. They can also see student records across Parlei, so approve only people you trust.</p></section>`;
 }
 function authErrText(e){
   const c = (e && e.code) || '';
@@ -1260,6 +1294,7 @@ function viewAccount(){
     <div class="item"><span class="grow"><span class="s">Email</span><span>${esc(email || '—')}</span></span></div>
     ${S.platform ? `<div class="item"><span class="grow"><span class="s">Password</span><span>We'll email you a link to change it.</span></span><button class="btn sm" data-act="changePassword">Change password</button></div>` : ''}
   </div>${S.platform ? `<div class="row-actions"><button class="btn" data-act="signOut">Sign out</button></div>` : ''}</section>
+  ${instructorAdminHTML()}
   <section class="card"><div class="card-head"><h3>Notifications</h3><span class="hint">Emails go to ${esc(email || 'your account email')}</span></div>
     <div class="list"><div class="item" style="padding:6px 0"><span class="grow"></span><span class="hint" style="width:56px;text-align:center">Email</span><span class="hint" style="width:56px;text-align:center">Push</span></div>
     ${types.map(([k, label, desc]) => `<div class="item"><span class="grow"><span class="t" style="font-weight:500">${esc(label)}</span><span class="s">${esc(desc)}</span></span>
@@ -1527,7 +1562,18 @@ const ACT = {
   },
   editProfile: () => profileForm(),
   authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
-  googleSignIn: () => authRun(() => S.platform.signInGoogle()),
+  googleSignIn: d => { S.signupRole = d.role || ''; return authRun(() => S.platform.signInGoogle()); },
+  demoAs: d => demoStart(d.role),
+  reloadApp: () => location.reload(),
+  becomeStudent: async () => { if (await upsert('profiles/' + S.me, {role:'student'})) render(true); },
+  approveInstructor: async d => {
+    const r = D.instructorRequests[d.uid]; if (!r) return;
+    if (!(await setDoc('teachers/' + d.uid, {name:r.name || '', email:r.email || '', approvedAt:Date.now()}))) return;
+    await setDoc('instructorRequests/' + d.uid, Object.assign({}, r, {status:'approved', decidedAt:Date.now()}));
+    notify({type:'instructorApproved', uid:d.uid}); toast((r.name || 'Instructor') + ' approved');
+  },
+  declineInstructor: async d => { const r = D.instructorRequests[d.uid]; if (!r || !(await askConfirm(`Decline ${r.name || 'this request'}? They can still use Parlei as a student.`, 'Decline'))) return; setDoc('instructorRequests/' + d.uid, Object.assign({}, r, {status:'declined', decidedAt:Date.now()})); },
+  removeInstructor: async d => { const t = D.teachers[d.uid]; if (!(await askConfirm(`Remove ${(t && t.name) || 'this instructor'}? They lose teacher access; their classes stay.`, 'Remove'))) return; delDoc('teachers/' + d.uid); },
   signOut: async () => { try { await S.platform.signOut(); } catch (e) {} location.hash = 'home'; location.reload(); },
   changePassword: async () => { try { await S.platform.resetPassword(S.email); toast('Check your email for a link to change your password.'); } catch (e) { toast(authErrText(e), true); } },
   resendVerify: async () => { try { await S.platform.resendVerification(); toast('Sent. Check your inbox.'); } catch (e) { toast(authErrText(e), true); } },
@@ -1554,7 +1600,9 @@ const FORMS = {
   authSignin: f => { S.authEmail = f.email.value.trim(); return authRun(() => S.platform.signIn(S.authEmail, f.password.value)); },
   authSignup: f => {
     const first = f.first.value.trim(), last = f.last.value.trim(), email = f.email.value.trim(); S.authEmail = email;
-    S.pendingProfile = {first, last, preferred:'', email, phone:'', native:'', goals:'', createdAt:Date.now(), lastSeen:Date.now()};
+    const role = f.dataset.role === 'instructor' ? 'instructor' : 'student';
+    S.pendingProfile = {first, last, preferred:'', email, phone:'', native:'', goals:'', role, createdAt:Date.now(), lastSeen:Date.now()};
+    if (role === 'instructor') S.pendingRequest = {name:(first + ' ' + last).trim(), email, teaches:f.teaches.value.trim(), org:f.org.value.trim()};
     return authRun(() => S.platform.signUp(email, f.password.value, (first + ' ' + last).trim()));
   },
   authReset: f => { S.authEmail = f.email.value.trim(); return authRun(async () => { await S.platform.resetPassword(S.authEmail); S.authMode = 'signin'; toast('If that email has an account, a reset link is on its way.'); }); },
@@ -1734,13 +1782,7 @@ async function boot(){
   S.tts = browserTTS();
   const P = await window.parleiReady;          // null when config.js has no Firebase settings: run the demo
   if (!P) {
-    S.demo = true; S.db = memoryDB(); S.me = 'demo-teacher'; S.isOwner = true; S.teacherCapable = true;
-    for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
-    for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
-    S.assets = { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
-    S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
-    await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
-    startApp(); return;
+    S.demo = true; S.authScreen = true; S.authMode = 'choose'; render(true); return;
   }
   if (P.error) { S.fatal = 'config'; render(true); return; }
   S.platform = P; S.db = P.db;
@@ -1751,15 +1793,38 @@ async function boot(){
     S.authScreen = false; S.me = u.uid; S.email = u.email || ''; S.names[u.uid] = u.displayName || '';
     S.isOwner = !!u.isOwner; S.teacherCapable = !!u.isTeacher; S.verifyNote = !!u.needsVerify;
     S.assets = S.teacherCapable ? P.assets : null;
+    if (!S.pendingProfile && S.signupRole && !S.teacherCapable) {   // Google sign-up from the student or instructor page
+      const existing = await S.db.doc('profiles/' + S.me).get().catch(() => null);
+      if (!existing || !existing.exists) {
+        const [first, ...rest] = (u.displayName || '').split(' ');
+        S.pendingProfile = {first:first || '', last:rest.join(' '), preferred:'', email:u.email || '', phone:'', native:'', goals:'', role:S.signupRole === 'instructor' ? 'instructor' : 'student', createdAt:Date.now(), lastSeen:Date.now()};
+        if (S.signupRole === 'instructor') S.pendingRequest = {name:u.displayName || '', email:u.email || '', teaches:'', org:''};
+      }
+    }
     if (S.pendingProfile) { const pp = S.pendingProfile; S.pendingProfile = null; await upsert('profiles/' + S.me, pp); }
+    if (S.pendingRequest && !S.teacherCapable) { const rq = S.pendingRequest; S.pendingRequest = null; if (await setDoc('instructorRequests/' + S.me, Object.assign(rq, {status:'pending', at:Date.now()}))) notify({type:'instructorRequest'}); }
     startApp();
   });
+}
+async function demoStart(role){
+  S.demo = true; S.authScreen = false; S.db = memoryDB();
+  if (role === 'teacher') { S.me = 'demo-teacher'; S.isOwner = true; S.teacherCapable = true; store.set('preview', '0'); }
+  else { S.me = 'demo-student'; S.isOwner = false; S.teacherCapable = false; }
+  {
+    for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
+    for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
+    S.assets = !S.teacherCapable ? null : { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
+    S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
+    await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
+    startApp();
+  }
 }
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
   ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
   ['members', 'subs', 'grades', 'prog', 'threads', 'profiles'].forEach(S.teacherCapable ? listenCol : listenOwn);
   listenOwn('vocab'); listenOwn('media');
+  if (S.isOwner) { listenCol('instructorRequests'); listenCol('teachers'); } else if (!S.teacherCapable) listenOwn('instructorRequests');
   const t = setInterval(() => {
     if (!ready() || !S.loaded.profiles) return;
     clearInterval(t); clearTimeout(slow); S.slow = false;

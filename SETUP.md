@@ -80,7 +80,7 @@ Until your domain is verified, Resend only delivers to your own email address. T
 
 ## 6. Students
 
-Send students your site's address and the class **join code**. They tap **New student? Create an account**, confirm their email, and enter the code.
+Send students your site's address and the class **join code**. They tap **I'm a student**, create an account, confirm their email, and enter the code.
 
 **Push on iPhone and iPad:** Apple only allows notifications for sites saved to the home screen. Students open Parlei in Safari, tap **Share → Add to Home Screen**, open it from the new icon, then turn on push under **Settings**. Android phones and computers can turn it on straight from the browser.
 
@@ -97,9 +97,15 @@ Send students your site's address and the class **join code**. They tap **New st
 
 Everyone can turn each one on or off, separately for email and push, under **Settings**. Reminders go out once a day at 7 a.m. Toronto time (12:00 UTC; change it in `vercel.json`).
 
-## Adding another teacher later
+## Students and instructors
 
-In Firestore, create a document in a collection named `teachers` whose ID is that person's user ID (from **Authentication → Users**). They get teacher access on their next sign-in.
+The first screen asks everyone whether they're a **student** or an **instructor**.
+
+- **Students** create an account, confirm their email and enter a class join code.
+- **Instructors** fill in a short request. You get an email, and the request appears under **Settings → Instructors**, where you **Approve** or **Decline** it. Approved instructors get an email and can create and run their own classes. Until then they see a "waiting for approval" page. You can remove an instructor there at any time; their classes stay.
+- Your own teacher email (`ownerEmail`) is always the main teacher and never needs approval.
+
+Approved instructors can also see student records across Parlei, so approve only people you trust.
 
 ## Making changes
 

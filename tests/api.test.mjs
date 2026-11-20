@@ -103,3 +103,16 @@ test('look-up endpoint and daily limit', async () => {
   assert.equal((await call(lookup, null, {lang:'fr', term:'x'})).status, 401);
   assert.equal((await call(lookup, 'tok-amara', {lang:'<script>', term:'x'})).status, 400);
 });
+test('instructor requests go to the owner; only the owner can announce approval', async () => {
+  store.set('instructorRequests/luis', {name:'Luis Herrera', email:'luis@example.com', teaches:'Spanish', status:'pending', at:Date.now()});
+  sentEmails.length = 0;
+  await call(notify, 'tok-luis', {type:'instructorRequest'});
+  assert.deepEqual(sentEmails.map(e => e.to[0]), ['owner@example.com']);
+  assert.match(sentEmails[0].subject, /Instructor request: Luis Herrera/);
+  assert.equal((await call(notify, 'tok-amara', {type:'instructorRequest'})).json.sent, 0);   // no request on file
+  assert.equal((await call(notify, 'tok-luis', {type:'instructorApproved', uid:'luis'})).status, 403);
+  store.set('teachers/luis', {name:'Luis Herrera', approvedAt:Date.now()});
+  sentEmails.length = 0;
+  await call(notify, 'tok-owner', {type:'instructorApproved', uid:'luis'});
+  assert.match(sentEmails[0].subject, /instructor account is ready/);
+});

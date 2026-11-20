@@ -30,6 +30,13 @@ service cloud.firestore {
     // Who teaches. Only the owner adds teachers.
     match /teachers/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isOwner(); }
 
+    // Instructor sign-ups: the applicant creates a pending request; only the owner approves or declines it.
+    match /instructorRequests/{uid} {
+      allow read: if isSelf(uid) || isOwner();
+      allow create: if isSelf(uid) && request.resource.data.status == 'pending';
+      allow update, delete: if isOwner();
+    }
+
     // Each student's own records: they and the teacher can read; the student writes.
     match /members/{uid}      { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid) || isTeacher(); }
     match /profiles/{uid}     { allow read: if isSelf(uid) || isTeacher(); allow write: if isSelf(uid); }
