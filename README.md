@@ -74,6 +74,3 @@ npm run dev              # serve public/ on http://localhost:3000 (demo mode unt
 ```
 
 In demo mode the sign-up and sign-in forms work exactly as on the live site, but accounts last only for the visit. Quick logins: `teacher@demo.parlei` and `student@demo.parlei` with any password.
-
-```sh
-```
