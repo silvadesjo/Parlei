@@ -490,6 +490,7 @@ function currentClass(){
   return cs.find(c => c.id === S.classId) || cs.find(c => c.id === store.get('class')) || cs[0];
 }
 const inClass = (col, cid) => rows(col).filter(x => x.classId === cid);
+const myClassesAll = () => rows('classes').sort(byCreated);
 const classOf = id => { const c = (D.classes || {})[id]; return c ? Object.assign({id}, c) : null; };
 function studentsOf(cid){ return Object.entries(D.members || {}).filter(([, m]) => m.classIds && m.classIds[cid]).map(([uid, m]) => ({uid, joined:m.classIds[cid]})).sort((a, b) => a.joined - b.joined); }
 const subOf = (uid, aid) => { const s = (D.subs || {})[uid]; return (s && s.items && s.items[aid]) || null; };
@@ -697,10 +698,10 @@ function viewJoin(){
   const prof = profileOf(S.me);
   if (!prof) return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your student account</h1><p class="muted">Tell your teacher who you are, then enter the join code they gave you. Only your teacher sees these details.</p>
     <form class="stack" data-form="signup">${profileFields(S.demo ? {} : {first:(S.names[S.me] || '').split(' ')[0] || ''})}
-    <label for="joinCode">Join code</label><input id="joinCode" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. BNJR26" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
+    <label for="joinCode">Join code</label><input id="joinCode" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
     <button class="btn primary">Create account and join</button></form></section>`;
   return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me))}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
-  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. BNJR26" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>`;
+  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>`;
 }
 
 /* ---- home ---- */
@@ -1467,7 +1468,7 @@ const FORMS = {
   signup: async f => {
     const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
-    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code);
+    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null);
     if (!c) { toast("That join code doesn't match a class. Check it with your teacher.", true); return; }
     const now = Date.now();
     if (!(await upsert('profiles/' + S.me, Object.assign(r.p, {createdAt:now, lastSeen:now})))) return;
@@ -1480,7 +1481,7 @@ const FORMS = {
   },
   join: async f => {
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return;
-    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code);
+    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null);
     if (!c) { toast("That code doesn't match a class. Check it with your teacher.", true); return; }
     if (await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}})) { S.classId = c.id; store.set('class', c.id); f.code.blur(); if ($('#modalRoot').classList.contains('open')) closeModal(); go('home'); render(true); }
   },
