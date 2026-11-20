@@ -365,7 +365,7 @@ const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON
 const VIEWS = [
   {id:'home', long:'Home', short:'Home', icon:'home'},
   {id:'lessons', long:'Lessons', short:'Lessons', icon:'book'},
-  {id:'words', long:'Vocabulary', short:'Words', icon:'abc'},
+  {id:'words', long:'WordBank', short:'WordBank', icon:'abc'},
   {id:'media', long:'Media', short:'Media', icon:'media', sec:true},
   {id:'work', long:'Assignments', short:'Work', icon:'check'},
   {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
@@ -690,7 +690,7 @@ function renderMain(){
   if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
   if (S.view === 'account') return out + viewAccount();
   if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
-  if (S.role === 'student' && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account so your teacher knows who you are. <button class="link" data-act="editProfile">Add your details</button></p>`;
+  if (S.role === 'student' && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account. <button class="link" data-act="editProfile">Add your details</button></p>`;
   const V = {home: S.role === 'teacher' ? viewHomeT : viewHomeS, lessons:viewLessons, work: S.role === 'teacher' ? viewWorkT : viewWorkS, practice:viewPractice, calendar:viewCalendar, inbox:viewInbox};
   return out + (V[S.view] || V.home)(c);
 }
@@ -969,7 +969,7 @@ function wordResultsHTML(){
 }
 function viewWords(){
   const langs = myLangs(), lang = currentWordLang();
-  const headHtml = `<div class="page-head"><div><p class="eyebrow">Your personal word bank</p><h1>Vocabulary</h1></div></div>`;
+  const headHtml = `<div class="page-head"><div><p class="eyebrow">Your personal word bank</p><h1>WordBank</h1></div></div>`;
   if (!lang) {
     const c = currentClass(); const sug = c && c.language ? c.language : 'fr';
     return headHtml + `<section class="card narrow"><h2>Start your word bank</h2><p class="muted">Collect the words you meet in class, in books and out in the world. Each language you study gets its own tab.</p>
@@ -1093,7 +1093,7 @@ function mediaRow(m){
 }
 function viewRepertoire(c){
   const langs = myLangs(), lang = currentWordLang();
-  if (!lang) return `<section class="card narrow"><h2>Build your repertoire</h2><p class="muted">Keep track of songs, shows, podcasts and books in the languages you're learning. Language tabs are shared with Vocabulary.</p>
+  if (!lang) return `<section class="card narrow"><h2>Build your repertoire</h2><p class="muted">Keep track of songs, shows, podcasts and books in the languages you're learning. Language tabs are shared with WordBank.</p>
     <form class="stack" data-form="addLang"><label for="nlLang">First language</label>${langSelect('nlLang', (c && c.language) || 'fr', [])}<div id="nlOther" class="stack" hidden><label for="nlName">Which language?</label><input id="nlName" name="name" maxlength="40" placeholder="e.g. Twi, Catalan, Quechua"></div><button class="btn primary">Create tab</button></form></section>`;
   const all = myMedia(lang), haveTitles = new Set(all.map(m => norm(m.title)));
   const items = all.filter(m => (S.mediaType === 'all' || m.type === S.mediaType) && (S.mediaStatus === 'all' || m.status === S.mediaStatus));
