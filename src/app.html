@@ -53,6 +53,10 @@
 .choice b{font-size:16px;display:block}
 .choice .s{font-size:13.5px;color:var(--muted)}
 .choice-ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.wide-only{display:inline}
+@media (max-width:560px){.wide-only{display:none}.signed-in .theme-btn{display:none}.top{gap:8px}.top select{max-width:140px}}
+.acct{width:36px;height:36px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;cursor:pointer;flex:none}
+#roleBox{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--sunk);color:var(--muted);display:grid;place-items:center;cursor:pointer;flex:none}
 .theme-btn:hover{color:var(--ink)}
 .theme-btn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
@@ -747,10 +751,22 @@ function renderTop(){
   const cs = S.fatal || !ready() ? [] : myClasses(), c = currentClass();
   $('#classSwitch').innerHTML = cs.length > 1 ? `<label class="sr" for="classSel">Class</label><select id="classSel">${cs.map(x => `<option value="${esc(x.id)}" ${c && x.id === c.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '';
   let r = '';
-  if (S.teacherCapable) r = `<div class="seg" role="group" aria-label="View as"><button data-act="role" data-role="teacher" aria-pressed="${S.role === 'teacher'}">Teacher</button><button data-act="role" data-role="student" aria-pressed="${S.role === 'student'}">Student view</button></div>`;
+  if (S.teacherCapable) r = `<div class="seg" role="group" aria-label="View as"><button data-act="role" data-role="teacher" aria-pressed="${S.role === 'teacher'}">Teacher</button><button data-act="role" data-role="student" aria-pressed="${S.role === 'student'}">Student<span class="wide-only"> view</span></button></div>`;
   else if (S.me) r = '<span class="chip">Student</span>';
-  if (S.demo && !S.authScreen) r = '<button class="chip" style="border:0;cursor:pointer" data-act="reloadApp" title="Nothing in the demo is saved">Demo · start over</button> ' + r;
+  if (S.demo && !S.authScreen) r = '<button class="chip" style="border:0;cursor:pointer" data-act="reloadApp" title="Nothing in the demo is saved">Demo<span class="wide-only"> · start over</span></button> ' + r;
+  if (S.authScreen) r = `<div class="row-actions" style="flex-wrap:nowrap">${S.authMode === 'signin' ? '' : '<button class="btn sm" data-act="authMode" data-mode="signin">Sign in</button>'}${['choose', 'student', 'instructor'].includes(S.authMode || 'choose') ? '' : '<button class="btn sm primary" data-act="authMode" data-mode="choose">Create account</button>'}</div>`;
+  else if (S.me && S.platform) r += ` <button class="acct" data-act="accountMenu" aria-label="Your account">${esc(nameInitialsSafe(profName(S.me) || S.names[S.me] || S.email || '?'))}</button>`;
   $('#roleBox').innerHTML = r;
+  document.body.classList.toggle('signed-in', !!(S.me && S.platform && !S.authScreen));
+}
+const nameInitialsSafe = n => (String(n).match(/\b\p{L}/gu) || ['?']).slice(0, 2).join('').toUpperCase();
+function accountMenu(){
+  const name = profName(S.me) || S.names[S.me] || 'Your account';
+  modal(`${head(name, esc(S.email || ''))}<div class="list">
+    <button class="item" data-act="navTo" data-v="account"><span class="grow"><span class="t">Settings</span><span class="s">Notifications, password, display</span></span></button>
+    <button class="item" data-act="editProfile"><span class="grow"><span class="t">My details</span><span class="s">Name, email and more</span></span></button>
+    <button class="item" data-act="toggleDay"><span class="grow"><span class="t">Daylight mode</span><span class="s">${document.documentElement.classList.contains('daylight') ? 'On: tap to turn off' : 'A brighter, light-blue look'}</span></span></button>
+  </div><div class="actions"><button class="btn" data-act="signOut">Sign out</button></div>`, {label:'Account'});
 }
 function renderNav(){
   if (S.authScreen || S.fatal) { $('#nav').innerHTML = ''; return; }
@@ -1357,22 +1373,23 @@ function viewAuth(){
     <label for="${p}Email">Email</label><input id="${p}Email" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <label for="${p}Pw">Password</label><input id="${p}Pw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">`;
   if (mode === 'choose') return `<section class="card narrow" style="gap:16px"><p class="eyebrow">Bienvenue · Bienvenido · Bem-vindo</p><h1>Welcome to Parlei</h1>
-    ${S.demo ? '<p class="banner">This is a demo with a sample French class. Nothing you do is saved.</p>' : '<p class="muted">Lessons, practice and messages for your language class.</p>'}
-    <button class="choice" data-act="${S.demo ? 'demoAs' : 'authMode'}" data-mode="student" data-role="student"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>I'm a student</b><span class="s">${S.demo ? 'See Parlei the way students do' : 'Create an account and join your class with a code'}</span></span></button>
-    <button class="choice" data-act="${S.demo ? 'demoAs' : 'authMode'}" data-mode="instructor" data-role="teacher"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>I'm an instructor</b><span class="s">${S.demo ? 'Try the teacher tools' : 'Teach your classes on Parlei'}</span></span></button>
-    ${S.demo ? '' : '<p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p>'}</section>`;
+    ${S.demo ? '<p class="banner">This is a demo. Accounts and everything you do last only until you close the page.</p>' : '<p class="muted">Lessons, practice and messages for your language class.</p>'}
+    <button class="choice" data-act="authMode" data-mode="student"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>I'm a student</b><span class="s">Create an account and join your class with a code</span></span></button>
+    <button class="choice" data-act="authMode" data-mode="instructor"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>I'm an instructor</b><span class="s">Teach your classes on Parlei</span></span></button>
+    <button class="btn primary wide" data-act="authMode" data-mode="signin">I already have an account: Sign in</button>
+    ${S.demo ? `<div class="stack" style="gap:6px;border-top:1px solid var(--line);padding-top:14px"><span class="hint">Just looking? Skip the forms:</span><div class="row-actions"><button class="btn" data-act="demoLogin" data-email="teacher@demo.parlei">Try the teacher demo</button><button class="btn" data-act="demoLogin" data-email="student@demo.parlei">Try the student demo</button></div></div>` : ''}</section>`;
   if (mode === 'reset') return `<section class="card narrow">${back}<h1>Reset your password</h1><p class="muted">We'll email you a link to choose a new password.</p>${err}
     <form class="stack" data-form="authReset"><label for="auEmail">Email</label><input id="auEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}"><button class="btn primary" ${busy}>Send reset link</button></form></section>`;
   if (mode === 'student') return `<section class="card narrow">${back}<p class="eyebrow">Students</p><h1>Create your student account</h1><p class="muted">You'll enter your teacher's join code next.</p>${err}
     <form class="stack" data-form="authSignup" data-role="student">${nameFields('su')}<button class="btn primary" ${busy}>Create student account</button></form>${google('student')}
     <p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p></section>`;
-  if (mode === 'instructor') return `<section class="card narrow">${back}<p class="eyebrow">Instructors</p><h1>Create your instructor account</h1><p class="muted">Instructor accounts are approved before they can create classes. We'll email you as soon as yours is ready.</p>${err}
+  if (mode === 'instructor') return `<section class="card narrow">${back}<p class="eyebrow">Instructors</p><h1>Create your instructor account</h1><p class="muted">${S.demo ? 'In the demo, instructor accounts are approved straight away. On the live site you approve each one.' : 'Instructor accounts are approved before they can create classes. We\'ll email you as soon as yours is ready.'}</p>${err}
     <form class="stack" data-form="authSignup" data-role="instructor">${nameFields('in')}
     <label for="inTeach">Languages you teach</label><input id="inTeach" name="teaches" maxlength="80" placeholder="French, Portuguese">
     <label for="inOrg">School or organization <span class="hint">(optional)</span></label><input id="inOrg" name="org" maxlength="80">
     <button class="btn primary" ${busy}>Request instructor account</button></form>${google('instructor')}
     <p class="muted">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p></section>`;
-  return `<section class="card narrow">${back}<h1>Sign in</h1>${err}
+  return `<section class="card narrow">${back}<h1>Sign in</h1>${err}${S.demo ? '<p class="hint">Demo: sign in with an account you created on this visit, or use teacher@demo.parlei or student@demo.parlei with any password.</p>' : ''}
     <form class="stack" data-form="authSignin"><label for="siEmail">Email</label><input id="siEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <label for="siPw">Password</label><input id="siPw" name="password" type="password" required autocomplete="current-password"><button class="btn primary" ${busy}>Sign in</button></form>
     ${google('')}<div class="row-actions" style="justify-content:space-between"><button class="link" data-act="authMode" data-mode="choose">New here? Create an account</button><button class="link" data-act="authMode" data-mode="reset">Forgot password?</button></div></section>`;
@@ -1707,7 +1724,8 @@ const ACT = {
   editProfile: () => profileForm(),
   authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
   googleSignIn: d => { S.signupRole = d.role || ''; return authRun(() => S.platform.signInGoogle()); },
-  demoAs: d => demoStart(d.role),
+  demoLogin: d => { store.set('preview', '0'); return authRun(() => S.platform.signIn(d.email, 'demo')); },
+  accountMenu: () => accountMenu(),
   reloadApp: () => location.reload(),
   becomeStudent: async () => { if (await upsert('profiles/' + S.me, {role:'student'})) render(true); },
   approveInstructor: async d => {
@@ -1718,7 +1736,7 @@ const ACT = {
   },
   declineInstructor: async d => { const r = D.instructorRequests[d.uid]; if (!r || !(await askConfirm(`Decline ${r.name || 'this request'}? They can still use Parlei as a student.`, 'Decline'))) return; setDoc('instructorRequests/' + d.uid, Object.assign({}, r, {status:'declined', decidedAt:Date.now()})); },
   removeInstructor: async d => { const t = D.teachers[d.uid]; if (!(await askConfirm(`Remove ${(t && t.name) || 'this instructor'}? They lose teacher access; their classes stay.`, 'Remove'))) return; delDoc('teachers/' + d.uid); },
-  signOut: async () => { try { await S.platform.signOut(); } catch (e) {} location.hash = 'home'; location.reload(); },
+  signOut: async () => { try { await S.platform.signOut(); } catch (e) {} closeModal(); location.hash = 'home'; location.reload(); },
   changePassword: async () => { try { await S.platform.resetPassword(S.email); toast('Check your email for a link to change your password.'); } catch (e) { toast(authErrText(e), true); } },
   resendVerify: async () => { try { await S.platform.resendVerification(); toast('Sent. Check your inbox.'); } catch (e) { toast(authErrText(e), true); } },
   pushOn: async () => { const r = await S.platform.push.enable(S.me); toast(r.ok ? 'Push notifications are on for this device' : (r.message || 'Couldn\'t turn on notifications.'), !r.ok); render(true); },
@@ -1958,10 +1976,8 @@ applyDaylight(store.get('daylight') === '1');
 async function boot(){
   S.view = VIEWS.some(x => x.id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   S.tts = browserTTS();
-  const P = await window.parleiReady;          // null when config.js has no Firebase settings: run the demo
-  if (!P) {
-    S.demo = true; S.authScreen = true; S.authMode = 'choose'; render(true); return;
-  }
+  let P = await window.parleiReady;            // null when config.js has no Firebase settings: run the demo
+  if (!P) { S.demo = true; P = await demoPlatform(); }
   if (P.error) { S.fatal = 'config'; render(true); return; }
   S.platform = P; S.db = P.db;
   if (P.lookup) { S.lookupApi = P.lookup; S.sample = {}; }
@@ -1984,19 +2000,40 @@ async function boot(){
     startApp();
   });
 }
-async function demoStart(role){
-  S.demo = true; S.authScreen = false; S.db = memoryDB();
-  if (role === 'teacher') { S.me = 'demo-teacher'; S.isOwner = true; S.teacherCapable = true; store.set('preview', '0'); }
-  else { S.me = 'demo-student'; S.isOwner = false; S.teacherCapable = false; }
-  {
-    for (const [p, v] of Object.entries(SEED)) await S.db.doc(p).set(v);
-    for (const [p, v] of Object.entries(DEMO.docs)) await S.db.doc(p).set(v);
-    await S.db.doc('classes/fr-a1').update({teacherId:'demo-teacher', teacherName:'Madame Silva'});
-    S.assets = !S.teacherCapable ? null : { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
-    S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
-    await S.db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
-    startApp();
-  }
+/* Demo: the real sign-in and sign-up flow, with accounts and data kept in memory for this visit only. */
+async function demoPlatform(){
+  const db = memoryDB();
+  for (const [p, v] of Object.entries(SEED)) await db.doc(p).set(v);
+  for (const [p, v] of Object.entries(DEMO.docs)) await db.doc(p).set(v);
+  await db.doc('classes/fr-a1').update({teacherId:'demo-teacher', teacherName:'Madame Silva'});
+  S.blobUrls['demo-tone'] = URL.createObjectURL(demoWav());
+  await db.doc('audio/au-demo').set({classId:'fr-a1', title:'Les salutations, read slowly', lessonId:'l-greet', notes:'bonjour = hello\nbonsoir = good evening\nau revoir = goodbye', published:true, assetId:'demo-tone', type:'audio/wav', duration:3, createdAt:Date.now()});
+  await db.doc('profiles/demo-teacher').set({first:'Madame', last:'Silva', preferred:'Madame Silva', email:'teacher@demo.parlei', createdAt:Date.now()});
+  const accounts = {
+    'teacher@demo.parlei':{uid:'demo-teacher', name:'Madame Silva', teacher:true, owner:true},
+    'student@demo.parlei':{uid:'demo-s1', name:'Amara Okafor'}
+  };
+  let cb = null;
+  const login = (email, a) => setTimeout(() => cb && cb({uid:a.uid, email, displayName:a.name, isOwner:!!a.owner, isTeacher:!!a.teacher, needsVerify:false}), 0);
+  const create = (email, name) => {
+    email = String(email).trim().toLowerCase();
+    if (accounts[email]) throw {code:'auth/email-already-in-use'};
+    const role = (S.pendingProfile && S.pendingProfile.role) || S.signupRole || 'student';
+    S.pendingRequest = null;                      // in the demo, instructor accounts are approved straight away
+    return (accounts[email] = {uid:'u-' + rid(), name, teacher:role === 'instructor'});
+  };
+  const upload = { async upload(blob){ const id = rid(); S.blobUrls[id] = URL.createObjectURL(blob); return {id, url:S.blobUrls[id]}; }, async delete(id){ return {deleted:!!S.blobUrls[id]}; } };
+  return {
+    db, demo:true, assets:upload,
+    onUser(f){ cb = f; setTimeout(() => f(null), 0); },
+    async signIn(email, pw){ const a = accounts[String(email).trim().toLowerCase()]; if (!a || !pw) throw {code:'auth/invalid-credential'}; login(email, a); },
+    async signUp(email, pw, name){ if (String(pw).length < 8) throw {code:'auth/weak-password'}; login(email, create(email, name)); },
+    async signInGoogle(){ const email = (S.signupRole === 'instructor' ? 'instructor' : 'student') + '.' + rid().slice(-4) + '@gmail.demo'; login(email, create(email, S.signupRole === 'instructor' ? 'Demo Instructor' : 'Demo Student')); },
+    async resetPassword(){}, async resendVerification(){},
+    async signOut(){ cb = null; },
+    notify:async () => ({sent:0}), access:async () => ({ok:true}), lookup:null,
+    push:{status:() => 'unavailable', enable:async () => ({ok:false, message:'Push notifications work on your own site once it is set up.'}), disable:async () => {}}
+  };
 }
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';

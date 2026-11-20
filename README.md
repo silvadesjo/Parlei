@@ -72,3 +72,8 @@ python3 src/build.py     # rebuild public/index.html after editing src/app.html
 npm install && npm test  # server tests
 npm run dev              # serve public/ on http://localhost:3000 (demo mode until config.js is filled in)
 ```
+
+In demo mode the sign-up and sign-in forms work exactly as on the live site, but accounts last only for the visit. Quick logins: `teacher@demo.parlei` and `student@demo.parlei` with any password.
+
+```sh
+```
