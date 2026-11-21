@@ -13,7 +13,7 @@ self.PARLEI_CONFIG = {
 
   // The teacher's email. Signing in with this email (verified) makes you the teacher.
   // Use the same email in firestore.rules, storage.rules and the OWNER_EMAIL setting on Vercel.
-  ownerEmail: "REPLACE_WITH_YOUR_EMAIL",
+  ownerEmail: "joycesilvadesmond@gmail.com",
 
   // Firebase console > Project settings > Cloud Messaging > Web Push certificates > Key pair
   vapidKey: "REPLACE_WITH_VAPID_KEY",
