@@ -54,21 +54,22 @@ async function init(){
       collection:p => colRef(path + '/' + p)
     };
   }
-  function colRef(path, cons){
+  function colRef(path, cons, group){
     cons = cons || [];
-    const c = F.collection(fdb, path), q = () => cons.length ? F.query(c, ...cons) : c;
+    const c = group ? F.collectionGroup(fdb, path) : F.collection(fdb, path), q = () => cons.length ? F.query(c, ...cons) : c;
     return {
       path,
       doc:id => docRef(path + '/' + (id || F.doc(c).id)),
       add:async d => { const r = docRef(path + '/' + F.doc(c).id); await r.set(d); return r; },
-      where:(f, op, v) => colRef(path, cons.concat(F.where(f, op, v))),
-      orderBy:(f, dir) => colRef(path, cons.concat(F.orderBy(f, dir || 'asc'))),
-      limit:n => colRef(path, cons.concat(F.limit(n))),
+      where:(f, op, v) => colRef(path, cons.concat(F.where(f, op, v)), group),
+      orderBy:(f, dir) => colRef(path, cons.concat(F.orderBy(f, dir || 'asc')), group),
+      limit:n => colRef(path, cons.concat(F.limit(n)), group),
       get:() => guard(async () => wrapQuery(await F.getDocs(q()))),
       onSnapshot:(next, onErr) => F.onSnapshot(q(), s => next(wrapQuery(s)), e => onErr && onErr(err(e)))
     };
   }
-  const db = {doc:docRef, collection:p => colRef(p)};
+  // collectionGroup(name): the same kind of item across every class, e.g. all public lessons.
+  const db = {doc:docRef, collection:p => colRef(p), collectionGroup:name => colRef(name, [], true)};
 
   /* ---------- server calls ---------- */
   async function api(path, body){

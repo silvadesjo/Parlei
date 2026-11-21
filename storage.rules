@@ -5,7 +5,10 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /audio/{classId}/{file} {
-      allow read: if request.auth != null;
+      // Readable by the class's students and teachers, and by everyone signed in when the
+      // recording belongs to a public lesson (Self-study). Files are named {audioId}.{ext}.
+      allow read: if request.auth != null && (teachesClass(classId) || studentOf(classId)
+        || firestore.get(/databases/(default)/documents/classes/$(classId)/audio/$(file.split('[.]')[0])).data.get('public', false) == true);
       allow delete: if teachesClass(classId);
       allow create, update: if teachesClass(classId)
         && request.resource.size < 50 * 1024 * 1024
@@ -16,6 +19,12 @@ service firebase.storage {
       return request.auth != null && request.auth.token.email != null
         && request.auth.token.email.lower() == 'replace_with_your_email'
         && request.auth.token.email_verified == true;
+    }
+    function studentOf(classId) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/members/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.get('classIds', {}).get(classId, false) is number
+        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.get('classIds', {}).get(classId, false) > 0;
     }
     // Only the class's own instructor and its co-teachers (and the owner) upload to a class.
     function teachesClass(classId) {

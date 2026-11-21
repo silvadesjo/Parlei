@@ -27,6 +27,17 @@ Use the same teacher email everywhere below. In these steps it's written as **YO
 ### Database
 7. **Build → Firestore Database → Create database.** Pick a location close to your students (for Toronto, `northamerica-northeast2`). Start in **production mode**.
 8. Open the **Rules** tab. Paste in the contents of **`firestore.rules`**, replace `replace_with_your_email` with **YOUR_EMAIL** in lower case, and click **Publish**.
+8b. Open the **Indexes** tab, then **Single field → Add exemption**, and add these five, each with **Collection group** scope ticked for *Ascending* (they let Self-study find public items across classes, and let the daily reminders find what's due):
+
+   | Collection ID | Field |
+   |---|---|
+   | `lessons` | `public` |
+   | `decks` | `public` |
+   | `audio` | `public` |
+   | `assignments` | `due` |
+   | `events` | `start` |
+
+   (If you use the Firebase command line instead, `firebase deploy --only firestore` publishes the rules and these indexes from `firestore.indexes.json`.) If you skip this, Firebase shows an error with a link that creates the missing index in one click.
 
 ### Audio storage
 9. **Build → Storage → Get started.** If asked, upgrade to the **Blaze** plan. Set a budget alert (for example $5) under **Usage and billing** so nothing surprises you.
@@ -111,7 +122,9 @@ The first screen asks everyone whether they're a **student** or an **instructor*
 - **Co-teachers:** the instructor who owns a class opens **Edit class and co-teachers** and adds another *approved* instructor by email. That person is emailed and can then post, grade and message in that class only. The class owner (or you) can remove them, and co-teachers can leave on their own.
 - Access follows enrolment: when a student leaves or is removed, or a co-teacher is removed, that access ends right away.
 - **Messages** are visible only to the people listed in each conversation. A co-teacher sees a conversation only if they were included when it started, and the same goes for you as owner.
-- Students' word banks and media lists stay private to them.
+- **Class content** (lessons, assignments, flashcards, schedule, announcements, recordings) and the class itself, including its join code, can be read only by that class's students and teachers, and by you. Students join through the server, which checks the code.
+- **Self-study:** lessons, decks and recordings marked **Public** can be read by anyone with an account. Nothing else from the class is shared.
+- Students' word banks and media lists stay private to them, and notebooks are private to whoever wrote them.
 
 These permissions are enforced by `firestore.rules` and `storage.rules` together with the server, so they hold even if someone tampers with the app.
 

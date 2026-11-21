@@ -6,6 +6,8 @@ import {admin, verifyUser, studentsOf, docData, nameOf, firstTime, deliver, fail
 const HOUR = 36e5;
 const bad = msg => Object.assign(new Error(msg), {status:400});
 const forbidden = () => Object.assign(new Error('Not allowed'), {status:403});
+// Class content lives under classes/{classId}/…; the app sends the class id with the event.
+const inClassDoc = async (col, id, classId) => { const d = await docData(`classes/${safeId(classId)}/${col}/${safeId(id)}`); return d && Object.assign({classId}, d); };
 const safeId = v => { const s = String(v || ''); if (!/^[A-Za-z0-9_.~:@+-]{1,120}$/.test(s)) throw bad('Bad id'); return s; };
 
 export default async function handler(req, res){
@@ -23,7 +25,7 @@ export default async function handler(req, res){
       }
       case 'announcement': case 'assignment': case 'lesson': case 'audio': {
         const id = safeId(evt.id), col = {announcement:'announcements', assignment:'assignments', lesson:'lessons', audio:'audio'}[evt.type];
-        const d = await docData(`${col}/${id}`); if (!d) throw bad('Not found');
+        const d = await inClassDoc(col, id, evt.classId); if (!d) throw bad('Not found');
         if (!(await teachesClass(user, d.classId))) throw forbidden();
         if ((evt.type === 'lesson' || evt.type === 'audio') && d.published === false) break;
         if (!(await firstTime(`${evt.type}-${id}`))) break;
@@ -41,7 +43,7 @@ export default async function handler(req, res){
       case 'grade': {
         const uid = safeId(evt.uid), aid = safeId(evt.aid);
         if (!(await teachesStudent(user, uid))) throw forbidden();
-        const a = await docData('assignments/' + aid);
+        const a = await inClassDoc('assignments', aid, evt.classId);
         if (!a) throw bad('Not found');
         if (!(await teachesClass(user, a.classId))) throw forbidden();
         const g = await docData(`grades/${uid}__${a.classId}`), item = g && g.items && g.items[aid];
@@ -69,7 +71,7 @@ export default async function handler(req, res){
       }
       case 'submission': {
         const aid = safeId(evt.aid);
-        const a = await docData('assignments/' + aid);
+        const a = await inClassDoc('assignments', aid, evt.classId);
         const s = a && await docData(`subs/${user.uid}__${a.classId}`), item = s && s.items && s.items[aid];
         if (!item || !a || Date.now() - item.submittedAt > HOUR) break;
         if (!(await firstTime(`sub-${user.uid}-${aid}-${item.submittedAt}`))) break;
@@ -90,7 +92,7 @@ export default async function handler(req, res){
       }
       case 'booking': {
         const eid = safeId(evt.eid);
-        const b = await docData('bookings/' + user.uid), e = await docData('events/' + eid);
+        const b = await docData('bookings/' + user.uid), e = await inClassDoc('events', eid, evt.classId);
         if (!b || !b.slots || b.slots[eid] !== true || !e) break;
         if (!(await firstTime(`book-${user.uid}-${eid}`))) break;
         sent = await deliver(await teachersOfClass(e.classId), 'booking', {title:`${await nameOf(user.uid)} booked ${e.title}`, body:`${fmtWhen(e.start)} (${e.mins || 60} min)`, link:link('calendar'), linkLabel:'Open the schedule'});

@@ -11,6 +11,8 @@ rules_version = '2';
 //   (classes/{cid}.coTeachers), which only the server adds or removes.
 // - A student's records are readable only by the student, the owner, and the teachers of the
 //   student's classes. That list (members/{uid}.teacherIds) is kept up to date by the server.
+// - A class and its content are visible only to its students and teachers. Public lessons, decks
+//   and recordings (for Self-study) are visible to everyone signed in.
 // - Messages are visible only to the people listed in each conversation.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -41,62 +43,44 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/members/$(uid)).data.get('teacherIds', []).hasAny([me()]));
     }
 
-    // Classes: the owning instructor (or the owner) edits the details. Co-teachers and the
-    // owning instructor can't be changed here; the server does that, and also deletes classes.
+    // Is the signed-in user a current student of this class? (members/{uid}.classIds[cid] is the
+    // time they joined; false once they leave.) Only the server changes classIds.
+    function studentOf(cid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/members/$(me()))
+        && get(/databases/$(database)/documents/members/$(me())).data.get('classIds', {}).get(cid, false) is number
+        && get(/databases/$(database)/documents/members/$(me())).data.get('classIds', {}).get(cid, false) > 0;
+    }
+    function canSeeClass(cid) { return isOwner() || teachesClass(cid) || studentOf(cid); }
+
+    // Classes, and everything inside them, are visible only to the class's students and teachers
+    // (and the owner). Nobody can list other people's classes, so join codes stay private:
+    // students join through the server, which checks the code.
     match /classes/{cid} {
-      allow read: if signedIn();
+      allow get: if canSeeClass(cid);
+      allow list: if isOwner() || (signedIn() && resource.data.teacherId == me());
       allow create: if isTeacher() && request.resource.data.teacherId == me()
         && !('coTeachers' in request.resource.data);
       allow update: if (isOwner() || resource.data.teacherId == me())
         && request.resource.data.teacherId == resource.data.teacherId
         && request.resource.data.get('coTeachers', {}) == resource.data.get('coTeachers', {});
       allow delete: if false;
+
+      // Class content: lessons, assignments, decks, events, announcements, audio, recs.
+      // Read by the class; written only by its teachers, and an item can't claim another class.
+      match /{kind}/{id} {
+        allow read: if canSeeClass(cid);
+        allow create, update: if kind in ['lessons', 'assignments', 'decks', 'events', 'announcements', 'audio', 'recs']
+          && teachesClass(cid) && request.resource.data.classId == cid;
+        allow delete: if teachesClass(cid);
+      }
     }
 
-    // Course content: readable by signed-in users; written only by the teachers of its class,
-    // and it can't be moved to another class.
-    match /lessons/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /assignments/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /decks/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /events/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /announcements/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /audio/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
-    match /recs/{id} {
-      allow read: if signedIn();
-      allow create: if teachesClass(request.resource.data.classId);
-      allow update: if teachesClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
-      allow delete: if teachesClass(resource.data.classId);
-    }
+    // Self-study: lessons, flashcard decks and recordings a teacher marked public can be read by
+    // anyone signed in. The app lists them with where('public', '==', true).
+    match /{path=**}/lessons/{id} { allow read: if signedIn() && resource.data.public == true; }
+    match /{path=**}/decks/{id}   { allow read: if signedIn() && resource.data.public == true; }
+    match /{path=**}/audio/{id}   { allow read: if signedIn() && resource.data.public == true; }
 
     // Approved instructors. Only the owner approves (or removes) them.
     match /teachers/{uid} { allow read: if isSelf(uid) || isOwner(); allow write: if isOwner(); }
@@ -108,12 +92,12 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
-    // Class membership. Students join and leave themselves; teacherIds is set only by the server.
+    // Class membership. Only the server changes classIds (joining checks the code) and teacherIds.
     // Teachers list their students with: where('teacherIds', 'array-contains', <their uid>).
     match /members/{uid} {
-      allow read: if isSelf(uid) || isOwner() || (signedIn() && me() in resource.data.teacherIds);
-      allow create: if isSelf(uid) && !('teacherIds' in request.resource.data);
-      allow update: if isSelf(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['teacherIds']);
+      allow read: if isSelf(uid) || isOwner() || (signedIn() && me() in resource.data.get('teacherIds', []));
+      allow create: if isSelf(uid) && !('teacherIds' in request.resource.data) && !('classIds' in request.resource.data);
+      allow update: if isSelf(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['teacherIds', 'classIds']);
       allow delete: if isOwner();
     }
 

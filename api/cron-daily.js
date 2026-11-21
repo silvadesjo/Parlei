@@ -11,7 +11,7 @@ export default async function handler(req, res){
     let sent = 0;
 
     // Assignments due tomorrow: remind students who haven't handed in.
-    const due = await db.collection('assignments').where('due', '==', tomorrow).get();
+    const due = await db.collectionGroup('assignments').where('due', '==', tomorrow).get();
     for (const doc of due.docs) {
       const a = doc.data();
       if (!(await firstTime(`due-${doc.id}-${tomorrow}`))) continue;
@@ -25,7 +25,7 @@ export default async function handler(req, res){
 
     // Sessions in the next 24 hours.
     const from = new Date(now).toISOString(), to = new Date(now + 864e5).toISOString();
-    const events = await db.collection('events').where('start', '>=', from).where('start', '<', to).get();
+    const events = await db.collectionGroup('events').where('start', '>=', from).where('start', '<', to).get();
     for (const doc of events.docs) {
       const e = doc.data();
       if (!(await firstTime(`session-${doc.id}`))) continue;

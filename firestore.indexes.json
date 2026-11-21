@@ -1,4 +1,20 @@
 {
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {"collectionGroup": "lessons", "fieldPath": "public", "indexes": [
+      {"order": "ASCENDING", "queryScope": "COLLECTION"},
+      {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "decks", "fieldPath": "public", "indexes": [
+      {"order": "ASCENDING", "queryScope": "COLLECTION"},
+      {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "audio", "fieldPath": "public", "indexes": [
+      {"order": "ASCENDING", "queryScope": "COLLECTION"},
+      {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "assignments", "fieldPath": "due", "indexes": [
+      {"order": "ASCENDING", "queryScope": "COLLECTION"},
+      {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "events", "fieldPath": "start", "indexes": [
+      {"order": "ASCENDING", "queryScope": "COLLECTION"},
+      {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]}
+  ]
 }

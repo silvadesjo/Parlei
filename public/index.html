@@ -504,6 +504,86 @@ const upsert = (path, part) => queue(path, async () => { const r = S.db.doc(path
 let renderQueued = false;
 function schedule(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
 function markLoaded(n){ S.loaded[n] = true; }
+/* ---- who can read class content ----
+   On your own site, a class and everything in it (lessons, assignments, flashcards, schedule,
+   announcements, recordings) is stored under classes/{classId}/…, and the database lets only that
+   class's students and teachers (and the owner) read it. Public lessons, decks and their recordings
+   are the exception: anyone signed in can read those. The rest of the app keeps using short paths
+   like 'lessons/ID'; scopedDb() turns them into the real ones. The demo keeps everything in memory. */
+const CONTENT = ['lessons', 'assignments', 'decks', 'events', 'announcements', 'audio', 'recs'];
+const PUBLIC_CONTENT = ['lessons', 'decks', 'audio'];
+const CONTENT_RE = new RegExp('^(' + CONTENT.join('|') + ')/([^/]+)$');
+function scopedDb(base){
+  const real = (col, id, d) => {
+    const cid = (d && d.classId) || ((D[col] || {})[id] || {}).classId;
+    if (!cid) throw {code:'not-found', message:"Couldn't find that item's class. Refresh and try again."};
+    return base.doc('classes/' + cid + '/' + col + '/' + id);
+  };
+  const later = fn => new Promise(r => r()).then(fn);
+  return Object.assign({}, base, {
+    doc(path){
+      const m = CONTENT_RE.exec(path); if (!m) return base.doc(path);
+      const col = m[1], id = m[2];
+      return {id, path,
+        get:() => later(() => real(col, id).get()),
+        set:d => later(() => real(col, id, d).set(d)),
+        update:d => later(() => real(col, id, d).update(d)),
+        delete:() => later(() => real(col, id).delete()),
+        onSnapshot:(next, onErr) => real(col, id).onSnapshot(next, onErr)};
+    }
+  });
+}
+/* Merge several listeners into one D[name]: each listener fills its own bucket. */
+const BUCKETS = {};
+function setBucket(name, key, m){ const b = BUCKETS[name] = BUCKETS[name] || {}; if (m === null) delete b[key]; else b[key] = m; D[name] = Object.assign({}, ...Object.values(b)); }
+const snapMap = snap => { const m = {}; snap.docs.forEach(d => { if (d.exists) m[d.id] = d.data(); }); return m; };
+/* Classes you can see: the owner sees all; an instructor sees the classes they own (a query) and
+   co-teach (listed on teachers/{uid}.coClasses by the server); a student sees the classes they joined. */
+const classSubs = {}, contentSubs = {};
+let classesPending = null, coClasses = {}, coLoaded = false, ownLoaded = false;
+function listenScoped(){
+  D.classes = {}; CONTENT.forEach(n => { D[n] = {}; });
+  if (S.isOwner) { S.db.collection('classes').onSnapshot(snap => { setBucket('classes', 'all', snapMap(snap)); markLoaded('classes'); syncScoped(); schedule(); }, () => { markLoaded('classes'); schedule(); }); }
+  else {
+    if (S.teacherCapable) {
+      S.db.collection('classes').where('teacherId', '==', S.me).onSnapshot(snap => { setBucket('classes', 'own', snapMap(snap)); ownLoaded = true; syncScoped(); schedule(); }, () => { ownLoaded = true; syncScoped(); schedule(); });
+      S.db.doc('teachers/' + S.me).onSnapshot(d => { coClasses = (d.exists && d.data().coClasses) || {}; coLoaded = true; syncScoped(); schedule(); }, () => { coLoaded = true; syncScoped(); schedule(); });
+    } else { ownLoaded = coLoaded = true; }
+  }
+  PUBLIC_CONTENT.forEach(n => S.db.collectionGroup(n).where('public', '==', true).onSnapshot(snap => { setBucket(n, 'public', snapMap(snap)); schedule(); }, () => {}));
+}
+function syncScoped(){
+  if (S.demo) return;
+  if (!S.isOwner) {
+    const mine = (D.members || {})[S.me], want = new Set();
+    Object.entries((mine && mine.classIds) || {}).forEach(([cid, v]) => { if (typeof v === 'number' && v > 0) want.add(cid); });
+    Object.keys(coClasses).forEach(cid => { if (coClasses[cid]) want.add(cid); });
+    Object.keys(BUCKETS.classes && BUCKETS.classes.own || {}).forEach(cid => want.delete(cid));
+    for (const cid of want) if (!classSubs[cid]) {
+      classesPending = classesPending || new Set(); classesPending.add(cid);
+      const done = () => { if (classesPending) { classesPending.delete(cid); } };
+      classSubs[cid] = S.db.doc('classes/' + cid).onSnapshot(d => { setBucket('classes', 'd:' + cid, d.exists ? {[cid]:d.data()} : null); done(); syncScoped(); schedule(); }, () => { setBucket('classes', 'd:' + cid, null); done(); syncScoped(); schedule(); });
+    }
+    for (const cid of Object.keys(classSubs)) if (!want.has(cid)) { classSubs[cid](); delete classSubs[cid]; setBucket('classes', 'd:' + cid, null); }
+    if (!S.loaded.classes && S.loaded.members && ownLoaded && coLoaded && !(classesPending && classesPending.size)) markLoaded('classes');
+  }
+  // Class content: one listener per class and kind.
+  const cids = new Set(Object.keys(D.classes || {}));
+  for (const cid of cids) for (const n of CONTENT) { const k = cid + '/' + n; if (!contentSubs[k]) contentSubs[k] = S.db.collection('classes/' + cid + '/' + n).onSnapshot(snap => { setBucket(n, cid, snapMap(snap)); markLoaded(n); if (n === 'decks') syncRecordListeners(); schedule(); }, () => { markLoaded(n); schedule(); }); }
+  for (const k of Object.keys(contentSubs)) { const [cid, n] = k.split('/'); if (!cids.has(cid)) { contentSubs[k](); delete contentSubs[k]; setBucket(n, cid, null); } }
+  if (S.loaded.classes && !cids.size) CONTENT.forEach(markLoaded);
+}
+/* Joining and leaving go through the server, which checks the join code. */
+async function joinClass(code){
+  if (S.demo) {
+    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || classOf('fr-a1') || myClassesAll()[0];
+    if (!c || !(await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}}))) return null;
+    return c.id;
+  }
+  try { const r = await S.platform.access({action:'join', code}); return (r && r.cid) || null; }
+  catch (e) { toast(e && e.code === 'bad_code' ? "That code doesn't match a class. Check it with your teacher." : (e && e.message) || "Couldn't join the class. Try again.", true); return null; }
+}
+
 function listenCol(name){
   D[name] = {};
   S.db.collection(name).onSnapshot(snap => {
@@ -517,7 +597,7 @@ function listenCol(name){
 /* Instructors (other than the owner) only receive their own students: the database allows nothing else. */
 function listenMyStudents(){
   D.members = {}; let fromQuery = {}, own = null;
-  const merge = () => { D.members = Object.assign({}, fromQuery); if (own) D.members[S.me] = own; markLoaded('members'); syncStudentListeners(); syncRecordListeners(); schedule(); };
+  const merge = () => { D.members = Object.assign({}, fromQuery); if (own) D.members[S.me] = own; markLoaded('members'); syncStudentListeners(); syncRecordListeners(); syncScoped(); schedule(); };
   S.db.collection('members').where('teacherIds', 'array-contains', S.me).onSnapshot(snap => { fromQuery = {}; snap.docs.forEach(d => { if (d.exists) fromQuery[d.id] = d.data(); }); merge(); }, () => merge());
   S.db.doc('members/' + S.me).onSnapshot(sn => { own = sn.exists ? sn.data() : null; merge(); }, () => merge());
 }
@@ -555,7 +635,7 @@ function listenOwn(name){
   S.db.doc(name + '/' + S.me).onSnapshot(s => {
     D[name] = s.exists ? {[S.me]: s.data()} : {};
     if (!s.metadata || !s.metadata.fromCache) markLoaded(name); else if (!S.loaded[name]) S.loaded[name] = 'cache';
-    if (name === 'members') syncRecordListeners();
+    if (name === 'members') { syncRecordListeners(); syncScoped(); }
     schedule();
   }, () => { markLoaded(name); schedule(); });
 }
@@ -1018,13 +1098,16 @@ function viewWorkS(c){
 }
 
 /* ---- self-study: lessons and decks a teacher has opened to everyone with an account ---- */
-const isPublicLesson = l => !!(l && l.public && l.published !== false && classOf(l.classId));
-const isPublicDeck = d => !!(d && d.public && (d.cards || []).length && classOf(d.classId));
+/* Public items carry their class's name, language and teacher (classInfo), because people outside the class can't read the class. */
+const classMeta = cid => classOf(cid) || ((rows('lessons').concat(rows('decks'))).find(x => x.classId === cid && x.classInfo) || {}).classInfo || null;
+const classInfoFor = c => ({name:c.name || '', language:c.language || 'fr', teacherName:c.teacherName || ''});
+const isPublicLesson = l => !!(l && l.public && l.published !== false && classMeta(l.classId));
+const isPublicDeck = d => !!(d && d.public && (d.cards || []).length && classMeta(d.classId));
 const publicLessons = () => rows('lessons').filter(isPublicLesson);
 const publicDecks = () => rows('decks').filter(isPublicDeck);
 const hasPublic = () => publicLessons().length + publicDecks().length > 0;
-const langOfClass = cid => (classOf(cid) || {}).language || 'fr';
-function classByline(cid){ const c = classOf(cid) || {}; return [c.name, c.teacherName].filter(Boolean).join(' · '); }
+const langOfClass = cid => (classMeta(cid) || {}).language || 'fr';
+function classByline(cid){ const c = classMeta(cid) || {}; return [c.name, c.teacherName].filter(Boolean).join(' · '); }
 function viewStudy(){
   let ls = publicLessons(), ds = publicDecks();
   if (S.studyLessonId) { const l = ls.find(x => x.id === S.studyLessonId); if (l) return viewStudyLesson(l); }
@@ -1052,7 +1135,7 @@ function viewStudy(){
       <div class="row-actions"><button class="btn primary" data-act="practice" data-id="${esc(d.id)}">${st.seen ? (st.due ? 'Review ' + Math.min(st.due, 25) + ' cards' : 'Practise anyway') : 'Start'}</button></div></section>`; }).join('')}</div>` : '<p class="empty">No free flashcards in this language yet.</p>'}`;
 }
 function viewStudyLesson(l){
-  const cls = classOf(l.classId) || {}, lang = langOfClass(l.classId);
+  const cls = Object.assign({id:l.classId}, classMeta(l.classId)), lang = langOfClass(l.classId);
   const rec = rows('audio').filter(x => x.lessonId === l.id && x.published !== false);
   return `<div class="lesson stack" style="gap:16px"><button class="link" data-act="closeStudyLesson">${icon('back')} Self-study</button>
   <div><p class="eyebrow">${esc(langName(lang))} · ${esc(classByline(l.classId))}${l.unit ? ' · ' + esc(l.unit) : ''}</p><h1>${esc(l.title)}</h1></div>
@@ -1062,6 +1145,7 @@ function viewStudyLesson(l){
   ${S.role === 'student' && !myClasses().some(c => c.id === l.classId) ? `<section class="card"><p class="muted">Want assignments, feedback and live practice with ${esc(cls.teacherName || 'this teacher')}? Join the class with the code your teacher gives you.</p><div class="row-actions"><button class="btn" data-act="navTo" data-v="home">Join a class</button></div></section>` : ''}</div>`;
 }
 
+function audioIsPublic(x, lesson){ return !!(lesson && lesson.public && lesson.published !== false && x.published !== false); }
 /* ---- flashcards ---- */
 function viewPractice(c){
   const decks = inClass('decks', c.id).sort(byCreated);
@@ -1861,7 +1945,7 @@ const ACT = {
   editEvent: d => eventForm(d.id),
   delEvent: async d => { if (await askConfirm('Remove this from the schedule?')) delDoc('events/' + d.id); },
   togglePast: () => { S.showPast = !S.showPast; render(true); },
-  book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) { notify({type:'booking', eid:d.id}); toast('Booked. See you then !'); } },
+  book: async d => { const b = bookerOf(d.id); if (b && b !== S.me) { toast('Someone just booked this slot.'); return; } if (await upsert('bookings/' + S.me, {slots:{[d.id]:true}})) { notify({type:'booking', eid:d.id, classId:(D.events[d.id] || {}).classId}); toast('Booked. See you then !'); } },
   unbook: d => upsert('bookings/' + S.me, {slots:{[d.id]:false}}),
   openConvo: d => { S.compose = null; S.convoId = d.cid; render(true); markRead(); },
   closeConvo: () => { S.compose = null; S.convoId = null; render(true); },
@@ -1987,7 +2071,7 @@ const ACT = {
     if (S.demo) { if (await upsert('members/' + d.uid, {classIds:{[d.cid]:false}})) toast('Student removed from ' + c.name); return; }
     if (await access({action:'removeStudent', cid:d.cid, uid:d.uid})) toast('Student removed from ' + c.name);
   },
-  leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) { if (await upsert('members/' + S.me, {classIds:{[d.id]:false}})) access({action:'sync'}); } },
+  leave: async d => { if (await askConfirm('Leave this class? You can rejoin with the code.', 'Leave')) { if (S.demo) await upsert('members/' + S.me, {classIds:{[d.id]:false}}); else await access({action:'leave', cid:d.id}); } },
   addCoTeacher: async (d, el) => {
     const box = $('#coEmail'), email = box ? box.value.trim() : ''; if (!email) { toast('Type the instructor\'s email.', true); return; }
     if (S.demo) { toast('In the demo, co-teachers can\'t be added. On your own site, approved instructors can.'); return; }
@@ -2018,12 +2102,11 @@ const FORMS = {
   signup: async f => {
     const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
-    const c = code ? rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null) : null;
-    if (code && !c) { toast("That join code doesn't match a class. Check it with your teacher, or leave it blank for now.", true); return; }
     const now = Date.now();
     if (!(await upsert('profiles/' + S.me, Object.assign(r.p, {createdAt:now, lastSeen:now})))) return;
-    if (!c) { f.code.blur(); toast(hasPublic() ? 'Account created. Start with the free lessons below.' : 'Account created. Join a class whenever you get a code.'); if (hasPublic()) go('study'); else render(true); return; }
-    if (await upsert('members/' + S.me, {classIds:{[c.id]:now}})) { notify({type:'joined', cid:c.id}); S.classId = c.id; store.set('class', c.id); f.code.blur(); go('home'); }
+    if (!code) { f.code.blur(); toast(hasPublic() ? 'Account created. Start with the free lessons below.' : 'Account created. Join a class whenever you get a code.'); if (hasPublic()) go('study'); else render(true); return; }
+    const cid = await joinClass(code); f.code.blur();
+    if (cid) { if (S.demo) notify({type:'joined', cid}); S.classId = cid; store.set('class', cid); go('home'); } else render(true);
   },
   profile: async f => {
     const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
@@ -2039,9 +2122,8 @@ const FORMS = {
   noteNewFolder: async f => { const name = f.name.value.trim(); if (!name || !S.noteId) return; closeModal(); if (noteTimer) await saveNote(); await patchNote(S.noteId, {folder:name}); render(true); toast('Moved to ' + name); },
   join: async f => {
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return;
-    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null);
-    if (!c) { toast("That code doesn't match a class. Check it with your teacher.", true); return; }
-    if (await upsert('members/' + S.me, {classIds:{[c.id]:Date.now()}})) { notify({type:'joined', cid:c.id}); S.classId = c.id; store.set('class', c.id); f.code.blur(); if ($('#modalRoot').classList.contains('open')) closeModal(); go('home'); render(true); }
+    const cid = await joinClass(code); if (!cid) return;
+    { if (S.demo) notify({type:'joined', cid}); S.classId = cid; store.set('class', cid); f.code.blur(); if ($('#modalRoot').classList.contains('open')) closeModal(); go('home'); render(true); }
   },
   class: async f => {
     const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
@@ -2050,25 +2132,29 @@ const FORMS = {
     if (old && old.coTeachers) doc.coTeachers = old.coTeachers;   // co-teachers only change through the server
     if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
   },
-  ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); const id = 'an-' + rid(); if (await setDoc('announcements/' + id, {classId:c.id, text:t, at:Date.now(), by:S.me})) { notify({type:'announcement', id}); closeModal(); toast('Posted'); } },
+  ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); const id = 'an-' + rid(); if (await setDoc('announcements/' + id, {classId:c.id, text:t, at:Date.now(), by:S.me})) { notify({type:'announcement', id, classId:c.id}); closeModal(); toast('Posted'); } },
   lesson: async f => {
     const id = f.dataset.id || 'l-' + rid(); const old = f.dataset.id ? D.lessons[id] : null; const c = currentClass();
     const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), unit:f.unit.value.trim(), order:Number(f.order.value) || 0, body:f.body.value,
-      links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, public:f.public.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
-    if (await setDoc('lessons/' + id, doc)) { if (!old && doc.published) notify({type:'lesson', id}); closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
+      links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, public:f.public.checked && f.published.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
+    if (doc.public) doc.classInfo = classInfoFor(classOf(doc.classId) || c);
+    if (await setDoc('lessons/' + id, doc)) {
+      for (const x of rows('audio').filter(x => x.lessonId === id)) { const pub = audioIsPublic(x, doc); if (!!x.public !== pub) await upsert('audio/' + x.id, {public:pub}); } if (!old && doc.published) notify({type:'lesson', id, classId:doc.classId}); closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
   },
   assignment: async f => {
     const id = f.dataset.id || 'a-' + rid(); const old = f.dataset.id ? D.assignments[id] : null; const c = currentClass();
     const kind = f.kind.value; let questions = [];
     if (kind === 'quiz') { const r = parseQuiz(f.questions.value); if (r.errors.length) { const e = $('#aErr'); e.textContent = r.errors.join(' '); e.hidden = false; return; } questions = r.qs; }
     const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), kind, due:f.due.value, points:Math.max(1, Number(f.points.value) || 10), instructions:f.instructions.value, questions, createdAt: old ? old.createdAt : Date.now()};
-    if (await setDoc('assignments/' + id, doc)) { if (!old) notify({type:'assignment', id}); closeModal(); toast('Assignment saved'); }
+    if (await setDoc('assignments/' + id, doc)) { if (!old) notify({type:'assignment', id, classId:doc.classId}); closeModal(); toast('Assignment saved'); }
   },
   deck: async f => {
     const id = f.dataset.id || 'd-' + rid(); const old = f.dataset.id ? D.decks[id] : null; const c = currentClass();
     const cards = parseDeck(f.cards.value, old && old.cards);
     if (!cards.length) { toast('Add at least one card, like "bonjour = hello".', true); return; }
-    if (await setDoc('decks/' + id, {classId: old ? old.classId : c.id, title:f.title.value.trim(), cards, public:f.public.checked, createdAt: old ? old.createdAt : Date.now()})) { closeModal(); toast(cards.length + ' cards saved'); }
+    const dcls = old ? old.classId : c.id, ddoc = {classId:dcls, title:f.title.value.trim(), cards, public:f.public.checked, createdAt: old ? old.createdAt : Date.now()};
+    if (ddoc.public) ddoc.classInfo = classInfoFor(classOf(dcls) || c);
+    if (await setDoc('decks/' + id, ddoc)) { closeModal(); toast(cards.length + ' cards saved'); }
   },
   event: async f => {
     const id = f.dataset.id; const old = id ? D.events[id] : null; const c = currentClass();
@@ -2084,21 +2170,22 @@ const FORMS = {
     const a = Object.assign({id:f.dataset.id}, D.assignments[f.dataset.id]); const answers = (a.questions || []).map((q, i) => { const r = f.querySelector(`input[name="q${i}"]:checked`); return r ? Number(r.value) : -1; });
     if (answers.includes(-1)) { toast('Answer every question before you submit.', true); return; }
     const sc = scoreQuiz(a, answers), now = Date.now();
-    if (await upsert('subs/' + recKey(S.me, a.classId), {student:S.me, classId:a.classId, items:{[a.id]:{answers, right:sc.right, total:sc.total, submittedAt:now}}})) { notify({type:'submission', aid:a.id}); toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
+    if (await upsert('subs/' + recKey(S.me, a.classId), {student:S.me, classId:a.classId, items:{[a.id]:{answers, right:sc.right, total:sc.total, submittedAt:now}}})) { notify({type:'submission', aid:a.id, classId:a.classId}); toast(`You scored ${sc.right} of ${sc.total}`); setTimeout(() => openAssignment(a.id), 50); }
   },
   written: async f => {
     const t = f.text.value.trim(); if (!t) { toast('Write your answer first.', true); return; }
     const cls = (D.assignments[f.dataset.id] || {}).classId;
-    if (await upsert('subs/' + recKey(S.me, cls), {student:S.me, classId:cls, items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { notify({type:'submission', aid:f.dataset.id}); closeModal(); toast('Handed in. Merci !'); }
+    if (await upsert('subs/' + recKey(S.me, cls), {student:S.me, classId:cls, items:{[f.dataset.id]:{text:t, submittedAt:Date.now()}}})) { notify({type:'submission', aid:f.dataset.id, classId:cls}); closeModal(); toast('Handed in. Merci !'); }
   },
   grade: async f => {
     const g = f.grade.value === '' ? null : Number(f.grade.value); if (g == null || isNaN(g)) { toast('Enter a grade first.', true); return; }
     const gcls = (D.assignments[f.dataset.id] || {}).classId;
-    if (await upsert('grades/' + recKey(f.dataset.uid, gcls), {student:f.dataset.uid, classId:gcls, items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) { notify({type:'grade', uid:f.dataset.uid, aid:f.dataset.id}); toast('Grade saved for ' + nameOf(f.dataset.uid)); }
+    if (await upsert('grades/' + recKey(f.dataset.uid, gcls), {student:f.dataset.uid, classId:gcls, items:{[f.dataset.id]:{grade:g, feedback:f.feedback.value.trim(), gradedAt:Date.now()}}})) { notify({type:'grade', uid:f.dataset.uid, aid:f.dataset.id, classId:gcls}); toast('Grade saved for ' + nameOf(f.dataset.uid)); }
   },
   audio: async f => {
     const id = f.dataset.id, c = currentClass(), btn = $('#auSave');
     const meta = {title:f.title.value.trim(), lessonId:f.lesson.value || '', notes:f.notes.value, published:f.published.checked};
+    meta.public = audioIsPublic(meta, meta.lessonId && D.lessons[meta.lessonId]);
     if (id) { const old = D.audio[id]; if (await setDoc('audio/' + id, Object.assign({}, old, meta))) { closeModal(); toast('Saved'); } return; }
     const file = f.file.files[0]; if (!file) { toast('Choose an audio file.', true); return; }
     if (!S.assets) { toast('Only teachers can upload recordings.', true); return; }
@@ -2112,7 +2199,7 @@ const FORMS = {
       const res = await S.assets.upload(file, {classId:c.id, id:aid, onProgress:p => status(`Uploading… ${Math.round(p * 100)}%`, p * 0.95)});
       status('Saving…', 0.97);
       const ok = await setDoc('audio/' + aid, Object.assign(meta, {classId:c.id, assetId:res.id, url:res.url, type:file.type || '', size:file.size, duration, name:file.name, createdAt:Date.now()}));
-      if (ok) { if (meta.published) notify({type:'audio', id:aid}); closeModal(); toast('Recording uploaded'); if (meta.lessonId && S.view !== 'lessons') S.mediaTab = 'audio'; render(true); } else btn.disabled = false;
+      if (ok) { if (meta.published) notify({type:'audio', id:aid, classId:c.id}); closeModal(); toast('Recording uploaded'); if (meta.lessonId && S.view !== 'lessons') S.mediaTab = 'audio'; render(true); } else btn.disabled = false;
     } catch (e) { status(audioErr(e)); bar.style.width = '0%'; btn.disabled = false; }
   },
   media: async f => {
@@ -2232,7 +2319,7 @@ async function boot(){
   let P = await window.parleiReady;            // null when config.js has no Firebase settings: run the demo
   if (!P) { S.demo = true; P = await demoPlatform(); }
   if (P.error) { S.fatal = 'config'; render(true); return; }
-  S.platform = P; S.db = P.db;
+  S.platform = P; S.db = P.demo ? P.db : scopedDb(P.db);
   if (P.lookup) { S.lookupApi = P.lookup; S.sample = {}; }
   P.onUser(async u => {
     if (!u) { if (S.me) { location.reload(); return; } S.authScreen = true; render(true); return; }
@@ -2290,7 +2377,8 @@ async function demoPlatform(){
 }
 function startApp(){
   S.role = S.teacherCapable && store.get('preview') !== '1' ? 'teacher' : 'student';
-  ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'bookings', 'audio', 'recs'].forEach(listenCol);
+  if (S.demo) ['classes', 'lessons', 'assignments', 'decks', 'events', 'announcements', 'audio', 'recs'].forEach(listenCol); else listenScoped();
+  listenCol('bookings');
   if (S.isOwner || S.demo) ['members', 'subs', 'grades', 'prog', 'profiles'].forEach(listenCol);
   else if (S.teacherCapable) listenMyStudents();
   else ['members', 'profiles'].forEach(listenOwn);

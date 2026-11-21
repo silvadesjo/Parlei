@@ -38,21 +38,21 @@ A language learning portal for teachers and students: classes, lessons, assignme
 
 - The owner (administrator) approves instructors and can see everything.
 - Each class has one owning instructor, plus co-teachers that only the class owner (or the administrator) can add. Instructors see only their own classes and those classes' students.
-- Course content is readable by signed-in users and editable only by the teachers of its class.
+- A class and its content (including the join code) are readable only by its students and teachers and the owner, and editable only by its teachers. Lessons, decks and recordings marked Public are readable by anyone signed in, for Self-study. Students join through the server, which checks the join code.
 - Submissions, grades and flashcard progress are stored per student per class (`{student}__{class}`), so only the student and the teachers of that class can read them, even when a student is shared between instructors. Grades are written only by the class's teachers. A student's profile is readable by any of their teachers. Word banks and media lists are private to the student.
 - Messages are visible only to the people listed in each conversation (the owner included). Everyone listed must be the student or one of their teachers, and the list can't change once the conversation starts.
-- Access lists (`members/{uid}.teacherIds`) and co-teacher changes are maintained only by the server (`/api/access`), so no one can grant themselves access.
+- Class membership (`members/{uid}.classIds`), access lists (`members/{uid}.teacherIds`) and co-teacher changes are maintained only by the server (`/api/access`), so no one can grant themselves access.
 - Notifications are sent by the server only after it checks the event against the database, and each event is sent once.
 
 ### Data model
 
 Conversations: `convos` (`student`, `participants`, messages).
-Course content: `classes`, `lessons`, `assignments`, `decks`, `events`, `announcements`, `audio`, `recs`.
+Classes: `classes/{classId}`, with the class's content inside it: `classes/{classId}/lessons`, `assignments`, `decks`, `events`, `announcements`, `audio`, `recs`. The app still refers to them by short names (`lessons/{id}`); `scopedDb()` in `src/app.html` maps them. Public items are found with collection-group queries on `public == true`.
 One document per person: `members` (classes joined), `profiles` (details and notification settings), `bookings`, `vocab`, `media`, `pushTokens`.
 Notebook pages live in `notes/{uid}/items/{noteId}`, readable and writable only by that person (not teachers, not the owner).
 
 One document per person per class (`{uid}__{classId}`): `subs` (submissions), `grades`, `prog` (flashcards; personal Word Bank practice uses `{uid}__self`).
-Teachers: `teachers/{uid}` (plus the owner email set in config); instructor sign-ups wait in `instructorRequests/{uid}`.
+Teachers: `teachers/{uid}` (with `coClasses`, the classes they co-teach, kept by the server; plus the owner email set in config); instructor sign-ups wait in `instructorRequests/{uid}`.
 
 ## Repository layout
 
