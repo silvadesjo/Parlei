@@ -165,5 +165,10 @@ service cloud.firestore {
     // Server-only records (notification log, look-up counts).
     match /notifLog/{id} { allow read, write: if false; }
     match /usage/{id}    { allow read, write: if false; }
-  }
+  
+    // Notebook: private to the writer. Not even teachers or the owner can read it.
+    match /notes/{uid}/items/{id} {
+      allow read, write: if isSelf(uid);
+    }
+}
 }

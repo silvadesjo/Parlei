@@ -322,6 +322,39 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .rating .ic{width:15px;height:15px;fill:currentColor;stroke:none}
 .progress{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
 .progress i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.notes{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:980px){.notes{grid-template-columns:320px 1fr}}
+.nfolders{display:flex;flex-wrap:wrap;gap:6px}
+.nf{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13.5px;display:inline-flex;gap:8px;align-items:center;color:var(--ink)}
+.nf span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.nf.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.nf.on span{color:var(--bg);opacity:.75}
+.pin{color:var(--accent);font-size:10px;vertical-align:2px}
+.note-ed{gap:10px}
+.note-title{font:400 26px/1.25 var(--display)!important;border:0!important;background:none!important;padding:4px 0!important}
+.note-title:focus{outline:none}
+.note-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note-meta select{width:auto;padding:5px 9px;font-size:13px}
+.note-tools{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);position:sticky;top:0;z-index:2}
+.tb{border:1px solid transparent;background:none;border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;color:var(--ink);min-width:32px}
+.tb:hover{background:var(--surface);border-color:var(--line)}
+.tsep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.note-body{min-height:300px;padding:14px 4px;font-size:16px;line-height:1.65;outline:none;overflow-wrap:anywhere;unicode-bidi:plaintext}
+.note-body:empty::before{content:attr(data-placeholder);color:var(--muted)}
+.note-body h2{font:400 24px/1.25 var(--display);margin:10px 0 4px}
+.note-body h3{font-size:17px;font-weight:600;margin:8px 0 2px}
+.note-body p,.note-body div{margin:0 0 6px}
+.note-body ul,.note-body ol{margin:4px 0 8px;padding-left:24px}
+.note-body blockquote{margin:6px 0;padding:6px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+.note-body a{color:var(--accent)}
+.note-body ul.checklist{list-style:none;padding-left:4px}
+.note-body ul.checklist > li{position:relative;padding-left:28px;margin:3px 0}
+.note-body ul.checklist > li::before{content:'';position:absolute;left:2px;top:.25em;width:16px;height:16px;border:1.5px solid var(--muted);border-radius:4px;background:var(--surface);cursor:pointer}
+.note-body ul.checklist > li[data-checked="true"]{color:var(--muted);text-decoration:line-through}
+.note-body ul.checklist > li[data-checked="true"]::before{background:var(--accent);border-color:var(--accent)}
+.note-body ul.checklist > li[data-checked="true"]::after{content:'';position:absolute;left:7px;top:.38em;width:5px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.note-body.read{min-height:0;opacity:.8}
+.note-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -380,6 +413,7 @@ const ICON = {
   back:'<path d="M15 5l-7 7 7 7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  note:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'
 };
 const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
@@ -387,6 +421,7 @@ const VIEWS = [
   {id:'home', long:'Home', short:'Home', icon:'home'},
   {id:'lessons', long:'Lessons', short:'Lessons', icon:'book'},
   {id:'words', long:'Word Bank', short:'Word Bank', icon:'abc'},
+  {id:'notes', long:'Notebook', short:'Notebook', icon:'note', sec:true},
   {id:'media', long:'Media', short:'Media', icon:'media', sec:true},
   {id:'work', long:'Assignments', short:'Work', icon:'check'},
   {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
@@ -402,7 +437,7 @@ const S = {
   db:null, user:null, tts:null, me:null, isOwner:false, teacherIds:[], teacherCapable:false, role:'student',
   demo:false, fatal:null, slow:false, readOnly:false, data:{}, loaded:{}, names:{},
   classId:null, view:'home', lessonId:null, convoId:null, compose:null, showPast:false, dirty:false, practice:null, dir:'fwd',
-  wordLang:null, wordQ:'', wordSort:'new', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
+  wordLang:null, wordQ:'', wordSort:'new', noteId:null, noteFolder:'all', noteQ:'', noteSort:'edited', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
 };
 const D = S.data;
 const store = {
@@ -728,7 +763,7 @@ function askConfirm(text, okLabel){
 function render(force){
   const a = document.activeElement;
   const playing = [...document.querySelectorAll('#main audio')].some(x => !x.paused && !x.ended);
-  if (!force && (playing || (a && $('#main').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))) {
+  if (!force && (playing || (a && $('#main').contains(a) && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)))) {
     S.dirty = true; const wr = $('#wordResults'); if (wr) wr.innerHTML = wordResultsHTML(); return;
   }
   S.dirty = false;
@@ -791,6 +826,7 @@ function renderMain(){
   const c = currentClass();
   let out = S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
   if (S.view === 'words') return out + viewWords();
+  if (S.view === 'notes') return out + viewNotes();
   if (S.view === 'media') return out + viewMedia(c);
   if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
   if (!S.teacherCapable && (profileOf(S.me) || {}).role === 'instructor' && S.view !== 'account') return out + viewPending();
@@ -1469,6 +1505,106 @@ function browserTTS(){
   } };
 }
 
+/* ---- notebook: private notes (only the writer can read them) ---- */
+const notesPath = () => 'notes/' + S.me + '/items';
+function listenNotes(){
+  D.notes = {};
+  S.db.collection(notesPath()).onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { if (d.exists) m[d.id] = d.data(); }); D.notes = m; markLoaded('notes');
+    if (!S.noteSaving) schedule();
+  }, () => { markLoaded('notes'); schedule(); });
+}
+const allNotes = () => rows('notes');
+const noteFolders = () => [...new Set(allNotes().filter(n => !n.trashed && n.folder).map(n => n.folder))].sort((a, b) => a.localeCompare(b));
+const noteTitle = n => (n.title || '').trim() || (n.text || '').trim().split('\n')[0].slice(0, 60) || 'Untitled note';
+function filteredNotes(){
+  const f = S.noteFolder, q = norm(S.noteQ);
+  let list = allNotes().filter(n => f === 'trash' ? n.trashed : !n.trashed);
+  if (f === 'pinned') list = list.filter(n => n.pinned);
+  else if (f !== 'all' && f !== 'trash') list = list.filter(n => n.folder === f);
+  if (q) list = list.filter(n => norm(n.title).includes(q) || norm(n.text).includes(q));
+  const by = {edited:(a, b) => (b.updatedAt || 0) - (a.updatedAt || 0), created:(a, b) => (b.createdAt || 0) - (a.createdAt || 0), title:(a, b) => noteTitle(a).localeCompare(noteTitle(b))}[S.noteSort];
+  return list.sort((a, b) => (f !== 'trash' && (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || by(a, b));
+}
+/* Keep only safe formatting from the editor. */
+function cleanHTML(html){
+  const t = document.createElement('template'); t.innerHTML = String(html || '');
+  const OK = {B:1, STRONG:1, I:1, EM:1, U:1, S:1, STRIKE:1, H2:1, H3:1, P:1, DIV:1, BR:1, UL:1, OL:1, LI:1, BLOCKQUOTE:1, A:1, SPAN:1};
+  const DROP = {SCRIPT:1, STYLE:1, IFRAME:1, OBJECT:1, EMBED:1, IMG:1, SVG:1, MATH:1, VIDEO:1, AUDIO:1, FORM:1, INPUT:1, BUTTON:1, TEXTAREA:1, SELECT:1, LINK:1, META:1};
+  const walk = node => { [...node.childNodes].forEach(ch => {
+    if (ch.nodeType === 1) {
+      if (DROP[ch.tagName]) { ch.remove(); return; }
+      walk(ch);
+      if (!OK[ch.tagName]) { ch.replaceWith(...ch.childNodes); return; }
+      [...ch.attributes].forEach(a => { const keep = (ch.tagName === 'A' && a.name === 'href' && /^(https?:|mailto:)/i.test(a.value.trim())) || (ch.tagName === 'UL' && a.name === 'class' && a.value === 'checklist') || (ch.tagName === 'LI' && a.name === 'data-checked'); if (!keep) ch.removeAttribute(a.name); });
+      if (ch.tagName === 'A') { ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener'); }
+    } else if (ch.nodeType !== 3) ch.remove();
+  }); };
+  walk(t.content); return t.innerHTML;
+}
+const noteWords = t => (String(t || '').trim().match(/\S+/g) || []).length;
+function viewNotes(){
+  const list = filteredNotes(), folders = noteFolders(), open = S.noteId && (D.notes || {})[S.noteId] ? Object.assign({id:S.noteId}, D.notes[S.noteId]) : null;
+  const count = f => allNotes().filter(n => f === 'trash' ? n.trashed : !n.trashed && (f === 'all' || (f === 'pinned' ? n.pinned : n.folder === f))).length;
+  const folderBtn = (id, label) => `<button class="nf ${S.noteFolder === id ? 'on' : ''}" data-act="noteFolder" data-f="${esc(id)}">${esc(label)}<span>${count(id)}</span></button>`;
+  const side = `<section class="card notes-side"><div class="card-head"><h3>Your notes</h3><button class="btn sm primary" data-act="newNote">${icon('plus')} New note</button></div>
+    <div class="nfolders">${folderBtn('all', 'All notes')}${folderBtn('pinned', 'Pinned')}${folders.map(f => folderBtn(f, f)).join('')}${folderBtn('trash', 'Trash')}</div>
+    <div class="toolbar"><div class="searchbox">${icon('search')}<label class="sr" for="noteSearch">Search notes</label><input id="noteSearch" type="search" autocomplete="off" placeholder="Search your notes" value="${esc(S.noteQ)}"></div>
+    <label class="sr" for="noteSort">Sort</label><select id="noteSort"><option value="edited" ${S.noteSort === 'edited' ? 'selected' : ''}>Last edited</option><option value="created" ${S.noteSort === 'created' ? 'selected' : ''}>Newest</option><option value="title" ${S.noteSort === 'title' ? 'selected' : ''}>A to Z</option></select></div>
+    <div id="noteList">${noteListHTML(list)}</div>
+    ${S.noteFolder === 'trash' && list.length ? '<button class="link danger" data-act="emptyTrash">Empty trash</button>' : ''}</section>`;
+  const pane = open ? noteEditor(open) : `<section class="card"><p class="empty">${allNotes().length ? 'Choose a note, or start a new one.' : 'Write down new words, questions for class, or anything on your mind. Only you can see your notebook.'}</p><div class="row-actions" style="justify-content:center"><button class="btn primary" data-act="newNote">${icon('plus')} New note</button></div></section>`;
+  const narrow = window.matchMedia('(max-width: 979px)').matches;
+  return `<div class="page-head"><div><p class="eyebrow">Private to you</p><h1>Notebook</h1></div></div><div class="notes">${narrow && open ? pane : side + (narrow ? '' : pane)}</div>`;
+}
+function noteListHTML(list){
+  if (!list.length) return `<p class="empty">${S.noteQ ? 'No notes match.' : S.noteFolder === 'trash' ? 'Trash is empty.' : 'No notes here yet.'}</p>`;
+  return `<div class="list">${list.map(n => `<button class="item" data-act="openNote" data-id="${esc(n.id)}" ${S.noteId === n.id ? 'aria-current="true"' : ''}><span class="grow"><span class="t">${n.pinned ? '<span class="pin" aria-label="Pinned">●</span> ' : ''}${esc(noteTitle(n))}</span><span class="s">${esc(new Date(n.updatedAt || n.createdAt || Date.now()).toLocaleDateString(undefined, {month:'short', day:'numeric'}))}${n.folder ? ' · ' + esc(n.folder) : ''} · ${esc((n.text || '').replace(/\s+/g, ' ').slice(0, 70))}</span></span></button>`).join('')}</div>`;
+}
+function noteEditor(n){
+  const folders = noteFolders(), langs = Object.entries(Object.assign({}, LANGS, typeof WORD_LANGS !== 'undefined' ? WORD_LANGS : {}));
+  if (n.trashed) return `<section class="card"><div class="card-head"><h3>${esc(noteTitle(n))}</h3><button class="link" data-act="closeNote">${icon('back')} All notes</button></div>
+    <p class="banner">This note is in the trash.</p><div class="note-body read">${cleanHTML(n.html)}</div>
+    <div class="row-actions"><button class="btn primary" data-act="restoreNote" data-id="${esc(n.id)}">Restore</button><button class="btn bad" data-act="deleteNote" data-id="${esc(n.id)}">Delete forever</button></div></section>`;
+  const tb = (cmd, label, inner, val) => `<button type="button" class="tb" data-act="noteCmd" data-cmd="${cmd}"${val ? ` data-val="${val}"` : ''} title="${label}" aria-label="${label}">${inner}</button>`;
+  return `<section class="card note-ed" data-note="${esc(n.id)}">
+    <div class="card-head"><button class="link" data-act="closeNote">${icon('back')} All notes</button><span class="hint" id="noteStatus">${n.updatedAt ? 'Saved' : ''}</span></div>
+    <label class="sr" for="noteTitle">Title</label><input id="noteTitle" class="note-title" maxlength="140" placeholder="Title" value="${esc(n.title || '')}">
+    <div class="note-meta"><label class="sr" for="noteFolderSel">Folder</label><select id="noteFolderSel"><option value="">No folder</option>${folders.map(f => `<option ${n.folder === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}<option value="__new">New folder…</option></select>
+      <label class="sr" for="noteLang">Language for reading aloud</label><select id="noteLang">${langs.map(([k, v]) => `<option value="${esc(k)}" ${(n.lang || ((currentClass() || {}).language) || 'fr') === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+      <button class="btn sm" data-act="pinNote" data-id="${esc(n.id)}" aria-pressed="${!!n.pinned}">${n.pinned ? 'Unpin' : 'Pin'}</button></div>
+    <div class="note-tools" role="toolbar" aria-label="Formatting">
+      ${tb('bold', 'Bold', '<b>B</b>')}${tb('italic', 'Italic', '<i>I</i>')}${tb('underline', 'Underline', '<u>U</u>')}${tb('strikeThrough', 'Strikethrough', '<s>S</s>')}
+      <span class="tsep"></span>${tb('formatBlock', 'Heading', 'H1', 'h2')}${tb('formatBlock', 'Subheading', 'H2', 'h3')}${tb('formatBlock', 'Normal text', '¶', 'p')}
+      <span class="tsep"></span>${tb('insertUnorderedList', 'Bulleted list', '•&nbsp;List')}${tb('insertOrderedList', 'Numbered list', '1.&nbsp;List')}${tb('checklist', 'Checklist', '☐&nbsp;To-do')}${tb('formatBlock', 'Quote', '❝', 'blockquote')}
+      <span class="tsep"></span>${tb('createLink', 'Link', 'Link')}${tb('insertDate', 'Insert date', 'Date')}${tb('removeFormat', 'Clear formatting', 'Clear')}${tb('undo', 'Undo', '↶')}${tb('redo', 'Redo', '↷')}
+    </div>
+    <div id="noteBody" class="note-body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note" data-placeholder="Start writing…" spellcheck="true">${cleanHTML(n.html)}</div>
+    <div class="note-foot"><span class="hint" id="noteCount">${noteWords(n.text)} words · ${(n.text || '').length} characters</span>
+      <div class="row-actions">${S.tts ? '<button class="btn sm" data-act="noteSpeak">Read aloud</button>' : ''}<button class="btn sm" data-act="noteToWords">Add selection to Word Bank</button><button class="btn sm" data-act="copyNote">Copy text</button>${true ? '<button class="btn sm" data-act="downloadNote">Download</button>' : ''}<button class="btn sm" data-act="dupNote" data-id="${esc(n.id)}">Duplicate</button><button class="btn sm bad" data-act="trashNote" data-id="${esc(n.id)}">Delete</button></div></div>
+  </section>`;
+}
+/* Autosave: a short pause after typing writes the note. */
+let noteTimer = null;
+function noteChanged(){
+  const st = $('#noteStatus'); if (st) st.textContent = 'Saving…';
+  const body = $('#noteBody'); if (body) { const t = body.innerText; const c = $('#noteCount'); if (c) c.textContent = `${noteWords(t)} words · ${t.trim().length} characters`; }
+  clearTimeout(noteTimer); noteTimer = setTimeout(saveNote, 700);
+}
+async function saveNote(){
+  clearTimeout(noteTimer); noteTimer = null;
+  const ed = document.querySelector('.note-ed'); if (!ed) return;
+  const id = ed.dataset.note, old = (D.notes || {})[id]; if (!old) return;
+  const body = $('#noteBody'), title = $('#noteTitle');
+  const doc = Object.assign({}, old, {title:title ? title.value.trim() : old.title || '', html:body ? cleanHTML(body.innerHTML) : old.html || '', text:body ? body.innerText.trim().slice(0, 50000) : old.text || '', updatedAt:Date.now()});
+  S.noteSaving = true;
+  const ok = await queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).set(doc));
+  S.noteSaving = false;
+  const st = $('#noteStatus'); if (st) st.textContent = ok ? 'Saved' : 'Not saved';
+}
+async function patchNote(id, part){ const old = (D.notes || {})[id]; if (!old) return false; return queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).set(Object.assign({}, old, part, {updatedAt:part.updatedAt || old.updatedAt || Date.now()}))); }
+function noteSelectionText(){ const sel = window.getSelection(); const body = $('#noteBody'); return sel && body && body.contains(sel.anchorNode) ? String(sel).trim() : ''; }
+
 /* ---------- dialogs ---------- */
 function classForm(id){
   const c = id ? classOf(id) : null;
@@ -1721,6 +1857,44 @@ const ACT = {
     if (ok) { S.classId = 'fr-a1'; store.set('class', 'fr-a1'); toast('Sample class added. Its join code is ' + code); render(true); }
   },
   switchClass: d => { S.classId = d.id; store.set('class', d.id); S.lessonId = null; render(true); $('#main').scrollTop = 0; toast('Switched to ' + ((classOf(d.id) || {}).name || 'class')); },
+  newNote: async () => {
+    if (noteTimer) await saveNote();
+    const id = 'n' + rid(), now = Date.now(), f = S.noteFolder;
+    const doc = {title:'', html:'', text:'', folder:['all', 'pinned', 'trash'].includes(f) ? '' : f, lang:((currentClass() || {}).language) || 'fr', pinned:f === 'pinned', trashed:false, createdAt:now, updatedAt:now};
+    if (await queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).set(doc))) { if (S.noteFolder === 'trash') S.noteFolder = 'all'; S.noteId = id; S.noteQ = ''; render(true); const t = $('#noteTitle'); if (t) t.focus(); }
+  },
+  openNote: async d => { if (noteTimer) await saveNote(); S.noteId = d.id; render(true); },
+  closeNote: async () => { if (noteTimer) await saveNote(); S.noteId = null; render(true); },
+  noteFolder: async d => { if (noteTimer) await saveNote(); S.noteFolder = d.f; render(true); },
+  noteCmd: (d, el) => {
+    const body = $('#noteBody'); if (!body) return; body.focus();
+    if (d.cmd === 'createLink') { const sel = String(window.getSelection() || ''); if (!sel) { toast('Select some text first, then tap Link.', true); return; } S.linkRange = window.getSelection().getRangeAt(0).cloneRange(); modal(`${head('Add a link')}<form class="stack" data-form="noteLink"><label for="linkUrl">Web address</label><input id="linkUrl" name="url" type="url" required placeholder="https://"><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Add link</button></div></form>`, {label:'Add link'}); return; }
+    if (d.cmd === 'insertDate') { document.execCommand('insertText', false, new Date().toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'})); noteChanged(); return; }
+    if (d.cmd === 'checklist') {
+      document.execCommand('insertUnorderedList');
+      const sel = window.getSelection(); let n = sel && sel.anchorNode; while (n && n !== body && n.nodeName !== 'UL') n = n.parentNode;
+      if (n && n.nodeName === 'UL') { const on = n.classList.toggle('checklist'); n.querySelectorAll(':scope > li').forEach(li => { if (on) li.setAttribute('data-checked', li.getAttribute('data-checked') || 'false'); else li.removeAttribute('data-checked'); }); }
+      noteChanged(); return;
+    }
+    document.execCommand(d.cmd, false, d.val ? '<' + d.val + '>' : null); noteChanged();
+  },
+  pinNote: async d => { const n = D.notes[d.id]; if (noteTimer) await saveNote(); if (n) await patchNote(d.id, {pinned:!n.pinned}); render(true); },
+  trashNote: async d => { if (noteTimer) await saveNote(); if (await patchNote(d.id, {trashed:true, trashedAt:Date.now()})) { S.noteId = null; toast('Moved to trash. You can restore it from Trash.'); render(true); } },
+  restoreNote: async d => { if (await patchNote(d.id, {trashed:false})) { toast('Note restored'); S.noteFolder = 'all'; render(true); } },
+  deleteNote: async d => { if (!(await askConfirm('Delete this note forever? This can\'t be undone.'))) return; if (await queue(notesPath() + '/' + d.id, () => S.db.doc(notesPath() + '/' + d.id).delete())) { S.noteId = null; render(true); } },
+  emptyTrash: async () => { const ids = allNotes().filter(n => n.trashed).map(n => n.id); if (!ids.length || !(await askConfirm(`Delete ${ids.length} note${ids.length > 1 ? 's' : ''} forever?`, 'Empty trash'))) return; for (const id of ids) await queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).delete()); S.noteId = null; render(true); },
+  dupNote: async d => { if (noteTimer) await saveNote(); const n = D.notes[d.id]; if (!n) return; const id = 'n' + rid(), now = Date.now(); if (await queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).set(Object.assign({}, n, {title:(noteTitle(n) + ' (copy)').slice(0, 140), pinned:false, createdAt:now, updatedAt:now})))) { S.noteId = id; render(true); toast('Note duplicated'); } },
+  copyNote: async () => { const body = $('#noteBody'), t = [($('#noteTitle') || {}).value, body ? body.innerText : ''].filter(Boolean).join('\n\n'); try { await navigator.clipboard.writeText(t); toast('Note copied'); } catch (e) { modal(`${head('Copy your note')}<textarea rows="10" readonly>${esc(t)}</textarea>`, {label:'Copy'}); } },
+  downloadNote: () => { const body = $('#noteBody'), title = (($('#noteTitle') || {}).value || 'note').trim() || 'note'; const blob = new Blob([title + '\n\n' + (body ? body.innerText : '')], {type:'text/plain'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = title.replace(/[^\p{L}\p{N} _-]+/gu, '').slice(0, 60) + '.txt'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); },
+  noteSpeak: async (d, el) => { const t = noteSelectionText() || (($('#noteBody') || {}).innerText || ''); if (!t.trim()) { toast('Write something first.'); return; } const lang = ($('#noteLang') || {}).value || 'fr'; try { await S.tts.speak(t.slice(0, 2000), {language:lang, rate:0.9}); } catch (e) {} },
+  noteToWords: async () => {
+    const t = noteSelectionText(); if (!t) { toast('Select a word or phrase in your note first.', true); return; }
+    if (noteTimer) await saveNote();
+    const lang = ($('#noteLang') || {}).value || 'fr';
+    if (!myLangs().includes(lang)) await upsert('vocab/' + S.me, {langs:{[lang]:{at:Date.now(), name:WORD_LANGS[lang] || LANGS[lang] || lang}}});
+    S.wordLang = lang; store.set('wordLang', lang); go('words');
+    setTimeout(() => { const box = $('#wTerm'); if (box) { box.value = t.slice(0, 120); const m = $('#wMean'); if (m) m.focus(); toast('Add the meaning, then tap Add word.'); } }, 120);
+  },
   editProfile: () => profileForm(),
   authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
   googleSignIn: d => { S.signupRole = d.role || ''; return authRun(() => S.platform.signInGoogle()); },
@@ -1798,6 +1972,13 @@ const FORMS = {
     const old = profileOf(S.me); if (!old) { r.p.createdAt = Date.now(); r.p.lastSeen = Date.now(); }
     if (await upsert('profiles/' + S.me, r.p)) { closeModal(); toast('Details saved'); render(true); }
   },
+  noteLink: f => {
+    const url = f.url.value.trim(); if (!/^(https?:|mailto:)/i.test(url)) { toast('Use a full web address starting with https://', true); return; }
+    closeModal(); const body = $('#noteBody'); if (!body) return; body.focus();
+    if (S.linkRange) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(S.linkRange); }
+    document.execCommand('createLink', false, url); noteChanged();
+  },
+  noteNewFolder: async f => { const name = f.name.value.trim(); if (!name || !S.noteId) return; closeModal(); if (noteTimer) await saveNote(); await patchNote(S.noteId, {folder:name}); render(true); toast('Moved to ' + name); },
   join: async f => {
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return;
     const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null);
@@ -1925,6 +2106,8 @@ const FORMS = {
 };
 
 document.addEventListener('click', e => {
+  const li = e.target.closest && e.target.closest('#noteBody ul.checklist > li');
+  if (li && e.clientX - li.getBoundingClientRect().left < 26) { li.setAttribute('data-checked', li.getAttribute('data-checked') === 'true' ? 'false' : 'true'); noteChanged(); e.preventDefault(); return; }
   const t = e.target.closest('[data-act]'); if (!t || !t.dataset.act) return;
   const fn = ACT[t.dataset.act]; if (!fn) return; e.preventDefault(); fn(t.dataset, t, e);
 });
@@ -1940,6 +2123,12 @@ document.addEventListener('change', e => {
   if (e.target.dataset && e.target.dataset.notify) { const [ch, type] = e.target.dataset.notify.split(':'); upsert('profiles/' + S.me, {notify:{[ch]:{[type]:e.target.checked}}}); }
   if (e.target.id === 'cmpStudent') { S.compose = Object.assign({}, S.compose, {student:e.target.value, teachers:[]}); render(true); }
   if (e.target.dataset && e.target.dataset.cmpTeacher && S.compose) { const set = new Set(S.compose.teachers || []); e.target.checked ? set.add(e.target.dataset.cmpTeacher) : set.delete(e.target.dataset.cmpTeacher); S.compose.teachers = [...set]; }
+  if (e.target.id === 'noteSort') { S.noteSort = e.target.value; const l = $('#noteList'); if (l) l.innerHTML = noteListHTML(filteredNotes()); }
+  if (e.target.id === 'noteLang' && S.noteId) { if (noteTimer) saveNote(); patchNote(S.noteId, {lang:e.target.value}); }
+  if (e.target.id === 'noteFolderSel' && S.noteId) {
+    if (e.target.value === '__new') { modal(`${head('New folder')}<form class="stack" data-form="noteNewFolder"><label for="nfName">Folder name</label><input id="nfName" name="name" required maxlength="40" placeholder="Class notes"><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Create and move</button></div></form>`, {label:'New folder'}); }
+    else { if (noteTimer) saveNote(); patchNote(S.noteId, {folder:e.target.value}).then(() => render(true)); }
+  }
   if (e.target.id === 'stuClass') { S.stuClass = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'mediaType') { S.mediaType = e.target.value; render(true); }
   if (e.target.id === 'mediaStatus') { S.mediaStatus = e.target.value; render(true); }
@@ -1953,14 +2142,19 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (e.target.id === 'wTerm' && $('#dictLinks')) { $('#dictLinks').innerHTML = dictLinks(currentWordLang(), e.target.value); const o = $('#lookupOut'); if (o) o.innerHTML = ''; }
   if (e.target.id === 'cmpText' && S.compose) S.compose.text = e.target.value;
+  if (e.target.id === 'noteBody' || e.target.id === 'noteTitle' || (e.target.closest && e.target.closest('#noteBody'))) noteChanged();
+  if (e.target.id === 'noteSearch') { S.noteQ = e.target.value; const l = $('#noteList'); if (l) l.innerHTML = noteListHTML(filteredNotes()); }
   if (e.target.id === 'stuSearch') { S.stuQ = e.target.value; $('#stuList').innerHTML = studentListHTML(); }
   if (e.target.id === 'wordSearch') { S.wordQ = e.target.value; $('#wordResults').innerHTML = wordResultsHTML(); }
 });
 document.addEventListener('focusout', () => setTimeout(() => { if (S.dirty && !$('#modalRoot').classList.contains('open')) render(); }, 0));
 function go(v){ if (location.hash !== '#' + v) location.hash = v; else route(); }
+window.addEventListener('beforeunload', () => { if (noteTimer) saveNote(); });
 function route(){
+  if (noteTimer) saveNote();
   const v = location.hash.slice(1); S.view = navViews().some(x => x.id === v) ? v : 'home';
   if (S.view !== 'lessons') S.lessonId = null;
+  if (S.view !== 'notes') S.noteId = null;
   if (S.view !== 'inbox') { S.convoId = null; S.compose = null; }
   render(true); $('#main').scrollTop = 0; markRead();
 }
@@ -2042,7 +2236,7 @@ function startApp(){
   else if (S.teacherCapable) listenMyStudents();
   else ['members', 'profiles'].forEach(listenOwn);
   listenConvos();
-  listenOwn('vocab'); listenOwn('media');
+  listenOwn('vocab'); listenOwn('media'); listenNotes();
   if (S.isOwner) { listenCol('instructorRequests'); listenCol('teachers'); } else if (!S.teacherCapable) listenOwn('instructorRequests');
   const t = setInterval(() => {
     if (!ready() || !S.loaded.profiles) return;
