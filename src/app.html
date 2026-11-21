@@ -356,8 +356,20 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .note-body.read{min-height:0;opacity:.8}
 .note-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 .sec-title{font:400 22px/1.3 var(--display);margin:8px 0 -4px}
-.auth{display:flex;flex-direction:column;gap:12px;max-width:460px;width:100%;margin:0 auto}
-.auth .narrow{max-width:none;width:100%}
+.auth{display:flex;flex-direction:column;gap:10px;max-width:440px;width:100%;margin:4px auto 0}
+.auth .narrow{max-width:none;width:100%;margin:0;gap:10px;padding:18px}
+.auth .stack{gap:6px}
+.auth .stack label{margin-top:4px}
+.auth input{padding-top:9px;padding-bottom:9px}
+.auth-h{font-size:26px;line-height:1.2;margin:0}
+.auth-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.auth .choice{padding:11px 12px;gap:12px}
+.auth .choice .choice-ic{width:36px;height:36px}
+.auth .choice b{font-size:15px}
+.auth .choice .s{font-size:13px}
+.auth .btn.wide,.auth .btn.primary{padding-top:10px;padding-bottom:10px}
+.demo-strip{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:9px 12px;border:1.5px dashed var(--accent);border-radius:12px;background:var(--accent-soft);font-size:13.5px}
+.next{margin:0}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
 .seg button{border:0;background:none;border-radius:9px;padding:9px 10px;font:500 14.5px var(--sans);color:var(--muted);cursor:pointer}
 .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -1566,48 +1578,43 @@ function viewAuth(){
   const tabs = `<div class="seg" role="tablist" aria-label="Account">
     <button role="tab" aria-selected="${creating}" data-act="authMode" data-mode="choose">Create account</button>
     <button role="tab" aria-selected="${!creating}" data-act="authMode" data-mode="signin">Sign in</button></div>`;
-  const back = `<button class="link" data-act="authMode" data-mode="choose">${icon('back')} Choose another account type</button>`;
-  const steps = list => `<ol class="next-steps">${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
+  const back = `<button class="link" data-act="authMode" data-mode="choose">Change</button>`;
+  const steps = list => `<p class="hint next">Next: ${list.join(' ')}</p>`;
   const nameFields = p => `<div class="grid2"><div><label for="${p}First">First name</label><input id="${p}First" name="first" required maxlength="40" autocomplete="given-name"></div><div><label for="${p}Last">Last name</label><input id="${p}Last" name="last" required maxlength="40" autocomplete="family-name"></div></div>
     <label for="${p}Email">Email</label><input id="${p}Email" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <label for="${p}Pw">Create a password</label><input id="${p}Pw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">`;
-  const welcome = `<p class="eyebrow">Bienvenue · Bienvenido · Bem-vindo</p><h1>Welcome to Parlei</h1>`;
-  const tryDemo = S.demo && mode === 'choose' ? `<section class="card narrow demo-card" style="gap:12px">
-    <p class="eyebrow">Demo</p><h2 style="margin:0">Look around first</h2>
-    <p class="muted" style="margin:0">Open a sample French class with one tap. No forms, and nothing you do is saved.</p>
-    <button class="choice" data-act="demoLogin" data-email="teacher@demo.parlei"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>Explore as a teacher</b><span class="s">Lessons, assignments, grading, students and messages</span></span></button>
-    <button class="choice" data-act="demoLogin" data-email="student@demo.parlei"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>Explore as a student</b><span class="s">Lessons, flashcards, homework and the Word Bank</span></span></button>
-  </section><div class="or" style="margin:2px 0"><span>or try the sign-up steps (any details work)</span></div>` : '';
-  const wrap = inner => `<div class="auth">${tryDemo}<section class="card narrow" style="gap:14px">${inner}</section></div>`;
+  const welcome = `<h1 class="auth-h">Welcome to Parlei</h1>`;
+  const tryDemo = S.demo ? `<div class="demo-strip"><span><b>Demo</b> · just looking? Nothing is saved.</span><span class="row-actions"><button class="btn sm" data-act="demoLogin" data-email="teacher@demo.parlei">Teacher demo</button><button class="btn sm" data-act="demoLogin" data-email="student@demo.parlei">Student demo</button></span></div>` : '';
+  const wrap = inner => `<div class="auth">${tryDemo}<section class="card narrow">${inner}</section></div>`;
 
-  if (mode === 'choose') return wrap(`${welcome}${S.demo ? '' : '<p class="muted" style="margin:0">Lessons, practice and messages for your language class.</p>'}${tabs}
-    <p style="margin:0"><b>Which describes you?</b></p>
-    <button class="choice" data-act="authMode" data-mode="student"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>I'm a student</b><span class="s">Join your teacher's class with a code, or start with free lessons</span></span>${icon('chev')}</button>
-    <button class="choice" data-act="authMode" data-mode="instructor"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>I'm a teacher</b><span class="s">Run your classes on Parlei. Teacher accounts are approved first.</span></span>${icon('chev')}</button>
+  if (mode === 'choose') return wrap(`${welcome}${tabs}
+    <p class="hint" style="margin:0">Which describes you?</p>
+    <button class="choice" data-act="authMode" data-mode="student"><span class="choice-ic">${icon('book')}</span><span class="grow"><b>I'm a student</b><span class="s">Join a class with a code, or try free lessons</span></span>${icon('chev')}</button>
+    <button class="choice" data-act="authMode" data-mode="instructor"><span class="choice-ic">${icon('users')}</span><span class="grow"><b>I'm a teacher</b><span class="s">Run your classes. Approved before first use.</span></span>${icon('chev')}</button>
     <p class="muted" style="margin:0;text-align:center">Already have an account? <button class="link" data-act="authMode" data-mode="signin">Sign in</button></p>`);
 
-  if (mode === 'student') return wrap(`${tabs}${back}<div><p class="eyebrow">Student account</p><h1>Create your student account</h1></div>
-    ${demoNote('use any name, email and password. The email doesn\'t need to be real.')}${err}
+  if (mode === 'student') return wrap(`${tabs}<div class="auth-title"><h1 class="auth-h">Student account</h1>${back}</div>
+    ${demoNote('any name, email and password work.')}${err}
     ${google('student', 'Sign up with Google')}${or('or sign up with your email')}
     <form class="stack" data-form="authSignup" data-role="student">${nameFields('su')}<button class="btn primary" ${busy}>Create student account</button></form>
-    <div><p class="unit-label">What happens next</p>${steps(S.demo ? ['Add a few details about yourself.', 'Enter any join code to see a class, or skip it and open Self-study.'] : ['Confirm your email with the link we send you.', 'Enter the join code your teacher gave you.', 'No code yet? Skip it and start with the free Self-study lessons.'])}</div>`);
+    ${steps(S.demo ? ['Add a few details about yourself.', 'Enter any join code to see a class, or skip it and open Self-study.'] : ['Confirm your email with the link we send you.', 'Enter the join code your teacher gave you.', 'No code yet? Skip it and start with the free Self-study lessons.'])}`);
 
-  if (mode === 'instructor') return wrap(`${tabs}${back}<div><p class="eyebrow">Teacher account</p><h1>Create your teacher account</h1></div>
-    ${demoNote('use any name, email and password. Teacher accounts are approved straight away in the demo.')}${err}
+  if (mode === 'instructor') return wrap(`${tabs}<div class="auth-title"><h1 class="auth-h">Teacher account</h1>${back}</div>
+    ${demoNote('any details work, and you\'re approved instantly.')}${err}
     ${google('instructor', 'Sign up with Google')}${or('or sign up with your email')}
     <form class="stack" data-form="authSignup" data-role="instructor">${nameFields('in')}
     <label for="inTeach">Languages you teach</label><input id="inTeach" name="teaches" maxlength="80" placeholder="French, Portuguese">
     <label for="inOrg">School or organization <span class="hint">(optional)</span></label><input id="inOrg" name="org" maxlength="80">
     <button class="btn primary" ${busy}>Request teacher account</button></form>
-    <div><p class="unit-label">What happens next</p>${steps(S.demo ? ['Your account is ready right away.', 'Create your first class, or start from the sample French class.'] : ['Confirm your email with the link we send you.', 'The Parlei administrator approves your account, usually within a day. We\'ll email you.', 'Create your classes and invite students with a join code.'])}</div>`);
+    ${steps(S.demo ? ['Your account is ready right away.', 'Create your first class, or start from the sample French class.'] : ['Confirm your email with the link we send you.', 'The Parlei administrator approves your account, usually within a day. We\'ll email you.', 'Create your classes and invite students with a join code.'])}`);
 
-  if (mode === 'reset') return wrap(`${tabs}<div><h1>Reset your password</h1><p class="muted" style="margin:6px 0 0">Enter your email and we'll send you a link to choose a new password.</p></div>
+  if (mode === 'reset') return wrap(`${tabs}<h1 class="auth-h">Reset your password</h1><p class="hint" style="margin:0">We'll email you a link to choose a new password.</p>
     ${demoNote('no email is sent. Sign in with any password instead.')}${err}
     <form class="stack" data-form="authReset"><label for="auEmail">Email</label><input id="auEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}"><button class="btn primary" ${busy}>Send reset link</button></form>
     <button class="link" data-act="authMode" data-mode="signin">${icon('back')} Back to sign in</button>`);
 
   return wrap(`${welcome}${tabs}
-    ${demoNote('sign in as <b>teacher@demo.parlei</b> or <b>student@demo.parlei</b> with any password, or with an account you created on this visit.')}${err}
+    ${demoNote('use <b>teacher@demo.parlei</b> or <b>student@demo.parlei</b>, any password.')}${err}
     ${google('', 'Sign in with Google')}${or('or sign in with your email')}
     <form class="stack" data-form="authSignin"><label for="siEmail">Email</label><input id="siEmail" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <div class="pw-row"><label for="siPw">Password</label><button type="button" class="link" data-act="authMode" data-mode="reset">Forgot password?</button></div><input id="siPw" name="password" type="password" required autocomplete="current-password"><button class="btn primary" ${busy}>Sign in</button></form>
