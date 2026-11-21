@@ -403,6 +403,13 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .splash-card{margin-top:12vh}
 #app.gate #nav{display:none}
 #cCode::placeholder{text-transform:none;letter-spacing:normal}
+.preview-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.preview-banner > span{flex:1;min-width:200px}
+.preview-banner .ic{flex:none}
+.cls-card.cur{border-color:var(--accent)}
+.cls-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.code-chip{border:1px dashed var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer}
+.code-chip b{letter-spacing:.08em;margin-left:4px}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -461,6 +468,7 @@ const ICON = {
   back:'<path d="M15 5l-7 7 7 7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  grid:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
   chev:'<path d="M9 6l6 6-6 6"/>',
   spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
   compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
@@ -470,6 +478,7 @@ const ICON = {
 const icon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 const VIEWS = [
   {id:'home', long:'Home', short:'Home', icon:'home'},
+  {id:'classes', long:'Classes', short:'Classes', icon:'grid', sec:true},
   {id:'lessons', long:'Lessons', short:'Lessons', icon:'book'},
   {id:'words', long:'Word Bank', short:'Word Bank', icon:'abc'},
   {id:'notes', long:'Notebook', short:'Notebook', icon:'note', sec:true},
@@ -718,9 +727,11 @@ async function fetchNames(){
 const initials = uid => { const n = nameOf(uid).replace(/\s*\(you\)$/, ''); return (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase(); };
 
 /* domain helpers */
+/* Student view for instructors: a preview of their own classes as students see them. Nothing to sign up for or join. */
+const previewing = () => !!S.teacherCapable && S.role === 'student';
 function myClasses(){
   const all = rows('classes').sort(byCreated);
-  if (S.role === 'teacher') return S.isOwner ? all : all.filter(c => c.teacherId === S.me || (c.coTeachers || {})[S.me]);
+  if (S.role === 'teacher' || previewing()) return S.isOwner ? all : all.filter(c => c.teacherId === S.me || (c.coTeachers || {})[S.me]);
   const m = (D.members || {})[S.me]; const ids = m && m.classIds ? Object.keys(m.classIds).filter(k => m.classIds[k]) : [];
   return all.filter(c => ids.includes(c.id));
 }
@@ -975,7 +986,8 @@ function renderMain(){
   if (!S.me) return '<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>Loading…</span></div>';
   if (!ready()) return `<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>${S.slow ? 'Still loading…' : 'Signing you in…'}</span>${S.slow ? '<div class="row-actions"><button class="btn sm" data-act="reloadApp">Try again</button><button class="btn sm" data-act="signOut">Sign out</button></div>' : ''}</div>`;
   const c = currentClass();
-  let out = S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
+  let out = previewing() ? `<p class="banner preview-banner">${icon('book')}<span><b>Student view.</b> This is what your students see. Changes here aren't sent anywhere.</span><button class="btn sm" data-act="role" data-role="teacher">Back to teacher</button></p>` : '';
+  out += S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
   if (S.view === 'words') return out + viewWords();
   if (S.view === 'notes') return out + viewNotes();
   if (S.view === 'study') return out + viewStudy();
@@ -983,8 +995,9 @@ function renderMain(){
   if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
   if (!S.teacherCapable && (profileOf(S.me) || {}).role === 'instructor' && S.view !== 'account') return out + viewPending();
   if (S.view === 'account') return out + viewAccount();
-  if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
-  if (S.role === 'student' && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account. <button class="link" data-act="editProfile">Add your details</button></p>`;
+  if (S.view === 'classes') return out + viewClasses();
+  if (!c) return out + (S.role === 'teacher' ? viewOnboard() : previewing() ? `<section class="card narrow"><h2>No classes yet</h2><p class="muted">Create a class first, then come back to see it the way your students will.</p><div class="row-actions"><button class="btn primary" data-act="role" data-role="teacher">Back to teacher</button></div></section>` : viewJoin());
+  if (S.role === 'student' && !previewing() && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account. <button class="link" data-act="editProfile">Add your details</button></p>`;
   const V = {home: S.role === 'teacher' ? viewHomeT : viewHomeS, lessons:viewLessons, work: S.role === 'teacher' ? viewWorkT : viewWorkS, practice:viewPractice, calendar:viewCalendar, inbox:viewInbox};
   return out + (V[S.view] || V.home)(c);
 }
@@ -1160,6 +1173,27 @@ function viewWorkS(c){
   return `<div class="page-head"><div><p class="eyebrow">${open.length} to do</p><h1>Assignments</h1></div></div>
   <section class="card"><h3>To do</h3>${open.length ? `<div class="list">${open.map(row).join('')}</div>` : '<p class="empty">Nothing due. Bien joué !</p>'}</section>
   ${done.length ? `<section class="card"><h3>Handed in</h3><div class="list">${done.map(row).join('')}</div></section>` : ''}`;
+}
+
+/* ---- classes: every class in one place ---- */
+function viewClasses(){
+  const list = myClasses(), teacher = S.role === 'teacher';
+  const card = c => {
+    const n = studentsOf(c.id).length, mine = ownsClass(c), co = coTeaches(c), cur = currentClass() && currentClass().id === c.id;
+    return `<section class="card cls-card ${cur ? 'cur' : ''}">
+      <div class="card-head"><div><p class="eyebrow" style="margin:0">${esc(LANGS[c.language] || c.language || '')}${c.level ? ' · ' + esc(c.level) : ''}${co ? ' · Co-teaching' : ''}</p><h3 style="margin:2px 0 0">${esc(c.name)}</h3></div>${cur ? '<span class="pill ok">Open now</span>' : ''}</div>
+      ${c.description ? `<p class="muted" style="margin:0">${esc(c.description)}</p>` : ''}
+      ${teacher ? `<div class="cls-meta"><span>${n} student${n === 1 ? '' : 's'}</span><button class="code-chip" data-act="copyCode" data-code="${esc(c.code)}" title="Copy the join code">Code <b>${esc(c.code)}</b></button></div>` : ''}
+      <div class="row-actions">${cur ? '' : `<button class="btn sm primary" data-act="openClass" data-id="${esc(c.id)}">Open</button>`}
+        ${teacher && (mine || co) ? `<button class="btn sm" data-act="editClass" data-id="${esc(c.id)}">${mine ? 'Edit' : 'Details'}</button>` : ''}
+        ${teacher && mine ? `<button class="btn sm bad" data-act="delClass" data-id="${esc(c.id)}">Delete</button>` : ''}
+        ${!teacher && !previewing() ? `<button class="btn sm" data-act="leave" data-id="${esc(c.id)}">Leave class</button>` : ''}</div></section>`;
+  };
+  const head = `<div class="page-head"><div><p class="eyebrow">${list.length} ${list.length === 1 ? 'class' : 'classes'}</p><h1>${teacher ? 'Classes' : 'My classes'}</h1></div>${teacher ? `<button class="btn primary" data-act="newClass">${icon('plus')} New class</button>` : ''}</div>`;
+  const empty = teacher ? `<section class="card"><p class="empty">You don't have any classes yet.</p><div class="row-actions" style="justify-content:center"><button class="btn primary" data-act="newClass">${icon('plus')} Create your first class</button></div></section>`
+    : `<section class="card"><p class="empty">You haven't joined a class yet.</p></section>`;
+  const join = !teacher && !previewing() ? `<section class="card narrow" style="margin:0"><h3>Join another class</h3><form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}"><button class="btn primary">Join class</button></form></section>` : '';
+  return head + (list.length ? `<div class="cols">${list.map(card).join('')}</div>` : empty) + join;
 }
 
 /* ---- self-study: lessons and decks a teacher has opened to everyone with an account ---- */
@@ -2011,9 +2045,11 @@ const ACT = {
   role: d => { S.role = d.role; if (S.view === 'students' && d.role !== 'teacher') { S.view = 'home'; location.hash = 'home'; } store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.convoId = null; S.compose = null; render(true); },
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
+  newClass: () => classForm(),
+  openClass: d => { S.classId = d.id; store.set('class', d.id); S.lessonId = null; go('home'); toast('Opened ' + ((classOf(d.id) || {}).name || 'class')); },
   fillCode: () => { const el = $('#cCode'); if (el) { el.value = newCode(); el.focus(); } },
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
-  delClass: async d => { const c = classOf(d.id); if (!(await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class'))) return; const ok = S.demo ? await delDoc('classes/' + d.id) : await access({action:'deleteClass', cid:d.id}); if (ok) { closeModal(); toast('Class deleted'); } },
+  delClass: async d => { const c = classOf(d.id); if (!(await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class'))) return; const ok = S.demo ? await delDoc('classes/' + d.id) : await access({action:'deleteClass', cid:d.id}); if (ok) { closeModal(); if (S.classId === d.id) { S.classId = null; store.set('class', ''); } toast('Class deleted'); render(true); } },
   newAnn: () => modal(`${head('Post an announcement', 'Everyone in the class sees this on their home page.')}<form class="stack" data-form="ann"><label for="anText">Message</label><textarea id="anText" name="text" rows="5" required maxlength="2000"></textarea><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Post</button></div></form>`, {label:'Announcement'}),
   delAnn: async d => { if (await askConfirm('Delete this announcement?')) delDoc('announcements/' + d.id); },
   student: d => studentDialog(d.uid),
@@ -2401,14 +2437,16 @@ document.addEventListener('click', e => {
   const li = e.target.closest && e.target.closest('#noteBody ul.checklist > li');
   if (li && e.clientX - li.getBoundingClientRect().left < 26) { li.setAttribute('data-checked', li.getAttribute('data-checked') === 'true' ? 'false' : 'true'); noteChanged(); e.preventDefault(); return; }
   const t = e.target.closest('[data-act]'); if (!t || !t.dataset.act) return;
-  const fn = ACT[t.dataset.act]; if (!fn) return; e.preventDefault(); fn(t.dataset, t, e);
+  const fn = ACT[t.dataset.act]; if (!fn) return; e.preventDefault(); if (previewBlock(t.dataset.act)) return; fn(t.dataset, t, e);
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#modalRoot').classList.contains('open')) closeModal();
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.flash[data-act="reveal"]')) { e.preventDefault(); ACT.reveal(); }
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target.id === 'msgText') e.target.form.requestSubmit();
 });
-document.addEventListener('submit', e => { const f = e.target; e.preventDefault(); const h = FORMS[f.dataset.form]; if (h) h(f); });
+const PREVIEW_BLOCKED = ['quiz', 'written', 'msg', 'compose', 'join', 'signup', 'book', 'leave'];
+const previewBlock = name => { if (previewing() && PREVIEW_BLOCKED.includes(name)) { toast("This is a preview of the student view, so nothing is sent. Switch back to Teacher to make changes."); return true; } return false; };
+document.addEventListener('submit', e => { const f = e.target; e.preventDefault(); if (previewBlock(f.dataset.form)) return; const h = FORMS[f.dataset.form]; if (h) h(f); });
 document.addEventListener('change', e => {
   if (e.target.id === 'classSel') { S.classId = e.target.value; store.set('class', S.classId); S.lessonId = null; S.convoId = null; S.compose = null; render(true); }
   if (e.target.id === 'nlLang') { const o = $('#nlOther'); if (o) o.hidden = e.target.value !== 'other'; }
