@@ -1,5 +1,6 @@
 // POST /api/access — the only way class access changes. The server checks who is asking, makes the
 // change, and refreshes the list of teachers who may see each affected student's records.
+//   {action:'codeFree', code, cid?}            is this join code free? (instructors; cid = the class being edited)
 //   {action:'join', code}                        a student joins the class with that join code
 //   {action:'leave', cid}                        a student leaves a class
 //   {action:'sync'}                              refresh the signed-in user's access
@@ -8,7 +9,7 @@
 //   {action:'removeStudent', cid, uid}           any teacher of the class
 //   {action:'deleteClass', cid}                  class owner or Parlei owner
 import {FieldPath, FieldValue} from 'firebase-admin/firestore';
-import {admin, verifyUser, isOwnerUser, ownerEmail, teachesClass, studentsOf, syncAccess, docData, deliver, nameOf, fail, appUrl, teachersOfClass, firstTime} from './_lib/core.js';
+import {admin, verifyUser, isTeacher, isOwnerUser, ownerEmail, teachesClass, studentsOf, syncAccess, docData, deliver, nameOf, fail, appUrl, teachersOfClass, firstTime} from './_lib/core.js';
 
 const err = (status, code, message) => Object.assign(new Error(message), {status, code});
 const safeId = v => { const s = String(v || ''); if (!/^[A-Za-z0-9_.~:@+-]{1,120}$/.test(s)) throw err(400, 'bad_id', 'Bad id'); return s; };
@@ -36,6 +37,14 @@ export default async function handler(req, res){
       case 'sync': {
         await syncAccess([user.uid]);
         return res.status(200).json({ok:true});
+      }
+      case 'codeFree': {
+        if (!(await isTeacher(user))) throw err(403, 'forbidden', 'Only instructors can do that');
+        const code = String(b.code || '').toUpperCase().replace(/\s+/g, '');
+        if (!/^[A-Z0-9]{4,12}$/.test(code)) throw err(400, 'bad_code', 'Use 4 to 12 letters or numbers');
+        const q = await db.collection('classes').where('code', '==', code).limit(2).get();
+        const free = q.docs.every(d => b.cid && d.id === String(b.cid));
+        return res.status(200).json({ok:true, free});
       }
       case 'join': {
         // Class documents (and their join codes) can't be listed by students, so the server matches the code.

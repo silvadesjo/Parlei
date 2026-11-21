@@ -159,6 +159,13 @@ test('per-class access: co-teachers, removal, and who gets told', async () => {
   store.set('grades/mei__c2', {items:{a9:{grade:1, gradedAt:2}}}); store.set('classes/c2/assignments/a9', {classId:'c2', title:'T', points:5});
   assert.equal((await call(notify, 'tok-carl', {type:'grade', uid:'mei', aid:'a9', classId:'c2'})).status, 403);
 
+  // Join codes: instructors can check one is free; students can't.
+  assert.equal((await call(access, 'tok-tina', {action:'codeFree', code:'pt2x'})).json.free, false);
+  assert.equal((await call(access, 'tok-tina', {action:'codeFree', code:'PT2X', cid:'c2'})).json.free, true);   // its own code
+  assert.equal((await call(access, 'tok-tina', {action:'codeFree', code:'NEWONE'})).json.free, true);
+  assert.equal((await call(access, 'tok-mei', {action:'codeFree', code:'NEWONE'})).status, 403);
+  assert.equal((await call(access, 'tok-tina', {action:'codeFree', code:'no!'})).json.code, 'bad_code');
+
   // Only approved instructors can be added; Tina adds Carl and he gets access and an email.
   assert.equal((await call(access, 'tok-tina', {action:'addCoTeacher', cid:'c2', email:'amara@example.com'})).json.code, 'not_instructor');
   sentEmails.length = 0;

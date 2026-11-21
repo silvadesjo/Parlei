@@ -402,6 +402,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 .splash-card{margin-top:12vh}
 #app.gate #nav{display:none}
+#cCode::placeholder{text-transform:none;letter-spacing:normal}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -732,6 +733,11 @@ const myClassesAll = () => rows('classes').sort(byCreated);
 const classOf = id => { const c = (D.classes || {})[id]; return c ? Object.assign({id}, c) : null; };
 const ownsClass = c => !!c && (S.isOwner || c.teacherId === S.me);           // can change class settings and co-teachers
 const coTeaches = c => !!c && !ownsClass(c) && !!(c.coTeachers || {})[S.me];
+/* Is a join code free? In the demo, check the classes here; on the live site the server checks every class. */
+async function codeIsFree(code, cid){
+  if (S.demo || !S.platform || !S.platform.access) return !rows('classes').some(c => c.id !== cid && (c.code || '').toUpperCase() === code);
+  try { const r = await S.platform.access({action:'codeFree', code, cid}); return r && typeof r.free === 'boolean' ? r.free : null; } catch (e) { return null; }
+}
 async function access(body){                                                 // class access changes go through the server
   if (S.demo || !S.platform || !S.platform.access) return {ok:true};
   try { return await S.platform.access(body); }
@@ -1841,7 +1847,9 @@ function classForm(id){
     <div class="grid2"><div><label for="cLang">Language</label><select id="cLang" name="language">${Object.entries(LANGS).map(([k, v]) => `<option value="${k}" ${(c ? c.language : 'fr') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
     <div><label for="cLevel">Level</label><input id="cLevel" name="level" maxlength="20" value="${esc(c ? c.level : '')}" placeholder="A1"></div></div>
     <label for="cDesc">Description</label><textarea id="cDesc" name="description" rows="2" maxlength="300">${esc(c ? c.description : '')}</textarea>
-    ${c ? `<p class="hint">Join code <b>${esc(c.code)}</b> · <button type="button" class="link" data-act="newCode" data-id="${esc(c.id)}">Make a new code</button> (the old one stops working)</p>` : ''}
+    <div><div class="pw-row"><label for="cCode">Join code${c ? '' : ' <span class="hint">(optional)</span>'}</label><button type="button" class="link" data-act="fillCode">Make a random one</button></div>
+    <input id="cCode" name="code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(c ? c.code : '')}" placeholder="Leave blank to create one automatically" style="text-transform:uppercase;letter-spacing:.06em">
+    <p class="hint" style="margin:4px 0 0">${c ? 'Students use this code to join. If you change it, the old code stops working.' : 'Want a specific code, like FRENCH1? Type it here: 4 to 12 letters or numbers.'}</p></div>
     ${c ? coTeacherSection(c) : ''}
     <div class="actions">${c ? `<button type="button" class="btn bad" data-act="delClass" data-id="${esc(c.id)}" style="margin-right:auto">Delete class</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">${c ? 'Save' : 'Create class'}</button></div></form>`, {label:'Class'});
 }
@@ -2003,6 +2011,7 @@ const ACT = {
   role: d => { S.role = d.role; if (S.view === 'students' && d.role !== 'teacher') { S.view = 'home'; location.hash = 'home'; } store.set('preview', d.role === 'student' ? '1' : '0'); S.lessonId = null; S.convoId = null; S.compose = null; render(true); },
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
+  fillCode: () => { const el = $('#cCode'); if (el) { el.value = newCode(); el.focus(); } },
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
   delClass: async d => { const c = classOf(d.id); if (!(await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class'))) return; const ok = S.demo ? await delDoc('classes/' + d.id) : await access({action:'deleteClass', cid:d.id}); if (ok) { closeModal(); toast('Class deleted'); } },
   newAnn: () => modal(`${head('Post an announcement', 'Everyone in the class sees this on their home page.')}<form class="stack" data-form="ann"><label for="anText">Message</label><textarea id="anText" name="text" rows="5" required maxlength="2000"></textarea><div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Post</button></div></form>`, {label:'Announcement'}),
@@ -2247,10 +2256,28 @@ const FORMS = {
   },
   class: async f => {
     const id = f.dataset.id || 'c-' + rid(); const old = f.dataset.id ? classOf(id) : null;
+    // Join code: the teacher's own (checked against every class) or one made automatically.
+    let code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!code) code = old ? old.code : newCode();
+    else if (!/^[A-Z0-9]{4,12}$/.test(code)) { toast('Join codes are 4 to 12 letters or numbers, with no spaces or symbols.', true); f.code.focus(); return; }
+    if (!old || code !== old.code) {
+      const btn = f.querySelector('button.primary'); if (btn) btn.disabled = true;
+      const free = await codeIsFree(code, old ? id : '');
+      if (btn) btn.disabled = false;
+      if (free === null) { toast("Couldn't check that code right now. Try again, or leave it blank to get one automatically.", true); return; }
+      if (!free) { toast('Another class already uses that code. Try a different one.', true); f.code.focus(); return; }
+    }
     const doc = {name:f.name.value.trim(), language:f.language.value, level:f.level.value.trim(), description:f.description.value.trim(),
-      code: old ? old.code : newCode(), teacherId: old ? old.teacherId : S.me, teacherName: old ? (old.teacherName || '') : (profName(S.me) || S.names[S.me] || ''), createdAt: old ? old.createdAt : Date.now()};
+      code, teacherId: old ? old.teacherId : S.me, teacherName: old ? (old.teacherName || '') : (profName(S.me) || S.names[S.me] || ''), createdAt: old ? old.createdAt : Date.now()};
     if (old && old.coTeachers) doc.coTeachers = old.coTeachers;   // co-teachers only change through the server
-    if (await setDoc('classes/' + id, doc)) { S.classId = id; store.set('class', id); closeModal(); toast(old ? 'Class saved' : 'Class created. Share the join code with students.'); }
+    // Close as soon as the save is confirmed, or after a moment if the connection is slow (it finishes in the background).
+    const btn = f.querySelector('button.primary'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    const saving = setDoc('classes/' + id, doc);
+    const res = await Promise.race([saving, new Promise(r => setTimeout(() => r('slow'), 2500))]);
+    if (res === false) { if (btn) { btn.disabled = false; btn.textContent = old ? 'Save' : 'Create class'; } return; }
+    S.classId = id; store.set('class', id); closeModal(); go('home');
+    toast(old ? 'Class saved' : `Class created. Join code: ${code}`);
+    if (res === 'slow') saving.then(ok => { if (ok) toast(old ? 'Class saved' : `Class created. Join code: ${code}`); });
   },
   ann: async f => { const t = f.text.value.trim(); if (!t) return; const c = currentClass(); const id = 'an-' + rid(); if (await setDoc('announcements/' + id, {classId:c.id, text:t, at:Date.now(), by:S.me})) { notify({type:'announcement', id, classId:c.id}); closeModal(); toast('Posted'); } },
   lesson: async f => {
