@@ -83,6 +83,11 @@ Until your domain is verified, Resend only delivers to your own email address. T
 4. Click **Deploy**.
 5. **Domain:** under **Settings → Domains**, add `parlei.ca` (or your choice) and follow the DNS steps in Cloudflare. Then add the domain to Firebase's **Authorized domains** (step 1.6), and update `APP_URL`.
 
+### Google sign-in on your own domain
+So Google's sign-in window shows your site instead of `…firebaseapp.com`, `config.js` sets `authDomain` to `www.parlei.ca`, and `vercel.json` forwards `/__/auth/…` to Firebase. Two settings make it work:
+1. **console.cloud.google.com → APIs & Services → Credentials**, open **Web client (auto created by Google Service)**, and under **Authorized redirect URIs** add `https://www.parlei.ca/__/auth/handler`. Save.
+2. **Google Auth Platform → Branding**: set **App name** to `Parlei`, choose your support email, add `parlei.ca` under **Authorized domains**, and save. Google shows the app name on the sign-in screen once the branding is approved.
+
 ## 5. First sign-in
 
 1. Open your site and **Continue with Google** using **YOUR_EMAIL**. Or create a password account with it and click the confirmation link in your inbox: the teacher email must be confirmed.

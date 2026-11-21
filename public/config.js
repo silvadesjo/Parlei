@@ -4,7 +4,7 @@ self.PARLEI_CONFIG = {
   // Firebase console > Project settings > General > Your apps > Web app > "firebaseConfig"
   firebase: {
     apiKey: "AIzaSyB_rM0YXrJtwDMUC5xX_lpKjGX62xf92A8",
-    authDomain: "parlei-795a8.firebaseapp.com",
+    authDomain: "www.parlei.ca",   // Google sign-in runs on your own domain (vercel.json forwards /__/auth to Firebase),
     projectId: "parlei-795a8",
     storageBucket: "parlei-795a8.firebasestorage.app",
     messagingSenderId: "826965689607",
