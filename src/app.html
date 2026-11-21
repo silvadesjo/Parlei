@@ -1010,7 +1010,7 @@ function profileFields(p){
   p = p || {};
   return `<div class="grid2"><div><label for="pfFirst">First name</label><input id="pfFirst" name="first" required maxlength="40" autocomplete="given-name" value="${esc(p.first || '')}"></div>
     <div><label for="pfLast">Last name</label><input id="pfLast" name="last" required maxlength="40" autocomplete="family-name" value="${esc(p.last || '')}"></div></div>
-    <label for="pfPref">What should we call you? <span class="hint">(optional)</span></label><input id="pfPref" name="preferred" maxlength="40" value="${esc(p.preferred || '')}" placeholder="Leave blank to use your first name">
+    <label for="pfPref">Preferred name <span class="hint">(optional)</span></label><input id="pfPref" name="preferred" maxlength="40" value="${esc(p.preferred || '')}" placeholder="Leave blank to use your first name">
     <label for="pfEmail">Email</label><input id="pfEmail" name="email" type="email" required maxlength="120" autocomplete="email" value="${esc(p.email || '')}" placeholder="you@example.com">
     <div class="grid2 stackable"><div><label for="pfPhone">Phone <span class="hint">(optional)</span></label><input id="pfPhone" name="phone" type="tel" maxlength="30" autocomplete="tel" value="${esc(p.phone || '')}"></div>
     <div><label for="pfNative">Languages you already speak</label><input id="pfNative" name="native" maxlength="80" value="${esc(p.native || '')}" placeholder="English, Tagalog"></div></div>
