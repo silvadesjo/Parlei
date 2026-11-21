@@ -1665,13 +1665,8 @@ function authErrText(e){
   if (/too-many-requests/.test(c)) return 'Too many attempts. Wait a few minutes and try again.';
   if (/popup-blocked/.test(c)) return 'Your browser blocked the Google window. Allow pop-ups for this site and try again.';
   if (/network/.test(c)) return 'No connection. Check your internet and try again.';
-  // Setup problems: say exactly what to fix (these only happen while the site is being set up).
-  if (/unauthorized-domain/.test(c)) return `This website (${location.hostname}) isn't allowed to use Google sign-in yet. In Firebase, open Authentication → Settings → Authorized domains and add it.`;
-  if (/operation-not-allowed/.test(c)) return 'This way of signing in is turned off. In Firebase, open Authentication → Sign-in method and turn on Email/Password and Google.';
-  if (/configuration-not-found|auth\/internal-error|invalid-api-key|api-key-not-valid/.test(c)) return 'Sign-in isn\'t set up yet. In Firebase, open Authentication and click Get started, then turn on Email/Password and Google.';
-  if (/permission-denied|not-found|failed-precondition/.test(c)) return 'Signed in, but the database isn\'t ready. In Firebase, create the Firestore database and publish the rules from firestore.rules.';
-  console.error('Sign-in error', e);
-  return `Something went wrong${c ? ' (' + c + ')' : ''}. Try again.`;
+  console.error('Sign-in error', e);   // details stay in the browser console, not on screen
+  return 'Something went wrong. Try again.';
 }
 async function authRun(fn){
   S.authBusy = true; S.authError = ''; render(true);
