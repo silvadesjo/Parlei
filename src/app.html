@@ -80,7 +80,7 @@ p{margin:0}
 
 #app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:1fr}
 .top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand{display:flex;align-items:center;gap:8px;margin-right:auto;color:inherit;text-decoration:none;cursor:pointer}
 .mark{width:34px;height:34px;flex:none;display:block}
 .brand .name{font:400 22px/1 var(--display)}
 .top select{max-width:230px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--sunk)}
@@ -407,7 +407,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 <body>
 <div id="app">
   <header class="top">
-    <div class="brand"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.4,5.6) scale(1,0.86)"><path fill="var(--accent-ink)" d="M8 46 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 46 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></div>
+    <a class="brand" href="#home" data-act="goHome" aria-label="Parlei home"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.4,5.6) scale(1,0.86)"><path fill="var(--accent-ink)" d="M8 46 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 46 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></a>
     <div id="classSwitch"></div>
     <div id="roleBox"></div>
     <button type="button" class="theme-btn" id="themeBtn" data-act="toggleDay" aria-pressed="false" aria-label="Daylight mode" title="Daylight mode: a brighter display"></button>
@@ -2060,6 +2060,7 @@ const ACT = {
     };
     inp.click();
   },
+  goHome: () => { if (S.authScreen) { S.authMode = 'choose'; S.authError = ''; render(true); } else { if (S.view === 'home') { S.lessonId = null; S.noteId = null; S.studyLessonId = null; } go('home'); } window.scrollTo(0, 0); },
   starWord: d => { const w = vocabDoc().words[d.id]; if (w) upsert('vocab/' + S.me, {words:{[d.id]:{star:!w.star}}}); },
   editWord: d => wordForm(d.id),
   delWord: async d => { if (await askConfirm('Delete this word?')) upsert('vocab/' + S.me, {words:{[d.id]:null}}); },
