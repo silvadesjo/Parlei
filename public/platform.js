@@ -42,6 +42,8 @@ async function init(){
     return out;
   }
   const guard = async fn => { try { return await fn(); } catch (e) { throw err(e); } };
+  // Tell the app when a live read is refused or fails, so it can stop waiting instead of loading forever.
+  const watchErr = (path, e) => { try { window.dispatchEvent(new CustomEvent('parlei-db-error', {detail:{path, code:(e && e.code) || ''}})); } catch (x) {} };
   function docRef(path){
     const r = F.doc(fdb, path);
     return {
@@ -50,7 +52,7 @@ async function init(){
       set:d => guard(() => F.setDoc(r, d)),
       update:d => guard(() => { const pairs = flatten(d); if (!pairs.length) return; const args = []; pairs.forEach(([p, v]) => args.push(new F.FieldPath(...p), v)); return F.updateDoc(r, ...args); }),
       delete:() => guard(() => F.deleteDoc(r)),
-      onSnapshot:(next, onErr) => F.onSnapshot(r, s => next(wrapDoc(s)), e => onErr && onErr(err(e))),
+      onSnapshot:(next, onErr) => F.onSnapshot(r, s => next(wrapDoc(s)), e => { watchErr(path, e); onErr && onErr(err(e)); }),
       collection:p => colRef(path + '/' + p)
     };
   }
@@ -65,7 +67,7 @@ async function init(){
       orderBy:(f, dir) => colRef(path, cons.concat(F.orderBy(f, dir || 'asc')), group),
       limit:n => colRef(path, cons.concat(F.limit(n)), group),
       get:() => guard(async () => wrapQuery(await F.getDocs(q()))),
-      onSnapshot:(next, onErr) => F.onSnapshot(q(), s => next(wrapQuery(s)), e => onErr && onErr(err(e)))
+      onSnapshot:(next, onErr) => F.onSnapshot(q(), s => next(wrapQuery(s)), e => { watchErr(path, e); onErr && onErr(err(e)); })
     };
   }
   // collectionGroup(name): the same kind of item across every class, e.g. all public lessons.

@@ -396,6 +396,12 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .bad-banner{margin:0}
 @media (min-width:860px){#app.auth-mode{grid-template-columns:1fr}}
 #app.auth-mode #nav{display:none}
+.splash{min-height:55vh;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;color:var(--muted);font-size:15px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.splash-card{margin-top:12vh}
+#app.gate #nav{display:none}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -405,7 +411,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" class="auth-mode gate">
   <header class="top">
     <a class="brand" href="#home" data-act="goHome" aria-label="Parlei home"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="markClip"><rect width="40" height="40" rx="10"/></clipPath></defs><g clip-path="url(#markClip)"><rect width="40" height="40" fill="var(--accent)"/><g transform="translate(0.4,5.6) scale(1,0.86)"><path fill="var(--accent-ink)" d="M8 46 L8 32 C8 27 5 23.5 5 17.5 C5 10 10.5 5 17 5 C22.5 5 25.6 8.6 26.2 12.6 L28.6 16.8 C29 17.5 28.6 18 27.9 18 L26.4 18 L26.4 19.3 L25.2 19.9 L26.5 20.6 L26.2 22.6 C26 24 24.8 24.7 23.4 24.6 L20.4 24.3 L20.4 46 Z"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"><path d="M30.6 16.6 A4.5 4.5 0 0 1 30.6 23.2"/><path d="M33.6 13.4 A8.6 8.6 0 0 1 33.6 26.4"/></g></g></g></svg><span class="name">Parlei</span></a>
     <div id="classSwitch"></div>
@@ -413,7 +419,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
     <button type="button" class="theme-btn" id="themeBtn" data-act="toggleDay" aria-pressed="false" aria-label="Daylight mode" title="Daylight mode: a brighter display"></button>
   </header>
   <nav id="nav" aria-label="Sections"></nav>
-  <main id="main"><div class="wrap"><div class="skeleton"></div><div class="skeleton"></div></div></main>
+  <main id="main"><div class="wrap"><div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>Loading…</span></div></div></main>
 </div>
 <div id="modalRoot"></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -682,6 +688,9 @@ function listenOwn(name){
   }, () => { markLoaded(name); schedule(); });
 }
 const ready = () => ['classes', 'members'].every(n => S.loaded[n]);
+/* Until we know who is signed in and their own data has loaded, show only a neutral screen:
+   no menu, no role switch, no class names. */
+const gated = () => !S.authScreen && !S.fatal && (!S.me || S.loadFailed || !ready());
 const rows = c => Object.entries(D[c] || {}).map(([id, v]) => Object.assign({id}, v));
 const byCreated = (a, b) => (a.createdAt || 0) - (b.createdAt || 0);
 
@@ -888,6 +897,10 @@ function askConfirm(text, okLabel){
 }
 
 /* ---------- render ---------- */
+window.addEventListener('parlei-db-error', ev => {
+  const d = ev.detail || {}, own = S.me && (d.path === 'members/' + S.me || d.path === 'profiles/' + S.me || d.path === 'classes' || /^classes\/[^/]+$/.test(d.path || ''));
+  if (own && !ready() && /permission-denied|failed-precondition|unauthenticated|not-found/.test(d.code || '')) { S.loadFailed = true; console.error('Parlei could not load', d); render(true); }
+});
 function render(force){
   const a = document.activeElement;
   const playing = [...document.querySelectorAll('#main audio')].some(x => !x.paused && !x.ended);
@@ -911,7 +924,8 @@ function render(force){
   const ms = $('#msgs'); if (ms) ms.scrollTop = ms.scrollHeight;
 }
 function renderTop(){
-  const appEl = document.getElementById('app'); if (appEl) appEl.classList.toggle('auth-mode', !!S.authScreen);
+  const appEl = document.getElementById('app'); const g = gated(); if (appEl) { appEl.classList.toggle('auth-mode', !!S.authScreen || g); appEl.classList.toggle('gate', g); }
+  if (g) { $('#classSwitch').innerHTML = ''; $('#roleBox').innerHTML = ''; document.body.classList.remove('signed-in'); return; }
   const cs = S.fatal || !ready() ? [] : myClasses(), c = currentClass();
   $('#classSwitch').innerHTML = cs.length > 1 ? `<label class="sr" for="classSel">Class</label><select id="classSel">${cs.map(x => `<option value="${esc(x.id)}" ${c && x.id === c.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '';
   let r = '';
@@ -933,7 +947,7 @@ function accountMenu(){
   </div><div class="actions"><button class="btn" data-act="signOut">Sign out</button></div>`, {label:'Account'});
 }
 function renderNav(){
-  if (S.authScreen || S.fatal) { $('#nav').innerHTML = ''; return; }
+  if (S.authScreen || S.fatal || gated()) { $('#nav').innerHTML = ''; return; }
   const c = !S.fatal && ready() ? currentClass() : null;
   const badge = {};
   if (c) {
@@ -951,7 +965,9 @@ function renderNav(){
 function renderMain(){
   if (S.authScreen) return viewAuth();
   if (S.fatal === 'config') return `<section class="card narrow"><h1>Almost there</h1><p class="muted">Parlei can't reach its database. Check the Firebase settings in <code>config.js</code> (see SETUP.md), then reload.</p></section>`;
-  if (!ready()) return (S.slow ? '<p class="banner">Your classes are taking a while to load. Check your connection; this page keeps trying.</p>' : '') + '<div class="skeleton"></div><div class="skeleton"></div>';
+  if (S.loadFailed) return `<section class="card narrow splash-card"><h1 class="auth-h">We couldn't open your account</h1><p class="muted" style="margin:0">Please try again in a moment.</p><div class="row-actions"><button class="btn primary" data-act="reloadApp">Try again</button><button class="btn" data-act="signOut">Sign out</button></div></section>`;
+  if (!S.me) return '<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>Loading…</span></div>';
+  if (!ready()) return `<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>${S.slow ? 'Still loading…' : 'Signing you in…'}</span>${S.slow ? '<div class="row-actions"><button class="btn sm" data-act="reloadApp">Try again</button><button class="btn sm" data-act="signOut">Sign out</button></div>' : ''}</div>`;
   const c = currentClass();
   let out = S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
   if (S.view === 'words') return out + viewWords();
@@ -1669,6 +1685,7 @@ function authErrText(e){
   return 'Something went wrong. Try again.';
 }
 async function authRun(fn){
+  try { sessionStorage.setItem('parlei-just-signed-in', '1'); } catch (e) {}
   S.authBusy = true; S.authError = ''; render(true);
   try { await fn(); } catch (e) { if (!/popup-closed|cancelled-popup/.test((e && e.code) || '')) S.authError = authErrText(e); }
   S.authBusy = false; if (S.authScreen) render(true);
@@ -2428,6 +2445,8 @@ async function boot(){
     if (!u) { if (S.me) { location.reload(); return; } S.authScreen = true; render(true); return; }
     if (S.me) { if (S.me !== u.uid) location.reload(); return; }
     S.authScreen = false; S.me = u.uid; S.email = u.email || ''; S.names[u.uid] = u.displayName || '';
+    let fresh = false; try { fresh = sessionStorage.getItem('parlei-just-signed-in') === '1'; sessionStorage.removeItem('parlei-just-signed-in'); } catch (e) {}
+    if (fresh) { S.view = 'home'; if (location.hash !== '#home') history.replaceState(null, '', '#home'); }
     S.isOwner = !!u.isOwner; S.teacherCapable = !!u.isTeacher; S.verifyNote = !!u.needsVerify;
     S.assets = S.teacherCapable ? P.assets : null;
     if (!S.pendingProfile && S.signupRole && !S.teacherCapable) {   // Google sign-up from the student or instructor page
