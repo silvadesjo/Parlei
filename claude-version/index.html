@@ -339,6 +339,7 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .note-body ul.checklist > li[data-checked="true"]::after{content:'';position:absolute;left:7px;top:.38em;width:5px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .note-body.read{min-height:0;opacity:.8}
 .note-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.sec-title{font:400 22px/1.3 var(--display);margin:8px 0 -4px}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -395,6 +396,7 @@ const ICON = {
   search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
   back:'<path d="M15 5l-7 7 7 7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
   note:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'
 };
@@ -406,6 +408,7 @@ const VIEWS = [
   {id:'notes', long:'Notebook', short:'Notebook', icon:'note', sec:true},
   {id:'media', long:'Media', short:'Media', icon:'media', sec:true},
   {id:'work', long:'Assignments', short:'Work', icon:'check'},
+  {id:'study', long:'Self-study', short:'Self-study', icon:'compass', sec:true},
   {id:'practice', long:'Flashcards', short:'Practice', icon:'cards', sec:true},
   {id:'calendar', long:'Schedule', short:'Schedule', icon:'cal', sec:true},
   {id:'inbox', long:'Messages', short:'Inbox', icon:'chat'},
@@ -418,7 +421,7 @@ const S = {
   db:null, user:null, tts:null, me:null, isOwner:false, teacherIds:[], teacherCapable:false, role:'student',
   demo:false, fatal:null, slow:false, readOnly:false, data:{}, loaded:{}, names:{},
   classId:null, view:'home', lessonId:null, threadId:null, showPast:false, dirty:false, practice:null, dir:'fwd',
-  wordLang:null, wordQ:'', wordSort:'new', noteId:null, noteFolder:'all', noteQ:'', noteSort:'edited', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
+  wordLang:null, wordQ:'', wordSort:'new', studyLessonId:null, studyLang:'all', noteId:null, noteFolder:'all', noteQ:'', noteSort:'edited', assets:null, sample:null, blobUrls:{}, mediaTab:null, mediaType:'all', mediaStatus:'all', stuQ:'', stuClass:'all'
 };
 const D = S.data;
 const store = {
@@ -457,7 +460,7 @@ function memoryDB(){
   return { doc:docRef, collection:p => colRef(p) };
 }
 const SEED = {"classes/fr-a1": {"name": "Français A1 · Monday evenings", "language": "fr", "level": "A1", "description": "Beginner French: greetings, introductions and everyday life.", "code": "BNJR26", "teacherId": "owner", "createdAt": 1763337600000}, "lessons/l-greet": {"classId": "fr-a1", "unit": "Unit 1 · Se présenter", "order": 1, "title": "Saying hello and goodbye", "published": true, "createdAt": 1763337600000, "body": "# Les salutations\nIn French, the greeting you choose depends on the time of day and how well you know the person.\n\nbonjour = hello / good morning\nbonsoir = good evening\nsalut = hi / bye (informal)\nau revoir = goodbye\nà bientôt = see you soon\nbonne journée = have a good day\n\n## Formal or informal?\n- Use **vous** with strangers, elders and at work.\n- Use **tu** with friends, family and children.\n- When in doubt, start with *vous*.\n\nComment allez-vous ? = How are you? (formal)\nÇa va ? = How's it going? (informal)\nÇa va bien, merci. = I'm fine, thanks.", "links": []}, "lessons/l-intro": {"classId": "fr-a1", "unit": "Unit 1 · Se présenter", "order": 2, "title": "Introducing yourself", "published": true, "createdAt": 1763337600001, "body": "# Je me présente\nje m'appelle Joyce = my name is Joyce\nj'habite à Toronto = I live in Toronto\nje suis étudiant / étudiante = I am a student\nje parle anglais et un peu français = I speak English and a little French\nenchanté / enchantée = nice to meet you\n\n## Your turn\nWrite three to five sentences about yourself using the phrases above. You'll hand them in as this week's writing assignment.", "links": []}, "assignments/a-quiz1": {"classId": "fr-a1", "title": "Quiz: greetings", "kind": "quiz", "points": 5, "due": "2026-11-23", "createdAt": 1763337600000, "instructions": "Choose the best answer for each question. You get one attempt, and your score appears right away.", "questions": [{"q": "It's 8 p.m. and you walk into a restaurant. You say…", "options": ["Bonjour", "Bonsoir", "Salut", "Bonne nuit"], "answer": 1}, {"q": "Which greeting is informal?", "options": ["Bonjour", "Au revoir", "Salut", "Bonsoir"], "answer": 2}, {"q": "How do you ask your teacher how they are?", "options": ["Ça va ?", "Comment allez-vous ?", "Salut ?", "Tu vas bien ?"], "answer": 1}, {"q": "« À bientôt » means…", "options": ["See you soon", "Good morning", "Have a good day", "Thank you"], "answer": 0}, {"q": "« Enchanté » means…", "options": ["Excuse me", "I'm sorry", "Nice to meet you", "Good luck"], "answer": 2}]}, "assignments/a-write1": {"classId": "fr-a1", "title": "Write about yourself", "kind": "written", "points": 10, "due": "2026-11-30", "createdAt": 1763337600001, "instructions": "Write 3–5 sentences introducing yourself in French: your name, where you live, what you do and which languages you speak. Use the phrases from the lesson \"Introducing yourself\".", "questions": []}, "decks/d-greet": {"classId": "fr-a1", "title": "Greetings & introductions", "createdAt": 1763337600000, "cards": [{"id": "c1", "f": "bonjour", "b": "hello"}, {"id": "c2", "f": "bonsoir", "b": "good evening"}, {"id": "c3", "f": "salut", "b": "hi / bye (informal)"}, {"id": "c4", "f": "au revoir", "b": "goodbye"}, {"id": "c5", "f": "à bientôt", "b": "see you soon"}, {"id": "c6", "f": "merci", "b": "thank you"}, {"id": "c7", "f": "s'il vous plaît", "b": "please (formal)"}, {"id": "c8", "f": "je m'appelle…", "b": "my name is…"}, {"id": "c9", "f": "enchanté", "b": "nice to meet you"}, {"id": "c10", "f": "comment allez-vous ?", "b": "how are you? (formal)"}, {"id": "c11", "f": "ça va bien", "b": "I'm fine"}, {"id": "c12", "f": "bonne journée", "b": "have a good day"}]}, "decks/d-num": {"classId": "fr-a1", "title": "Numbers 1–10", "createdAt": 1763337600001, "cards": [{"id": "n1", "f": "un", "b": "one"}, {"id": "n2", "f": "deux", "b": "two"}, {"id": "n3", "f": "trois", "b": "three"}, {"id": "n4", "f": "quatre", "b": "four"}, {"id": "n5", "f": "cinq", "b": "five"}, {"id": "n6", "f": "six", "b": "six"}, {"id": "n7", "f": "sept", "b": "seven"}, {"id": "n8", "f": "huit", "b": "eight"}, {"id": "n9", "f": "neuf", "b": "nine"}, {"id": "n10", "f": "dix", "b": "ten"}]}, "events/e-class1": {"classId": "fr-a1", "kind": "class", "title": "Monday class · Unit 1", "start": "2026-11-23T23:30:00.000Z", "mins": 90, "link": "", "createdAt": 1763337600000}, "events/e-class2": {"classId": "fr-a1", "kind": "class", "title": "Monday class · Unit 1 review", "start": "2026-11-30T23:30:00.000Z", "mins": 90, "link": "", "createdAt": 1763337600000}, "events/e-oh1": {"classId": "fr-a1", "kind": "slot", "title": "Office hours · 1:1", "start": "2026-11-18T22:00:00.000Z", "mins": 30, "link": "", "createdAt": 1763337600000}, "events/e-oh2": {"classId": "fr-a1", "kind": "slot", "title": "Office hours · 1:1", "start": "2026-11-18T22:30:00.000Z", "mins": 30, "link": "", "createdAt": 1763337600000}, "announcements/an-welcome": {"classId": "fr-a1", "text": "Bienvenue ! Our first class is Monday at 6:30 p.m. Before then, read \"Saying hello and goodbye\" and try the greetings flashcards.", "at": 1763337600000}};
-const DEMO = {"names": {"demo-teacher": "You", "demo-s1": "Amara Okafor", "demo-s2": "Luis Herrera", "demo-s3": "Mei Chen"}, "docs": {"members/demo-s1": {"classIds": {"fr-a1": 1763337600000}}, "members/demo-s2": {"classIds": {"fr-a1": 1763337600001}}, "members/demo-s3": {"classIds": {"fr-a1": 1763337600002}}, "subs/demo-s1": {"items": {"a-quiz1": {"answers": [1, 2, 1, 0, 0], "right": 4, "total": 5, "grade": 4, "submittedAt": 1763337600000, "gradedAt": 1763337600000, "feedback": ""}, "a-write1": {"text": "Je m'appelle Amara. J'habite à Toronto. Je suis étudiante à l'université. Je parle anglais, igbo et un peu français.", "submittedAt": 1763337600000}}}, "subs/demo-s3": {"items": {"a-quiz1": {"answers": [1, 2, 1, 0, 2], "right": 5, "total": 5, "grade": 5, "submittedAt": 1763337600000, "gradedAt": 1763337600000, "feedback": ""}}}, "prog/demo-s1": {"cards": {"d-greet~c1": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c2": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c3": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c4": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c5": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c6": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c7": {"b": 4, "d": 1764028800000, "n": 4}}, "updated": 1763337600000}, "prog/demo-s3": {"cards": {"d-greet~c1": {"b": 2, "d": 1763510400000, "n": 2}, "d-greet~c2": {"b": 2, "d": 1763510400000, "n": 2}, "d-greet~c3": {"b": 2, "d": 1763510400000, "n": 2}}, "updated": 1763337600000}, "threads/demo-s1": {"msgs": {"m1": {"from": "demo-s1", "text": "Bonjour ! Is Monday's class online or in person?", "at": 1763337600000}}, "lastAt": 1763337600000}, "bookings/demo-s2": {"slots": {"e-oh1": true}}, "profiles/demo-s1": {"first": "Amara", "last": "Okafor", "preferred": "", "email": "amara.okafor@example.com", "phone": "", "native": "English, Igbo", "goals": "Move to Montréal for my master's", "createdAt": 1763337600000, "lastSeen": 1763337600000}, "profiles/demo-s2": {"first": "Luis", "last": "Herrera", "preferred": "Lucho", "email": "luis.h@example.com", "phone": "416-555-0142", "native": "Spanish, English", "goals": "", "createdAt": 1763337600001, "lastSeen": 1763337600000}, "vocab/demo-teacher": {"langs": {"fr": {"at": 1763337600000, "name": "French"}, "es": {"at": 1763337600001, "name": "Spanish"}}, "words": {"w1": {"lang": "fr", "term": "la boulangerie", "meaning": "bakery", "example": "Je vais à la boulangerie tous les matins.", "note": "feminine", "at": 1763337600000, "star": true}, "w2": {"lang": "fr", "term": "dépanneur", "meaning": "convenience store (Québec)", "note": "Québécois", "at": 1763337600001}, "w3": {"lang": "fr", "term": "magasiner", "meaning": "to go shopping (Québec)", "at": 1763337600002}, "w4": {"lang": "es", "term": "la madrugada", "meaning": "the early hours of the morning", "at": 1763337600003}}}}};
+const DEMO = {"names": {"demo-teacher": "You", "demo-s1": "Amara Okafor", "demo-s2": "Luis Herrera", "demo-s3": "Mei Chen"}, "docs": {"members/demo-s1": {"classIds": {"fr-a1": 1763337600000}}, "members/demo-s2": {"classIds": {"fr-a1": 1763337600001}}, "members/demo-s3": {"classIds": {"fr-a1": 1763337600002}}, "subs/demo-s1": {"items": {"a-quiz1": {"answers": [1, 2, 1, 0, 0], "right": 4, "total": 5, "grade": 4, "submittedAt": 1763337600000, "gradedAt": 1763337600000, "feedback": ""}, "a-write1": {"text": "Je m'appelle Amara. J'habite à Toronto. Je suis étudiante à l'université. Je parle anglais, igbo et un peu français.", "submittedAt": 1763337600000}}}, "subs/demo-s3": {"items": {"a-quiz1": {"answers": [1, 2, 1, 0, 2], "right": 5, "total": 5, "grade": 5, "submittedAt": 1763337600000, "gradedAt": 1763337600000, "feedback": ""}}}, "prog/demo-s1": {"cards": {"d-greet~c1": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c2": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c3": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c4": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c5": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c6": {"b": 4, "d": 1764028800000, "n": 4}, "d-greet~c7": {"b": 4, "d": 1764028800000, "n": 4}}, "updated": 1763337600000}, "prog/demo-s3": {"cards": {"d-greet~c1": {"b": 2, "d": 1763510400000, "n": 2}, "d-greet~c2": {"b": 2, "d": 1763510400000, "n": 2}, "d-greet~c3": {"b": 2, "d": 1763510400000, "n": 2}}, "updated": 1763337600000}, "threads/demo-s1": {"msgs": {"m1": {"from": "demo-s1", "text": "Bonjour ! Is Monday's class online or in person?", "at": 1763337600000}}, "lastAt": 1763337600000}, "bookings/demo-s2": {"slots": {"e-oh1": true}}, "profiles/demo-s1": {"first": "Amara", "last": "Okafor", "preferred": "", "email": "amara.okafor@example.com", "phone": "", "native": "English, Igbo", "goals": "Move to Montréal for my master's", "createdAt": 1763337600000, "lastSeen": 1763337600000}, "profiles/demo-s2": {"first": "Luis", "last": "Herrera", "preferred": "Lucho", "email": "luis.h@example.com", "phone": "416-555-0142", "native": "Spanish, English", "goals": "", "createdAt": 1763337600001, "lastSeen": 1763337600000}, "vocab/demo-teacher": {"langs": {"fr": {"at": 1763337600000, "name": "French"}, "es": {"at": 1763337600001, "name": "Spanish"}}, "words": {"w1": {"lang": "fr", "term": "la boulangerie", "meaning": "bakery", "example": "Je vais à la boulangerie tous les matins.", "note": "feminine", "at": 1763337600000, "star": true}, "w2": {"lang": "fr", "term": "dépanneur", "meaning": "convenience store (Québec)", "note": "Québécois", "at": 1763337600001}, "w3": {"lang": "fr", "term": "magasiner", "meaning": "to go shopping (Québec)", "at": 1763337600002}, "w4": {"lang": "es", "term": "la madrugada", "meaning": "the early hours of the morning", "at": 1763337600003}}}, "lessons/l-greet": {"classId": "fr-a1", "unit": "Unit 1 · Se présenter", "order": 1, "title": "Saying hello and goodbye", "published": true, "createdAt": 1763337600000, "body": "# Les salutations\nIn French, the greeting you choose depends on the time of day and how well you know the person.\n\nbonjour = hello / good morning\nbonsoir = good evening\nsalut = hi / bye (informal)\nau revoir = goodbye\nà bientôt = see you soon\nbonne journée = have a good day\n\n## Formal or informal?\n- Use **vous** with strangers, elders and at work.\n- Use **tu** with friends, family and children.\n- When in doubt, start with *vous*.\n\nComment allez-vous ? = How are you? (formal)\nÇa va ? = How's it going? (informal)\nÇa va bien, merci. = I'm fine, thanks.", "links": [], "public": true}, "decks/d-greet": {"classId": "fr-a1", "title": "Greetings & introductions", "createdAt": 1763337600000, "cards": [{"id": "c1", "f": "bonjour", "b": "hello"}, {"id": "c2", "f": "bonsoir", "b": "good evening"}, {"id": "c3", "f": "salut", "b": "hi / bye (informal)"}, {"id": "c4", "f": "au revoir", "b": "goodbye"}, {"id": "c5", "f": "à bientôt", "b": "see you soon"}, {"id": "c6", "f": "merci", "b": "thank you"}, {"id": "c7", "f": "s'il vous plaît", "b": "please (formal)"}, {"id": "c8", "f": "je m'appelle…", "b": "my name is…"}, {"id": "c9", "f": "enchanté", "b": "nice to meet you"}, {"id": "c10", "f": "comment allez-vous ?", "b": "how are you? (formal)"}, {"id": "c11", "f": "ça va bien", "b": "I'm fine"}, {"id": "c12", "f": "bonne journée", "b": "have a good day"}], "public": true}}};
 
 /* ---------- writes: one at a time per document ---------- */
 const chains = {};
@@ -714,6 +717,7 @@ function renderMain(){
   let out = S.readOnly ? `<p class="banner">You can view this portal but not hand in work or send messages. Ask your teacher to share it with you as an editor.</p>` : '';
   if (S.view === 'words') return out + viewWords();
   if (S.view === 'notes') return out + viewNotes();
+  if (S.view === 'study') return out + viewStudy();
   if (S.view === 'media') return out + viewMedia(c);
   if (S.view === 'students' && S.role === 'teacher') return out + viewStudents();
   if (!c) return out + (S.role === 'teacher' ? viewOnboard() : viewJoin());
@@ -744,12 +748,12 @@ function readProfile(f){
 }
 function viewJoin(){
   const prof = profileOf(S.me);
-  if (!prof) return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your student account</h1><p class="muted">Tell your teacher who you are, then enter the join code they gave you. Only your teacher sees these details.</p>
+  if (!prof) return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your student account</h1><p class="muted">Tell your teacher who you are, then enter the join code they gave you. No code yet? Leave it blank to start with free self-study lessons. Only your teacher sees these details.</p>
     <form class="stack" data-form="signup">${profileFields(S.demo ? {} : {first:(S.names[S.me] || '').split(' ')[0] || ''})}
-    <label for="joinCode">Join code</label><input id="joinCode" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
+    <label for="joinCode">Join code <span class="hint">(leave blank if you don't have one yet)</span></label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
     <button class="btn primary">Create account and join</button></form></section>`;
   return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me))}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
-  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>`;
+  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>${hasPublic() ? `<section class="card narrow"><h3>No code yet?</h3><p class="muted">Try the free lessons and flashcards in Self-study while you wait.</p><div class="row-actions"><button class="btn" data-act="navTo" data-v="study">${icon('compass')} Open Self-study</button></div></section>` : ''}`;
 }
 
 /* ---- home ---- */
@@ -858,13 +862,13 @@ function viewLessons(c){
   return `<div class="page-head"><div><p class="eyebrow">${ls.length} lessons</p><h1>Lessons</h1></div>${S.role === 'teacher' ? `<button class="btn primary" data-act="editLesson">${icon('plus')} New lesson</button>` : ''}</div>
   ${units.length ? units.map(g => `<section class="card"><p class="unit-label">${esc(g.u)}</p><div class="list">${g.items.map(l => {
     const words = (String(l.body || '').match(/^.+?\s+=\s+.+$/gm) || []).length;
-    return `<button class="item" data-act="openLesson" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">${words ? words + ' phrases' : 'Reading'}${(l.links || []).length ? ' · ' + l.links.length + ' links' : ''}</span></span>${l.published === false ? '<span class="pill">Draft</span>' : ''}</button>`; }).join('')}</div></section>`).join('')
+    return `<button class="item" data-act="openLesson" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">${words ? words + ' phrases' : 'Reading'}${(l.links || []).length ? ' · ' + l.links.length + ' links' : ''}</span></span>${l.published === false ? '<span class="pill">Draft</span>' : ''}${S.role === 'teacher' && l.public && l.published !== false ? '<span class="pill ok">Public</span>' : ''}</button>`; }).join('')}</div></section>`).join('')
   : `<p class="empty">${S.role === 'teacher' ? 'Write your first lesson. Vocabulary lines get a listen button.' : 'Your teacher has not posted lessons yet.'}</p>`}`;
 }
 function viewLesson(l, c){
   return `<div class="lesson stack" style="gap:16px"><button class="link" data-act="closeLesson">${icon('back')} All lessons</button>
   <div><p class="eyebrow">${esc(l.unit || 'Lesson')}</p><h1>${esc(l.title)}</h1></div>
-  ${l.published === false ? '<p class="banner">Draft: students cannot see this lesson yet.</p>' : ''}
+  ${l.published === false ? '<p class="banner">Draft: students cannot see this lesson yet.</p>' : ''}${S.role === 'teacher' && l.public && l.published !== false ? '<p class="banner">Public: anyone with a Parlei account can read this lesson in Self-study.</p>' : ''}
   <article class="lesson-body">${renderBody(l.body, c.language)}</article>
   ${(() => { const rec = audioOf(c.id).filter(x => x.lessonId === l.id); return rec.length || S.role === 'teacher' ? `<section class="card"><div class="card-head"><h3>Listen</h3>${S.role === 'teacher' && S.assets ? `<button class="btn sm" data-act="uploadAudio" data-lesson="${esc(l.id)}">${icon('plus')} Add recording</button>` : ''}</div>${rec.length ? rec.map(x => audioCard(x, c, true)).join('') : '<p class="empty">Attach a recording of you reading this lesson aloud.</p>'}</section>` : ''; })()}
   ${(l.links || []).length ? `<section class="card"><h3>Materials</h3><div class="list">${l.links.map(u => `<a class="item" href="${esc(u)}" target="_blank" rel="noopener"><span class="grow"><span class="t">${esc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span><span class="s">Opens in a new tab</span></span></a>`).join('')}</div></section>` : ''}
@@ -895,13 +899,58 @@ function viewWorkS(c){
   ${done.length ? `<section class="card"><h3>Handed in</h3><div class="list">${done.map(row).join('')}</div></section>` : ''}`;
 }
 
+/* ---- self-study: lessons and decks a teacher has opened to everyone with an account ---- */
+const isPublicLesson = l => !!(l && l.public && l.published !== false && classOf(l.classId));
+const isPublicDeck = d => !!(d && d.public && (d.cards || []).length && classOf(d.classId));
+const publicLessons = () => rows('lessons').filter(isPublicLesson);
+const publicDecks = () => rows('decks').filter(isPublicDeck);
+const hasPublic = () => publicLessons().length + publicDecks().length > 0;
+const langOfClass = cid => (classOf(cid) || {}).language || 'fr';
+function classByline(cid){ const c = classOf(cid) || {}; return [c.name, c.teacherName].filter(Boolean).join(' · '); }
+function viewStudy(){
+  let ls = publicLessons(), ds = publicDecks();
+  if (S.studyLessonId) { const l = ls.find(x => x.id === S.studyLessonId); if (l) return viewStudyLesson(l); }
+  const langs = [...new Set(ls.map(l => langOfClass(l.classId)).concat(ds.map(d => langOfClass(d.classId))))].sort((a, b) => langName(a).localeCompare(langName(b)));
+  if (S.studyLang !== 'all' && !langs.includes(S.studyLang)) S.studyLang = 'all';
+  if (S.studyLang !== 'all') { ls = ls.filter(l => langOfClass(l.classId) === S.studyLang); ds = ds.filter(d => langOfClass(d.classId) === S.studyLang); }
+  ls.sort((a, b) => classByline(a.classId).localeCompare(classByline(b.classId)) || (a.unit || '').localeCompare(b.unit || '') || (a.order || 0) - (b.order || 0));
+  const noClass = !myClasses().length && S.role === 'student';
+  const intro = `<p class="muted" style="max-width:65ch">Free lessons and flashcards that teachers have opened to everyone with a Parlei account. Go at your own pace.${noClass ? ' When you\'re ready for assignments, feedback and live classes, join a class with your teacher\'s code.' : ''}</p>
+    ${noClass ? `<div class="row-actions"><button class="btn" data-act="navTo" data-v="home">I have a join code</button></div>` : ''}`;
+  if (!ls.length && !ds.length && S.studyLang === 'all') return `<div class="page-head"><div><p class="eyebrow">Free to use</p><h1>Self-study</h1></div></div>${intro}
+    <section class="card"><p class="empty">${S.role === 'teacher' ? 'Nothing is public yet. Open a lesson or a flashcard deck, choose Edit, and tick “Public” to share it here with everyone who signs up.' : 'There are no free lessons yet. Check back soon.'}</p></section>`;
+  const chips = langs.length > 1 ? `<div class="nfolders" role="group" aria-label="Language"><button class="nf ${S.studyLang === 'all' ? 'on' : ''}" data-act="studyLang" data-l="all">All languages</button>${langs.map(k => `<button class="nf ${S.studyLang === k ? 'on' : ''}" data-act="studyLang" data-l="${esc(k)}">${esc(langName(k))}</button>`).join('')}</div>` : '';
+  const groups = []; ls.forEach(l => { const k = classByline(l.classId) + '\u0000' + (l.unit || ''); let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, cid:l.classId, unit:l.unit, items:[]}); g.items.push(l); });
+  return `<div class="page-head"><div><p class="eyebrow">Free to use</p><h1>Self-study</h1></div></div>${intro}${chips}
+  <h2 class="sec-title">Lessons</h2>
+  ${groups.length ? groups.map(g => `<section class="card"><p class="unit-label">${esc(langName(langOfClass(g.cid)))} · ${esc(classByline(g.cid))}${g.unit ? ' · ' + esc(g.unit) : ''}</p><div class="list">${g.items.map(l => {
+    const words = (String(l.body || '').match(/^.+?\s+=\s+.+$/gm) || []).length;
+    return `<button class="item" data-act="openStudyLesson" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">${words ? words + ' phrases' : 'Reading'}</span></span></button>`; }).join('')}</div></section>`).join('') : '<p class="empty">No free lessons in this language yet.</p>'}
+  <h2 class="sec-title">Flashcards</h2>
+  ${ds.length ? `<div class="cols">${ds.map(d => { const st = deckStats(d, S.me); const pct = st.total ? Math.round(st.mastered / st.total * 100) : 0;
+    return `<section class="card"><div class="card-head"><h3>${esc(d.title)}</h3><span class="pill ${st.seen ? (st.due ? 'warn' : 'ok') : ''}">${st.seen ? (st.due ? st.due + ' due' : 'Up to date') : 'New'}</span></div>
+      <p class="hint">${esc(langName(langOfClass(d.classId)))} · ${esc(classByline(d.classId))}</p>
+      <div class="bar" title="${pct}% mastered"><i style="width:${pct}%"></i></div><p class="hint">${st.total} cards · ${st.mastered} mastered · ${st.seen} seen</p>
+      <div class="row-actions"><button class="btn primary" data-act="practice" data-id="${esc(d.id)}">${st.seen ? (st.due ? 'Review ' + Math.min(st.due, 25) + ' cards' : 'Practise anyway') : 'Start'}</button></div></section>`; }).join('')}</div>` : '<p class="empty">No free flashcards in this language yet.</p>'}`;
+}
+function viewStudyLesson(l){
+  const cls = classOf(l.classId) || {}, lang = langOfClass(l.classId);
+  const rec = rows('audio').filter(x => x.lessonId === l.id && x.published !== false);
+  return `<div class="lesson stack" style="gap:16px"><button class="link" data-act="closeStudyLesson">${icon('back')} Self-study</button>
+  <div><p class="eyebrow">${esc(langName(lang))} · ${esc(classByline(l.classId))}${l.unit ? ' · ' + esc(l.unit) : ''}</p><h1>${esc(l.title)}</h1></div>
+  <article class="lesson-body">${renderBody(l.body, lang)}</article>
+  ${rec.length ? `<section class="card"><h3>Listen</h3>${rec.map(x => audioCard(x, cls, true)).join('')}</section>` : ''}
+  ${(l.links || []).length ? `<section class="card"><h3>Materials</h3><div class="list">${l.links.map(u => `<a class="item" href="${esc(u)}" target="_blank" rel="noopener"><span class="grow"><span class="t">${esc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span><span class="s">Opens in a new tab</span></span></a>`).join('')}</div></section>` : ''}
+  ${S.role === 'student' && !myClasses().some(c => c.id === l.classId) ? `<section class="card"><p class="muted">Want assignments, feedback and live practice with ${esc(cls.teacherName || 'this teacher')}? Join the class with the code your teacher gives you.</p><div class="row-actions"><button class="btn" data-act="navTo" data-v="home">Join a class</button></div></section>` : ''}</div>`;
+}
+
 /* ---- flashcards ---- */
 function viewPractice(c){
   const decks = inClass('decks', c.id).sort(byCreated);
   return `<div class="page-head"><div><p class="eyebrow">Spaced repetition</p><h1>Flashcards</h1></div>${S.role === 'teacher' ? `<button class="btn primary" data-act="editDeck">${icon('plus')} New deck</button>` : ''}</div>
   <p class="muted" style="max-width:65ch">Cards you know come back less often: tomorrow, then in 2, 4, 8 days and so on. Cards you miss come back the same day.</p>
   ${decks.length ? `<div class="cols">${decks.map(d => { const st = deckStats(d, S.me); const pct = st.total ? Math.round(st.mastered / st.total * 100) : 0;
-    return `<section class="card"><div class="card-head"><h3>${esc(d.title)}</h3><span class="pill ${st.due ? 'warn' : 'ok'}">${st.due ? st.due + ' due' : 'Up to date'}</span></div>
+    return `<section class="card"><div class="card-head"><h3>${esc(d.title)}${S.role === 'teacher' && d.public ? ' <span class="pill ok">Public</span>' : ''}</h3><span class="pill ${st.due ? 'warn' : 'ok'}">${st.due ? st.due + ' due' : 'Up to date'}</span></div>
       <div class="bar" title="${pct}% mastered"><i style="width:${pct}%"></i></div><p class="hint">${st.total} cards · ${st.mastered} mastered · ${st.seen} seen</p>
       <div class="row-actions"><button class="btn primary" data-act="practice" data-id="${esc(d.id)}">${st.due ? 'Review ' + Math.min(st.due, 25) + ' cards' : 'Practise anyway'}</button>
       ${S.role === 'teacher' ? `<button class="btn" data-act="editDeck" data-id="${esc(d.id)}">Edit</button>` : ''}</div></section>`; }).join('')}</div>`
@@ -1411,6 +1460,7 @@ function lessonForm(id){
     <textarea id="lBody" name="body" rows="12">${esc(l ? l.body : '')}</textarea>
     <label for="lLinks">Links to materials, one per line</label><textarea id="lLinks" name="links" rows="3" placeholder="https://…">${esc(l ? (l.links || []).join('\n') : '')}</textarea>
     <label class="check"><input type="checkbox" id="lPub" name="published" ${!l || l.published !== false ? 'checked' : ''}> Students can see this lesson</label>
+    <label class="check"><input type="checkbox" name="public" ${l && l.public ? 'checked' : ''}> Public: anyone with a Parlei account can read it in Self-study, without joining this class</label>
     <div class="actions"><button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save lesson</button></div></form>`, {wide:true, label:'Lesson'});
 }
 function assignmentForm(id){
@@ -1432,6 +1482,7 @@ function deckForm(id){
   const d = id ? Object.assign({id}, D.decks[id]) : null;
   modal(`${head(d ? 'Edit deck' : 'New deck')}<form class="stack" data-form="deck" data-id="${esc(id || '')}">
     <label for="dTitle">Deck name</label><input id="dTitle" name="title" required maxlength="80" value="${esc(d ? d.title : '')}" placeholder="Food & drink">
+    <label class="check"><input type="checkbox" name="public" ${d && d.public ? 'checked' : ''}> Public: anyone with a Parlei account can practise it in Self-study, without joining this class</label>
     <label for="dCards">Cards, one per line</label><p class="hint">Write the word, an equals sign, then its meaning: <code>le pain = bread</code>. For languages with their own script, add the Latin-letter form after a bar: <code>مرحبا | marhaba = hello</code>. Students keep their progress when you edit a card's meaning.</p>
     <textarea id="dCards" name="cards" rows="14">${esc(d ? (d.cards || []).map(x => x.f + (x.r ? ' | ' + x.r : '') + ' = ' + x.b).join('\n') : '')}</textarea>
     <div class="actions">${d ? `<button type="button" class="btn bad" data-act="delDeck" data-id="${esc(d.id)}" style="margin-right:auto">Delete deck</button>` : ''}<button type="button" class="btn" data-act="closeModal">Cancel</button><button class="btn primary">Save deck</button></div></form>`, {label:'Deck'});
@@ -1628,6 +1679,9 @@ const ACT = {
     const doc = {title:'', html:'', text:'', folder:['all', 'pinned', 'trash'].includes(f) ? '' : f, lang:((currentClass() || {}).language) || 'fr', pinned:f === 'pinned', trashed:false, createdAt:now, updatedAt:now};
     if (await queue(notesPath() + '/' + id, () => S.db.doc(notesPath() + '/' + id).set(doc))) { if (S.noteFolder === 'trash') S.noteFolder = 'all'; S.noteId = id; S.noteQ = ''; render(true); const t = $('#noteTitle'); if (t) t.focus(); }
   },
+  studyLang: d => { S.studyLang = d.l; render(true); },
+  openStudyLesson: d => { S.studyLessonId = d.id; render(true); window.scrollTo(0, 0); },
+  closeStudyLesson: () => { S.studyLessonId = null; render(true); },
   openNote: async d => { if (noteTimer) await saveNote(); S.noteId = d.id; render(true); },
   closeNote: async () => { if (noteTimer) await saveNote(); S.noteId = null; render(true); },
   noteFolder: async d => { if (noteTimer) await saveNote(); S.noteFolder = d.f; render(true); },
@@ -1681,10 +1735,11 @@ const FORMS = {
   signup: async f => {
     const r = readProfile(f); if (r.err) { toast(r.err, true); return; }
     const code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
-    const c = rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null);
-    if (!c) { toast("That join code doesn't match a class. Check it with your teacher.", true); return; }
+    const c = code ? rows('classes').find(x => (x.code || '').toUpperCase() === code) || (S.demo ? classOf('fr-a1') || myClassesAll()[0] : null) : null;
+    if (code && !c) { toast("That join code doesn't match a class. Check it with your teacher, or leave it blank for now.", true); return; }
     const now = Date.now();
     if (!(await upsert('profiles/' + S.me, Object.assign(r.p, {createdAt:now, lastSeen:now})))) return;
+    if (!c) { f.code.blur(); toast(hasPublic() ? 'Account created. Start with the free lessons below.' : 'Account created. Join a class whenever you get a code.'); if (hasPublic()) go('study'); else render(true); return; }
     if (await upsert('members/' + S.me, {classIds:{[c.id]:now}})) { S.classId = c.id; store.set('class', c.id); f.code.blur(); go('home'); }
   },
   profile: async f => {
@@ -1715,7 +1770,7 @@ const FORMS = {
   lesson: async f => {
     const id = f.dataset.id || 'l-' + rid(); const old = f.dataset.id ? D.lessons[id] : null; const c = currentClass();
     const doc = {classId: old ? old.classId : c.id, title:f.title.value.trim(), unit:f.unit.value.trim(), order:Number(f.order.value) || 0, body:f.body.value,
-      links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
+      links:f.links.value.split('\n').map(s => s.trim()).filter(s => /^https?:\/\//i.test(s)), published:f.published.checked, public:f.public.checked, createdAt: old ? old.createdAt : Date.now(), updatedAt:Date.now()};
     if (await setDoc('lessons/' + id, doc)) { closeModal(); S.lessonId = id; if (S.view !== 'lessons') go('lessons'); else render(true); toast('Lesson saved'); }
   },
   assignment: async f => {
@@ -1729,7 +1784,7 @@ const FORMS = {
     const id = f.dataset.id || 'd-' + rid(); const old = f.dataset.id ? D.decks[id] : null; const c = currentClass();
     const cards = parseDeck(f.cards.value, old && old.cards);
     if (!cards.length) { toast('Add at least one card, like "bonjour = hello".', true); return; }
-    if (await setDoc('decks/' + id, {classId: old ? old.classId : c.id, title:f.title.value.trim(), cards, createdAt: old ? old.createdAt : Date.now()})) { closeModal(); toast(cards.length + ' cards saved'); }
+    if (await setDoc('decks/' + id, {classId: old ? old.classId : c.id, title:f.title.value.trim(), cards, public:f.public.checked, createdAt: old ? old.createdAt : Date.now()})) { closeModal(); toast(cards.length + ' cards saved'); }
   },
   event: async f => {
     const id = f.dataset.id; const old = id ? D.events[id] : null; const c = currentClass();
@@ -1869,6 +1924,7 @@ function route(){
   const v = location.hash.slice(1); S.view = navViews().some(x => x.id === v) ? v : 'home';
   if (S.view !== 'lessons') S.lessonId = null;
   if (S.view !== 'notes') S.noteId = null;
+  if (S.view !== 'study') S.studyLessonId = null;
   if (S.view !== 'inbox') S.threadId = null;
   render(true); $('#main').scrollTop = 0; markRead();
 }

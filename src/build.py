@@ -27,6 +27,9 @@ demo = {
             "w4": {"lang": "es", "term": "la madrugada", "meaning": "the early hours of the morning", "at": now + 3}}},
     },
 }
+# In the demo, the greetings lesson and deck are public, so Self-study has something to show.
+for k in ("lessons/l-greet", "decks/d-greet"):
+    demo["docs"][k] = dict(seed[k], public=True)
 html = (here / "app.html").read_text()
 html = html.replace("__SEED__", json.dumps(seed, ensure_ascii=False)).replace("__DEMO__", json.dumps(demo, ensure_ascii=False))
 (here.parent / "public" / "index.html").write_text(html)

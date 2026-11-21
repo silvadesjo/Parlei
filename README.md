@@ -14,6 +14,7 @@ A language learning portal for teachers and students: classes, lessons, assignme
 - **Flashcards:** spaced-repetition decks, with each student's progress visible to the teacher.
 - **Word Bank:** each student's own word bank, one tab per language, with look-up and dictionary links. Languages with their own script (Arabic, Japanese, Korean, Mandarin) take both forms, e.g. مرحبا and marhaba or Franco-Arabic like 7abibi, and search finds either.
 - **Notebook:** private notes for students and instructors, with formatting (headings, lists, checklists, quotes, links), autosave, folders, pinning, search, sorting, trash and restore, duplicate, copy, download, read aloud, and sending a selected word to the Word Bank. Works without a class.
+- **Self-study:** instructors tick “Public” on a lesson or flashcard deck, and anyone with a Parlei account can use it before joining a class. Students can sign up without a join code. Flashcard progress is saved under the deck's class, so it carries over if they join later.
 - **Media:** class audio recordings uploaded by the teacher, and each student's personal repertoire of songs, shows, podcasts and books, with teacher recommendations.
 - **Schedule:** class sessions and bookable 1:1 office-hour slots.
 - **Messages:** private conversations between a student and the teachers they choose (or a teacher and a student, optionally with co-teachers). Only the people listed can see them. Plus class announcements.
