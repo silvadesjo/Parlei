@@ -356,19 +356,29 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .note-body.read{min-height:0;opacity:.8}
 .note-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:10px}
 .sec-title{font:400 22px/1.3 var(--display);margin:8px 0 -4px}
-.auth{display:flex;flex-direction:column;gap:10px;max-width:440px;width:100%;margin:4px auto 0}
+.auth-page{display:flex;flex-direction:column;gap:22px;max-width:440px;margin:4px auto 0;width:100%}
+@media (min-width:900px){.auth-page{display:grid;grid-template-columns:minmax(0,440px) minmax(0,380px);max-width:none;justify-content:center;align-items:start;gap:48px;margin-top:28px}.auth-intro{order:2;padding-top:12px}}
+.auth{display:flex;flex-direction:column;gap:10px;width:100%}
+.auth-intro{padding:0 4px 24px}
+.auth-intro h2{font:400 25px/1.25 var(--display);margin:6px 0 14px}
+.feats{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.feats li{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:var(--muted);line-height:1.45}
+.feats li .ic{flex:none;width:34px;height:34px;padding:8px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.feats b{display:block;color:var(--ink);font-weight:600;font-size:14.5px;margin-bottom:1px}
 .auth .narrow{max-width:none;width:100%;margin:0;gap:10px;padding:18px}
 .auth .stack{gap:6px}
 .auth .stack label{margin-top:4px}
 .auth input{padding-top:9px;padding-bottom:9px}
-.auth-h{font-size:26px;line-height:1.2;margin:0}
+.auth-h{font-size:28px;line-height:1.2;margin:0}
 .auth-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .auth .choice{padding:11px 12px;gap:12px}
 .auth .choice .choice-ic{width:36px;height:36px}
 .auth .choice b{font-size:15px}
 .auth .choice .s{font-size:13px}
 .auth .btn.wide,.auth .btn.primary{padding-top:10px;padding-bottom:10px}
-.demo-strip{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:9px 12px;border:1.5px dashed var(--accent);border-radius:12px;background:var(--accent-soft);font-size:13.5px}
+.demo-strip{display:flex;flex-direction:column;gap:8px;padding:11px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);font-size:14px}
+.demo-strip > div:first-child{display:flex;flex-direction:column;gap:1px}
+.demo-strip .hint{font-size:13px}
 .next{margin:0}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
 .seg button{border:0;background:none;border-radius:9px;padding:9px 10px;font:500 14.5px var(--sans);color:var(--muted);cursor:pointer}
@@ -384,6 +394,8 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .pw-row .link{font-size:13.5px}
 .choice > .ic:last-child{color:var(--muted);flex:none}
 .bad-banner{margin:0}
+@media (min-width:860px){#app.auth-mode{grid-template-columns:1fr}}
+#app.auth-mode #nav{display:none}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -899,6 +911,7 @@ function render(force){
   const ms = $('#msgs'); if (ms) ms.scrollTop = ms.scrollHeight;
 }
 function renderTop(){
+  const appEl = document.getElementById('app'); if (appEl) appEl.classList.toggle('auth-mode', !!S.authScreen);
   const cs = S.fatal || !ready() ? [] : myClasses(), c = currentClass();
   $('#classSwitch').innerHTML = cs.length > 1 ? `<label class="sr" for="classSel">Class</label><select id="classSel">${cs.map(x => `<option value="${esc(x.id)}" ${c && x.id === c.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '';
   let r = '';
@@ -1583,9 +1596,16 @@ function viewAuth(){
   const nameFields = p => `<div class="grid2"><div><label for="${p}First">First name</label><input id="${p}First" name="first" required maxlength="40" autocomplete="given-name"></div><div><label for="${p}Last">Last name</label><input id="${p}Last" name="last" required maxlength="40" autocomplete="family-name"></div></div>
     <label for="${p}Email">Email</label><input id="${p}Email" name="email" type="email" required autocomplete="email" value="${esc(S.authEmail || '')}">
     <label for="${p}Pw">Create a password</label><input id="${p}Pw" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">`;
-  const welcome = `<h1 class="auth-h">Welcome to Parlei</h1>`;
-  const tryDemo = S.demo ? `<div class="demo-strip"><span><b>Demo</b> · just looking? Nothing is saved.</span><span class="row-actions"><button class="btn sm" data-act="demoLogin" data-email="teacher@demo.parlei">Teacher demo</button><button class="btn sm" data-act="demoLogin" data-email="student@demo.parlei">Student demo</button></span></div>` : '';
-  const wrap = inner => `<div class="auth">${tryDemo}<section class="card narrow">${inner}</section></div>`;
+  const welcome = `<div><h1 class="auth-h">Welcome to Parlei</h1><p class="hint" style="margin:4px 0 0">Lessons, practice and messages for your language class.</p></div>`;
+  const tryDemo = S.demo ? `<div class="demo-strip"><div><b>Demo version</b><span class="hint">Explore a sample French class without an account. Changes aren't saved.</span></div><div class="row-actions"><button class="btn sm" data-act="demoLogin" data-email="teacher@demo.parlei">Explore as a teacher</button><button class="btn sm" data-act="demoLogin" data-email="student@demo.parlei">Explore as a student</button></div></div>` : '';
+  const intro = `<aside class="auth-intro"><p class="eyebrow">Bienvenue · Bienvenido · Bem-vindo · Nnọọ</p>
+    <h2>Your language class, all in one place</h2>
+    <ul class="feats">
+      <li>${icon('book')}<span><b>Lessons and homework</b>Readings, audio and assignments from your teacher, with feedback and grades.</span></li>
+      <li>${icon('cards')}<span><b>Practice that sticks</b>Flashcards, a personal Word Bank with dictionary look-up, and a notebook.</span></li>
+      <li>${icon('chat')}<span><b>Stay in touch</b>Messages, class sessions and 1:1 bookings, with reminders.</span></li>
+    </ul></aside>`;
+  const wrap = inner => `<div class="auth-page"><div class="auth">${tryDemo}<section class="card narrow">${inner}</section></div>${intro}</div>`;
 
   if (mode === 'choose') return wrap(`${welcome}${tabs}
     <p class="hint" style="margin:0">Which describes you?</p>
