@@ -3,12 +3,12 @@
 self.PARLEI_CONFIG = {
   // Firebase console > Project settings > General > Your apps > Web app > "firebaseConfig"
   firebase: {
-    apiKey: "REPLACE_WITH_API_KEY",
-    authDomain: "REPLACE.firebaseapp.com",
-    projectId: "REPLACE",
-    storageBucket: "REPLACE.firebasestorage.app",
-    messagingSenderId: "REPLACE",
-    appId: "REPLACE"
+    apiKey: "AIzaSyB_rM0YXrJtwDMUC5xX_lpKjGX62xf92A8",
+    authDomain: "parlei-795a8.firebaseapp.com",
+    projectId: "parlei-795a8",
+    storageBucket: "parlei-795a8.firebasestorage.app",
+    messagingSenderId: "826965689607",
+    appId: "1:826965689607:web:866782196e8ff8cfd471a2"
   },
 
   // The teacher's email. Signing in with this email (verified) makes you the teacher.
