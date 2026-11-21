@@ -5,7 +5,7 @@
   "description": "Parlei: a language learning portal for teachers and students",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "build:page": "python3 src/build.py",
