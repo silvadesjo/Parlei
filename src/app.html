@@ -406,6 +406,8 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .preview-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .preview-banner > span{flex:1;min-width:200px}
 .preview-banner .ic{flex:none}
+.cls-card{cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.cls-card:hover,.cls-card:focus-visible{border-color:var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .cls-card.cur{border-color:var(--accent)}
 .cls-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
 .code-chip{border:1px dashed var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer}
@@ -1180,11 +1182,11 @@ function viewClasses(){
   const list = myClasses(), teacher = S.role === 'teacher';
   const card = c => {
     const n = studentsOf(c.id).length, mine = ownsClass(c), co = coTeaches(c), cur = currentClass() && currentClass().id === c.id;
-    return `<section class="card cls-card ${cur ? 'cur' : ''}">
+    return `<section class="card cls-card ${cur ? 'cur' : ''}" data-act="openClass" data-id="${esc(c.id)}" role="link" tabindex="0" aria-label="Open ${esc(c.name)}">
       <div class="card-head"><div><p class="eyebrow" style="margin:0">${esc(LANGS[c.language] || c.language || '')}${c.level ? ' · ' + esc(c.level) : ''}${co ? ' · Co-teaching' : ''}</p><h3 style="margin:2px 0 0">${esc(c.name)}</h3></div>${cur ? '<span class="pill ok">Open now</span>' : ''}</div>
       ${c.description ? `<p class="muted" style="margin:0">${esc(c.description)}</p>` : ''}
       ${teacher ? `<div class="cls-meta"><span>${n} student${n === 1 ? '' : 's'}</span><button class="code-chip" data-act="copyCode" data-code="${esc(c.code)}" title="Copy the join code">Code <b>${esc(c.code)}</b></button></div>` : ''}
-      <div class="row-actions">${cur ? '' : `<button class="btn sm primary" data-act="openClass" data-id="${esc(c.id)}">Open</button>`}
+      <div class="row-actions"><button class="btn sm primary" data-act="openClass" data-id="${esc(c.id)}">Open class</button>
         ${teacher && (mine || co) ? `<button class="btn sm" data-act="editClass" data-id="${esc(c.id)}">${mine ? 'Edit' : 'Details'}</button>` : ''}
         ${teacher && mine ? `<button class="btn sm bad" data-act="delClass" data-id="${esc(c.id)}">Delete</button>` : ''}
         ${!teacher && !previewing() ? `<button class="btn sm" data-act="leave" data-id="${esc(c.id)}">Leave class</button>` : ''}</div></section>`;
@@ -2046,7 +2048,7 @@ const ACT = {
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newClass: () => classForm(),
-  openClass: d => { S.classId = d.id; store.set('class', d.id); S.lessonId = null; go('home'); toast('Opened ' + ((classOf(d.id) || {}).name || 'class')); },
+  openClass: d => { const same = S.classId === d.id; S.classId = d.id; store.set('class', d.id); S.lessonId = null; S.convoId = null; go('home'); window.scrollTo(0, 0); if (!same) toast('Opened ' + ((classOf(d.id) || {}).name || 'class')); },
   fillCode: () => { const el = $('#cCode'); if (el) { el.value = newCode(); el.focus(); } },
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
   delClass: async d => { const c = classOf(d.id); if (!(await askConfirm(`Delete "${c.name}"? Students lose access to its lessons and work.`, 'Delete class'))) return; const ok = S.demo ? await delDoc('classes/' + d.id) : await access({action:'deleteClass', cid:d.id}); if (ok) { closeModal(); if (S.classId === d.id) { S.classId = null; store.set('class', ''); } toast('Class deleted'); render(true); } },
@@ -2442,6 +2444,7 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#modalRoot').classList.contains('open')) closeModal();
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.flash[data-act="reveal"]')) { e.preventDefault(); ACT.reveal(); }
+  if (e.key === 'Enter' && e.target.matches('.cls-card')) { e.preventDefault(); ACT.openClass(e.target.dataset); }
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target.id === 'msgText') e.target.form.requestSubmit();
 });
 const PREVIEW_BLOCKED = ['quiz', 'written', 'msg', 'compose', 'join', 'signup', 'book', 'leave'];
