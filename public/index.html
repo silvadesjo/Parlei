@@ -1026,12 +1026,13 @@ function readProfile(f){
   return {p};
 }
 function viewJoin(){
-  const prof = profileOf(S.me);
-  if (!prof) return `<section class="card narrow"><p class="eyebrow">Bienvenue</p><h1>Create your student account</h1><p class="muted">Tell your teacher who you are, then enter the join code they gave you. No code yet? Leave it blank to start with free self-study lessons. Only your teacher sees these details.</p>
-    <form class="stack" data-form="signup">${profileFields(S.demo ? {} : {first:(S.names[S.me] || '').split(' ')[0] || '', last:(S.names[S.me] || '').split(' ').slice(1).join(' '), email:S.email || ''})}
-    <label for="joinCode">Join code <span class="hint">(leave blank if you don't have one yet)</span></label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600">
-    <button class="btn primary">Create account and join</button></form></section>`;
-  return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me))}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
+  // Signed-in students never see a second sign-up form. If their profile is somehow missing, start one quietly.
+  if (!profileOf(S.me) && !S.profileAutoTried && S.loaded.profiles) {
+    S.profileAutoTried = true;
+    const [first, ...rest] = (S.names[S.me] || '').split(' ');
+    upsert('profiles/' + S.me, {first:first || '', last:rest.join(' '), preferred:'', email:S.email || '', phone:'', native:'', goals:'', role:'student', createdAt:Date.now(), lastSeen:Date.now()});
+  }
+  return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me) || S.names[S.me] || S.email || '')}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
   <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>${hasPublic() ? `<section class="card narrow"><h3>No code yet?</h3><p class="muted">Try the free lessons and flashcards in Self-study while you wait.</p><div class="row-actions"><button class="btn" data-act="navTo" data-v="study">${icon('compass')} Open Self-study</button></div></section>` : ''}`;
 }
 
