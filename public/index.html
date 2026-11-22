@@ -702,7 +702,7 @@ function listenOwn(name){
 const ready = () => ['classes', 'members'].every(n => S.loaded[n]);
 /* Until we know who is signed in and their own data has loaded, show only a neutral screen:
    no menu, no role switch, no class names. */
-const gated = () => !S.authScreen && !S.fatal && (!S.me || S.loadFailed || !ready());
+const gated = () => !S.authScreen && !S.fatal && (!S.me || S.loadFailed || !ready() || !!S.settingUp);
 const rows = c => Object.entries(D[c] || {}).map(([id, v]) => Object.assign({id}, v));
 const byCreated = (a, b) => (a.createdAt || 0) - (b.createdAt || 0);
 
@@ -920,6 +920,7 @@ window.addEventListener('parlei-db-error', ev => {
   const d = ev.detail || {}, own = S.me && (d.path === 'members/' + S.me || d.path === 'profiles/' + S.me || d.path === 'classes' || /^classes\/[^/]+$/.test(d.path || ''));
   if (own && !ready() && /permission-denied|failed-precondition|unauthenticated|not-found/.test(d.code || '')) { S.loadFailed = true; console.error('Parlei could not load', d); render(true); }
 });
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({code:'timeout'}), ms))]);
 function render(force){
   const a = document.activeElement;
   const playing = [...document.querySelectorAll('#main audio')].some(x => !x.paused && !x.ended);
@@ -986,7 +987,7 @@ function renderMain(){
   if (S.fatal === 'config') return `<section class="card narrow"><h1>Almost there</h1><p class="muted">Parlei can't reach its database. Check the Firebase settings in <code>config.js</code> (see SETUP.md), then reload.</p></section>`;
   if (S.loadFailed) return `<section class="card narrow splash-card"><h1 class="auth-h">We couldn't open your account</h1><p class="muted" style="margin:0">Please try again in a moment.</p><div class="row-actions"><button class="btn primary" data-act="reloadApp">Try again</button><button class="btn" data-act="signOut">Sign out</button></div></section>`;
   if (!S.me) return '<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>Loading…</span></div>';
-  if (!ready()) return `<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>${S.slow ? 'Still loading…' : 'Signing you in…'}</span>${S.slow ? '<div class="row-actions"><button class="btn sm" data-act="reloadApp">Try again</button><button class="btn sm" data-act="signOut">Sign out</button></div>' : ''}</div>`;
+  if (!ready() || S.settingUp) return `<div class="splash" role="status"><span class="spin" aria-hidden="true"></span><span>${S.slow ? 'Still loading…' : S.settingUp ? 'Setting up your account…' : 'Signing you in…'}</span>${S.slow ? '<div class="row-actions"><button class="btn sm" data-act="reloadApp">Try again</button><button class="btn sm" data-act="signOut">Sign out</button></div>' : ''}</div>`;
   const c = currentClass();
   let out = previewing() ? `<p class="banner preview-banner">${icon('book')}<span><b>Student view.</b> This is what your students see. Changes here aren't sent anywhere.</span><button class="btn sm" data-act="role" data-role="teacher">Back to teacher</button></p>` : '';
   out += S.verifyNote ? `<p class="banner">Check your inbox to confirm your email address (${esc(S.email || '')}). <button class="link" data-act="resendVerify">Send it again</button></p>` : '';
@@ -2205,7 +2206,7 @@ const ACT = {
   },
   editProfile: () => profileForm(),
   authMode: d => { S.authMode = d.mode; S.authError = ''; const e = document.querySelector('input[type=email]'); if (e && e.value) S.authEmail = e.value; render(true); },
-  googleSignIn: d => { S.signupRole = d.role || ''; return authRun(() => S.platform.signInGoogle()); },
+  googleSignIn: d => { S.signupRole = d.role || ''; try { sessionStorage.setItem('parlei-signup', JSON.stringify({role:S.signupRole})); } catch (e) {} return authRun(() => S.platform.signInGoogle()); },
   demoLogin: d => { store.set('preview', '0'); return authRun(() => S.platform.signIn(d.email, 'demo')); },
   accountMenu: () => accountMenu(),
   reloadApp: () => location.reload(),
@@ -2263,6 +2264,7 @@ const FORMS = {
     const role = f.dataset.role === 'instructor' ? 'instructor' : 'student';
     S.pendingProfile = {first, last, preferred:'', email, phone:'', native:'', goals:'', role, createdAt:Date.now(), lastSeen:Date.now()};
     if (role === 'instructor') S.pendingRequest = {name:(first + ' ' + last).trim(), email, teaches:f.teaches.value.trim(), org:f.org.value.trim()};
+    try { sessionStorage.setItem('parlei-signup', JSON.stringify({role, profile:S.pendingProfile, request:S.pendingRequest || null})); } catch (e) {}
     return authRun(() => S.platform.signUp(email, f.password.value, (first + ' ' + last).trim()));
   },
   authReset: f => { S.authEmail = f.email.value.trim(); return authRun(async () => { await S.platform.resetPassword(S.authEmail); S.authMode = 'signin'; toast('If that email has an account, a reset link is on its way.'); }); },
@@ -2517,16 +2519,24 @@ async function boot(){
     if (fresh) { S.view = 'home'; if (location.hash !== '#home') history.replaceState(null, '', '#home'); }
     S.isOwner = !!u.isOwner; S.teacherCapable = !!u.isTeacher; S.verifyNote = !!u.needsVerify;
     S.assets = S.teacherCapable ? P.assets : null;
-    if (!S.pendingProfile && S.signupRole && !S.teacherCapable) {   // Google sign-up from the student or instructor page
-      const existing = await S.db.doc('profiles/' + S.me).get().catch(() => null);
-      if (!existing || !existing.exists) {
-        const [first, ...rest] = (u.displayName || '').split(' ');
-        S.pendingProfile = {first:first || '', last:rest.join(' '), preferred:'', email:u.email || '', phone:'', native:'', goals:'', role:S.signupRole === 'instructor' ? 'instructor' : 'student', createdAt:Date.now(), lastSeen:Date.now()};
-        if (S.signupRole === 'instructor') S.pendingRequest = {name:u.displayName || '', email:u.email || '', teaches:'', org:''};
+    // Creating an account signs you straight in. Set up the profile (and an instructor request) in the
+    // background while the app opens, so a slow save never leaves someone on the sign-in screen.
+    let intent = {}; try { intent = JSON.parse(sessionStorage.getItem('parlei-signup') || '{}') || {}; sessionStorage.removeItem('parlei-signup'); } catch (e) {}
+    if (!S.pendingProfile && intent.profile) S.pendingProfile = intent.profile;
+    if (!S.pendingRequest && intent.request) S.pendingRequest = intent.request;
+    const signupRole = S.signupRole || intent.role || '';
+    S.settingUp = (async () => {
+      if (!S.pendingProfile) {
+        const existing = await withTimeout(S.db.doc('profiles/' + S.me).get(), 8000).catch(() => null);
+        if (existing && !existing.exists) {   // first time here (e.g. Google): start a profile from the account's name and email
+          const [first, ...rest] = (u.displayName || '').split(' ');
+          S.pendingProfile = {first:first || '', last:rest.join(' '), preferred:'', email:u.email || '', phone:'', native:'', goals:'', role:S.teacherCapable ? 'teacher' : signupRole === 'instructor' ? 'instructor' : 'student', createdAt:Date.now(), lastSeen:Date.now()};
+          if (signupRole === 'instructor' && !S.teacherCapable && !S.pendingRequest) S.pendingRequest = {name:u.displayName || '', email:u.email || '', teaches:'', org:''};
+        }
       }
-    }
-    if (S.pendingProfile) { const pp = S.pendingProfile; S.pendingProfile = null; await upsert('profiles/' + S.me, pp); }
-    if (S.pendingRequest && !S.teacherCapable) { const rq = S.pendingRequest; S.pendingRequest = null; if (await setDoc('instructorRequests/' + S.me, Object.assign(rq, {status:'pending', at:Date.now()}))) notify({type:'instructorRequest'}); }
+      if (S.pendingProfile) { const pp = S.pendingProfile; S.pendingProfile = null; await withTimeout(upsert('profiles/' + S.me, pp), 10000).catch(() => {}); }
+      if (S.pendingRequest && !S.teacherCapable) { const rq = S.pendingRequest; S.pendingRequest = null; if (await withTimeout(setDoc('instructorRequests/' + S.me, Object.assign(rq, {status:'pending', at:Date.now()})), 10000).catch(() => false)) notify({type:'instructorRequest'}); }
+    })().finally(() => { S.settingUp = null; schedule(); });
     startApp();
   });
 }
