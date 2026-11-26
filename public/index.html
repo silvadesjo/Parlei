@@ -412,6 +412,19 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .cls-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
 .code-chip{border:1px dashed var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer}
 .code-chip b{letter-spacing:.08em;margin-left:4px}
+.ov-grid{display:grid;gap:16px;grid-template-columns:1fr}
+@media (min-width:760px){.ov-grid{grid-template-columns:1fr 1fr}}
+.ov-grid .card{margin:0}
+.wod{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:12px;background:var(--accent-soft)}
+.wod-term{display:flex;align-items:center;gap:8px;font:400 26px/1.2 var(--display)}
+.wod-ex{margin:2px 0 0;font-style:italic;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips .chip{text-decoration:none;color:var(--ink)}
+.join-nudge{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;text-align:left}
+.join-nudge .grow{display:flex;flex-direction:column;gap:2px;min-width:200px;align-items:flex-start}
+.join-box{gap:10px}
+.code-input{text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+.code-input::placeholder{text-transform:none;letter-spacing:normal;font-weight:400}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -999,7 +1012,8 @@ function renderMain(){
   if (!S.teacherCapable && (profileOf(S.me) || {}).role === 'instructor' && S.view !== 'account') return out + viewPending();
   if (S.view === 'account') return out + viewAccount();
   if (S.view === 'classes') return out + viewClasses();
-  if (!c) return out + (S.role === 'teacher' ? viewOnboard() : previewing() ? `<section class="card narrow"><h2>No classes yet</h2><p class="muted">Create a class first, then come back to see it the way your students will.</p><div class="row-actions"><button class="btn primary" data-act="role" data-role="teacher">Back to teacher</button></div></section>` : viewJoin());
+  if (!c && S.role === 'student' && !previewing() && S.view === 'home') return out + viewHomeNoClass();
+  if (!c) return out + (S.role === 'teacher' ? viewOnboard() : previewing() ? `<section class="card narrow"><h2>No classes yet</h2><p class="muted">Create a class first, then come back to see it the way your students will.</p><div class="row-actions"><button class="btn primary" data-act="role" data-role="teacher">Back to teacher</button></div></section>` : noClassHTML());
   if (S.role === 'student' && !previewing() && !profileOf(S.me)) out += `<p class="banner">Finish setting up your account. <button class="link" data-act="editProfile">Add your details</button></p>`;
   const V = {home: S.role === 'teacher' ? viewHomeT : viewHomeS, lessons:viewLessons, work: S.role === 'teacher' ? viewWorkT : viewWorkS, practice:viewPractice, calendar:viewCalendar, inbox:viewInbox};
   return out + (V[S.view] || V.home)(c);
@@ -1025,16 +1039,6 @@ function readProfile(f){
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return {err:'Check your email address.'};
   return {p};
 }
-function viewJoin(){
-  // Signed-in students never see a second sign-up form. If their profile is somehow missing, start one quietly.
-  if (!profileOf(S.me) && !S.profileAutoTried && S.loaded.profiles) {
-    S.profileAutoTried = true;
-    const [first, ...rest] = (S.names[S.me] || '').split(' ');
-    upsert('profiles/' + S.me, {first:first || '', last:rest.join(' '), preferred:'', email:S.email || '', phone:'', native:'', goals:'', role:'student', createdAt:Date.now(), lastSeen:Date.now()});
-  }
-  return `<section class="card narrow"><p class="eyebrow">Signed in as ${esc(profName(S.me) || S.names[S.me] || S.email || '')}</p><h1>Join your class</h1><p class="muted">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
-  <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:600"><button class="btn primary">Join class</button></form></section>${hasPublic() ? `<section class="card narrow"><h3>No code yet?</h3><p class="muted">Try the free lessons and flashcards in Self-study while you wait.</p><div class="row-actions"><button class="btn" data-act="navTo" data-v="study">${icon('compass')} Open Self-study</button></div></section>` : ''}`;
-}
 
 /* ---- home ---- */
 function viewHomeT(c){
@@ -1059,6 +1063,7 @@ function viewHomeT(c){
       ${studs.length ? `<div class="list">${studs.map(({uid}) => rosterRow(uid, c, asg, decks)).join('')}</div>` : `<p class="empty">No students yet. Share the join code <b>${esc(c.code)}</b> and the link to this page.</p>`}
     </section>
   </div>
+  ${overviewHTML(c)}
   <div class="row-actions">${ownsClass(c) ? `<button class="btn" data-act="editClass" data-id="${esc(c.id)}">Edit class and co-teachers</button>` : `<span class="pill acc" style="align-self:center">You co-teach this class</span><button class="btn" data-act="leaveCoTeach" data-id="${esc(c.id)}">Stop co-teaching</button>`}<button class="btn" data-act="editClass">${icon('plus')} New class</button></div>`;
 }
 function rosterRow(uid, c, asg, decks){
@@ -1131,7 +1136,8 @@ function viewHomeS(c){
     </div></section>
   </div>
   ${feedback.length ? `<section class="card"><h3>Latest feedback</h3><div class="list">${feedback.map(({a, s}) => `<button class="item" data-act="openA" data-id="${esc(a.id)}"><span class="grow"><span class="t">${esc(a.title)}</span><span class="s">${s.feedback ? esc(s.feedback.slice(0, 120)) : 'Graded'}</span></span><span class="pill ok">${fmtNum(s.grade)} / ${a.points}</span></button>`).join('')}</div></section>` : ''}
-  <div class="row-actions"><button class="link" data-act="editProfile">My account details</button><button class="link" data-act="joinAnother">Join another class</button><button class="link danger" data-act="leave" data-id="${esc(c.id)}">Leave this class</button></div>`;
+  ${overviewHTML(c)}
+  <div class="row-actions"><button class="link" data-act="editProfile">My account details</button><a class="link" href="#classes">Join another class</a><button class="link danger" data-act="leave" data-id="${esc(c.id)}">Leave this class</button></div>`;
 }
 
 /* ---- lessons ---- */
@@ -1193,11 +1199,73 @@ function viewClasses(){
         ${teacher && mine ? `<button class="btn sm bad" data-act="delClass" data-id="${esc(c.id)}">Delete</button>` : ''}
         ${!teacher && !previewing() ? `<button class="btn sm" data-act="leave" data-id="${esc(c.id)}">Leave class</button>` : ''}</div></section>`;
   };
-  const head = `<div class="page-head"><div><p class="eyebrow">${list.length} ${list.length === 1 ? 'class' : 'classes'}</p><h1>${teacher ? 'Classes' : 'My classes'}</h1></div>${teacher ? `<button class="btn primary" data-act="newClass">${icon('plus')} New class</button>` : ''}</div>`;
-  const empty = teacher ? `<section class="card"><p class="empty">You don't have any classes yet.</p><div class="row-actions" style="justify-content:center"><button class="btn primary" data-act="newClass">${icon('plus')} Create your first class</button></div></section>`
-    : `<section class="card"><p class="empty">You haven't joined a class yet.</p></section>`;
-  const join = !teacher && !previewing() ? `<section class="card narrow" style="margin:0"><h3>Join another class</h3><form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}"><button class="btn primary">Join class</button></form></section>` : '';
+  const head = `<div class="page-head"><div><p class="eyebrow">${list.length ? list.length + ' ' + (list.length === 1 ? 'class' : 'classes') : teacher ? 'Your classes' : 'Not in a class yet'}</p><h1>${teacher ? 'Classes' : 'My classes'}</h1></div>${teacher ? `<button class="btn primary" data-act="newClass">${icon('plus')} New class</button>` : ''}</div>`;
+  const empty = teacher ? `<section class="card"><p class="empty">You don't have any classes yet.</p><div class="row-actions" style="justify-content:center"><button class="btn primary" data-act="newClass">${icon('plus')} Create your first class</button></div></section>` : '';
+  const join = !teacher && !previewing() ? joinBoxHTML(list.length > 0) : '';
+  if (!teacher && !list.length) return head + join;
   return head + (list.length ? `<div class="cols">${list.map(card).join('')}</div>` : empty) + join;
+}
+
+/* ---- home overview: a look at your own learning (Word Bank, lessons, media, notebook) ---- */
+function sayBtn(text, lang){ return S.tts && text ? `<button class="icon-btn" data-act="say" data-text="${esc(text)}" data-lang="${esc(lang || 'fr')}" aria-label="Listen to ${esc(text)}">${icon('say')}</button>` : ''; }
+function wordOfDay(){
+  const ws = myWords(); if (!ws.length) return null;
+  const day = new Date().toISOString().slice(0, 10); let h = 0; for (const ch of day + S.me) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return ws.sort((a, b) => String(a.id).localeCompare(String(b.id)))[h % ws.length];
+}
+function firstName(){ const p = profileOf(S.me) || {}; return String(p.preferred || p.first || (S.names[S.me] || '').split(' ')[0] || '').trim().split(/\s+/)[0]; }
+function overviewHTML(c){
+  const ws = myWords(), wod = wordOfDay(), langs = myLangs();
+  const recentWords = ws.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).filter(w => !wod || w.id !== wod.id).slice(0, 4);
+  const wordCard = `<section class="card ov-words"><div class="card-head"><h3>Word Bank</h3><a class="link" href="#words">Open</a></div>
+    ${wod ? `<div class="wod"><p class="unit-label" style="margin:0">Word of the day · ${esc(langName(wod.lang))}</p>
+      <div class="wod-term"><span>${esc(wod.term || wod.roman)}</span>${sayBtn(wod.term || wod.roman, wod.lang)}</div>
+      ${wod.term && wod.roman ? `<p class="hint" style="margin:0">${esc(wod.roman)}</p>` : ''}
+      ${wod.meaning ? `<p style="margin:2px 0 0">${esc(wod.meaning)}</p>` : ''}${wod.example ? `<p class="muted wod-ex">${esc(wod.example)}</p>` : ''}</div>
+      ${recentWords.length ? `<p class="unit-label" style="margin:6px 0 0">Recently added</p><div class="chips">${recentWords.map(w => `<a class="chip" href="#words" title="${esc(w.meaning || '')}">${esc(w.term || w.roman)}</a>`).join('')}</div>` : ''}
+      <p class="hint" style="margin:0">${ws.length} word${ws.length === 1 ? '' : 's'} in ${langs.length} language${langs.length === 1 ? '' : 's'}</p>`
+    : `<p class="muted" style="margin:0">Save new words with their meaning and an example, and look them up in the dictionary.</p><div class="row-actions"><a class="btn sm primary" href="#words">Add your first word</a></div>`}</section>`;
+  // Lessons: your class's newest, plus free Self-study lessons.
+  const classLessons = c ? visibleLessons(c.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 3) : [];
+  const pub = publicLessons().filter(l => !c || l.classId !== c.id).slice(0, c ? 2 : 4);
+  const lessonCard = classLessons.length || pub.length ? `<section class="card"><div class="card-head"><h3>Lessons</h3><a class="link" href="${classLessons.length ? '#lessons' : '#study'}">See all</a></div><div class="list">
+    ${classLessons.map(l => `<button class="item" data-act="openLessonFromHome" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">${esc(l.unit || c.name)}</span></span></button>`).join('')}
+    ${pub.map(l => `<button class="item" data-act="openStudyFromHome" data-id="${esc(l.id)}"><span class="grow"><span class="t">${esc(l.title)}</span><span class="s">Free · ${esc(langName(langOfClass(l.classId)))} · ${esc(classByline(l.classId))}</span></span><span class="pill ok">Self-study</span></button>`).join('')}
+  </div></section>` : '';
+  // Media: new class recordings and your own repertoire.
+  const recs = c ? audioOf(c.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 2) : [];
+  const mine = myMedia().sort((a, b) => (a.status === 'doing' ? -1 : 0) - (b.status === 'doing' ? -1 : 0) || (b.at || 0) - (a.at || 0)).slice(0, 3);
+  const mediaCard = `<section class="card"><div class="card-head"><h3>Media</h3><a class="link" href="#media">Open</a></div>
+    ${recs.length || mine.length ? `<div class="list">
+      ${recs.map(x => `<a class="item" href="#media" style="text-decoration:none;color:inherit"><span class="mtype">${icon('say')}</span><span class="grow"><span class="t">${esc(x.title)}</span><span class="s">Class recording${x.duration ? ' · ' + Math.max(1, Math.round(x.duration / 60)) + ' min' : ''}</span></span></a>`).join('')}
+      ${mine.map(m => `<a class="item" href="#media" style="text-decoration:none;color:inherit"><span class="mtype">${MEDIA_ABBR[m.type] || '•'}</span><span class="grow"><span class="t">${esc(m.title)}</span><span class="s">${esc(MEDIA_STATUS[m.status] || 'Saved')}${m.lang ? ' · ' + esc(langName(m.lang)) : ''}</span></span></a>`).join('')}
+    </div>` : `<p class="muted" style="margin:0">Keep a list of songs, shows, podcasts and books in the languages you're learning.</p><div class="row-actions"><a class="btn sm" href="#media">Add media</a></div>`}</section>`;
+  const notes = rows('notes').filter(n => !n.trashed).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 3);
+  const notesCard = `<section class="card"><div class="card-head"><h3>Notebook</h3><a class="link" href="#notes">Open</a></div>
+    ${notes.length ? `<div class="list">${notes.map(n => `<button class="item" data-act="openNoteFromHome" data-id="${esc(n.id)}"><span class="grow"><span class="t">${esc(noteTitle(n))}</span><span class="s">${esc(fmtWhen(n.updatedAt || n.createdAt))}</span></span></button>`).join('')}</div>`
+      : `<p class="muted" style="margin:0">Jot down questions for class, new phrases or anything on your mind. Only you can see it.</p>`}
+    <div class="row-actions"><button class="btn sm" data-act="newNoteFromHome">${icon('plus')} New note</button></div></section>`;
+  return `<h2 class="sec-title">Your learning</h2><div class="ov-grid">${wordCard}${lessonCard}${mediaCard}${notesCard}</div>`;
+}
+/* Home for a student who hasn't joined a class yet. */
+function viewHomeNoClass(){
+  const name = firstName();
+  return `<section class="hero"><div><p class="eyebrow">Parlei</p><h1>${name ? 'Welcome, ' + esc(name) + '!' : 'Welcome!'}</h1><p class="muted">Here's your learning at a glance.</p></div></section>
+    <section class="card join-nudge"><div class="grow"><b>Have a join code from your teacher?</b><span class="muted">Join your class for lessons, homework and feedback.</span></div><a class="btn primary" href="#classes">Join a class</a></section>
+    ${overviewHTML(null)}`;
+}
+/* Class pages (lessons, homework…) before joining a class. */
+function noClassHTML(){
+  return `<section class="card narrow"><h2 style="margin:0">Join a class to see this</h2><p class="muted">Lessons, assignments, flashcards, the schedule and messages come from your class. Enter your teacher's join code on the Classes page.</p>
+    <div class="row-actions"><a class="btn primary" href="#classes">Join a class</a>${hasPublic() ? '<a class="btn" href="#study">Try free lessons</a>' : ''}</div></section>`;
+}
+/* The join box (Classes page). */
+function joinBoxHTML(another){
+  const who = profName(S.me) || S.names[S.me] || S.email || '';
+  return `<section class="card narrow join-box"><p class="eyebrow">Signed in as ${esc(who)}</p><h2 class="auth-h">${another ? 'Join another class' : 'Join your class'}</h2>
+    <p class="muted" style="margin:0">Enter the join code your teacher gave you. <button class="link" data-act="editProfile">Edit my details</button></p>
+    <form class="stack" data-form="join"><label for="joinCode">Join code</label><input id="joinCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="${S.demo ? 'Demo: type any code' : 'e.g. BNJR26'}" class="code-input"><button class="btn primary">Join class</button></form>
+    ${!another && hasPublic() ? `<p class="hint" style="margin:0">No code yet? <a href="#study">Start with free Self-study lessons</a>.</p>` : ''}</section>`;
 }
 
 /* ---- self-study: lessons and decks a teacher has opened to everyone with an account ---- */
@@ -2050,6 +2118,10 @@ const ACT = {
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newClass: () => classForm(),
+  openLessonFromHome: d => { S.lessonId = d.id; go('lessons'); window.scrollTo(0, 0); },
+  openStudyFromHome: d => { go('study'); S.studyLessonId = d.id; render(true); window.scrollTo(0, 0); },
+  openNoteFromHome: d => { go('notes'); S.noteId = d.id; render(true); },
+  newNoteFromHome: () => { go('notes'); setTimeout(() => ACT.newNote(), 50); },
   openClass: d => { const same = S.classId === d.id; S.classId = d.id; store.set('class', d.id); S.lessonId = null; S.convoId = null; go('home'); window.scrollTo(0, 0); if (!same) toast('Opened ' + ((classOf(d.id) || {}).name || 'class')); },
   fillCode: () => { const el = $('#cCode'); if (el) { el.value = newCode(); el.focus(); } },
   newCode: async d => { const ok = await upsert('classes/' + d.id, {code:newCode()}); if (ok) { toast('New join code made'); closeModal(); } },
