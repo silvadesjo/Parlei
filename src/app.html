@@ -425,6 +425,12 @@ mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 1px}
 .join-box{gap:10px}
 .code-input{text-transform:uppercase;letter-spacing:.12em;font-weight:600}
 .code-input::placeholder{text-transform:none;letter-spacing:normal;font-weight:400}
+.sc-list{display:flex;flex-direction:column;gap:10px}
+.sc-row{display:flex;gap:10px;align-items:flex-start}
+.sc-row .grow{display:flex;flex-direction:column;gap:2px}
+.sc-dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--line)}
+.sc-row.ok .sc-dot{background:#2e9e6a}
+.sc-row.bad .sc-dot{background:#d0533f}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:opacity .2s,transform .2s;z-index:60}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--bad);color:#fff}
@@ -1206,6 +1212,44 @@ function viewClasses(){
   return head + (list.length ? `<div class="cols">${list.map(card).join('')}</div>` : empty) + join;
 }
 
+/* ---- System check (owner only, live site): is everything set up? Plain steps for anything that isn't. ---- */
+function systemCheckHTML(){
+  const r = S.sysCheck;
+  const row = x => `<div class="sc-row ${x.ok ? 'ok' : x.ok === false ? 'bad' : ''}"><span class="sc-dot" aria-hidden="true"></span><div class="grow"><b>${esc(x.name)}</b><span class="hint">${x.ok ? esc(x.okText || 'Working') : esc(x.fix || 'Checking…')}</span></div></div>`;
+  return `<section class="card"><div class="card-head"><h3>System check</h3><button class="btn sm" data-act="runSysCheck" ${r && r.running ? 'disabled' : ''}>${r && r.running ? 'Checking…' : r ? 'Check again' : 'Run check'}</button></div>
+    <p class="hint" style="margin:0">Only you see this. It tests the database, its rules and the server settings, and says how to fix anything that isn't set up.</p>
+    ${r ? `<div class="sc-list">${r.items.map(row).join('')}</div>` : ''}</section>`;
+}
+async function runSysCheck(){
+  const P = S.platform, items = [];
+  S.sysCheck = {running:true, items}; render(true);
+  const push = x => { items.push(x); render(true); };
+  const timed = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({code:'timeout'}), ms))]);
+  const raw = P.db, rawCode = e => (e && (e.rawCode || e.code)) || 'error';
+  // 1. Database reachable (reads straight from the server, not the cache)
+  let dbOk = false;
+  try { await timed(raw.doc('profiles/' + S.me).get({source:'server'}), 9000); dbOk = true; push({name:'Database', ok:true, okText:'Firestore is reachable'}); }
+  catch (e) { const c = rawCode(e); push({name:'Database', ok:false, fix:/timeout|unavailable/.test(c)
+    ? "Can't reach the Firestore database. In Firebase, open Firestore: if it asks you to Create database, do that (Toronto, production mode). It must be the (default) database."
+    : 'Firestore answered with an error (' + c + '). Open Firestore → Rules and publish the latest rules.'}); }
+  // 2. Rules: can you save your own things?
+  if (dbOk) {
+    try { await timed(raw.doc('vocab/' + S.me).set({checkedAt:Date.now()}, {merge:true}), 9000); push({name:'Database rules', ok:true, okText:'Saving works'}); }
+    catch (e) { push({name:'Database rules', ok:false, fix:'Saving was refused. In Firebase, open Firestore → Rules, replace everything with the latest firestore.rules (with your email in it) and click Publish.'}); }
+  } else push({name:'Database rules', ok:false, fix:'Checked once the database is reachable.'});
+  // 3. Server settings on Vercel
+  try {
+    const h = await timed(fetch('/api/health?t=' + Date.now()).then(r => r.json()), 9000), st = h.settings || {};
+    const need = [['FIREBASE_SERVICE_ACCOUNT', 'the Firebase server key (Project settings → Service accounts → Generate new private key; paste the whole file)'], ['OWNER_EMAIL', 'your email'], ['APP_URL', 'https://www.parlei.ca'], ['CRON_SECRET', 'any long random text']].filter(([k]) => !st[k]);
+    push(need.length ? {name:'Server settings', ok:false, fix:'Missing in Vercel → Settings → Environment Variables: ' + need.map(([k, v]) => k + ' (' + v + ')').join('; ') + '. Then redeploy.'}
+      : h.serviceAccountProject && h.serviceAccountProject !== (self.PARLEI_CONFIG.firebase || {}).projectId ? {name:'Server settings', ok:false, fix:'The server key is for a different Firebase project (' + h.serviceAccountProject + '). Generate one in this project.'}
+      : {name:'Server settings', ok:true, okText:'Joining classes, codes and deleting classes work'});
+    push({name:'Email notifications', ok:!!(st.RESEND_API_KEY && st.FROM_EMAIL), okText:'Emails can be sent', fix:'Optional: add RESEND_API_KEY and FROM_EMAIL in Vercel to send emails.'});
+    push({name:'Dictionary look-up', ok:!!st.ANTHROPIC_API_KEY, okText:'Look up works', fix:'Optional: add ANTHROPIC_API_KEY in Vercel to turn on Look up.'});
+  } catch (e) { push({name:'Server', ok:false, fix:"The server didn't answer. Check the latest deployment in Vercel."}); }
+  S.sysCheck.running = false; render(true);
+}
+
 /* ---- home overview: a look at your own learning (Word Bank, lessons, media, notebook) ---- */
 function sayBtn(text, lang){ return S.tts && text ? `<button class="icon-btn" data-act="say" data-text="${esc(text)}" data-lang="${esc(lang || 'fr')}" aria-label="Listen to ${esc(text)}">${icon('say')}</button>` : ''; }
 function wordOfDay(){
@@ -1821,6 +1865,7 @@ function viewAccount(){
     ${S.platform ? `<div class="item"><span class="grow"><span class="s">Password</span><span>We'll email you a link to change it.</span></span><button class="btn sm" data-act="changePassword">Change password</button></div>` : ''}
   </div>${S.platform ? `<div class="row-actions"><button class="btn" data-act="signOut">Sign out</button></div>` : ''}</section>
   ${instructorAdminHTML()}
+  ${S.isOwner && !S.demo ? systemCheckHTML() : ''}
   <section class="card"><div class="card-head"><h3>Notifications</h3><span class="hint">Emails go to ${esc(email || 'your account email')}</span></div>
     <div class="list"><div class="item" style="padding:6px 0"><span class="grow"></span><span class="hint" style="width:56px;text-align:center">Email</span><span class="hint" style="width:56px;text-align:center">Push</span></div>
     ${types.map(([k, label, desc]) => `<div class="item"><span class="grow"><span class="t" style="font-weight:500">${esc(label)}</span><span class="s">${esc(desc)}</span></span>
@@ -2118,6 +2163,7 @@ const ACT = {
   copyCode: async d => { try { await navigator.clipboard.writeText(d.code); toast('Join code copied'); } catch (e) { toast('Join code: ' + d.code); } },
   editClass: d => classForm(d.id),
   newClass: () => classForm(),
+  runSysCheck: () => runSysCheck(),
   openLessonFromHome: d => { S.lessonId = d.id; go('lessons'); window.scrollTo(0, 0); },
   openStudyFromHome: d => { go('study'); S.studyLessonId = d.id; render(true); window.scrollTo(0, 0); },
   openNoteFromHome: d => { go('notes'); S.noteId = d.id; render(true); },

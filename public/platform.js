@@ -27,7 +27,7 @@ async function init(){
 
   /* ---------- document store ---------- */
   const CODES = {'permission-denied':'invalid_argument', 'invalid-argument':'invalid_argument', 'not-found':'invalid_argument', 'failed-precondition':'invalid_argument', 'resource-exhausted':'resource_exhausted', 'unavailable':'unavailable', 'deadline-exceeded':'unavailable'};
-  const err = e => ({code:CODES[e && e.code] || 'unavailable', message:(e && e.message) || String(e)});
+  const err = e => ({code:CODES[e && e.code] || 'unavailable', rawCode:(e && e.code) || '', message:(e && e.message) || String(e)});
   const meta = s => ({fromCache:s.metadata.fromCache, hasPendingWrites:s.metadata.hasPendingWrites});
   const wrapDoc = s => ({id:s.id, exists:s.exists(), data:() => s.exists() ? s.data() : undefined, metadata:meta(s)});
   const wrapQuery = s => ({docs:s.docs.map(wrapDoc), size:s.size, empty:s.empty, docChanges:() => [], metadata:meta(s)});
@@ -48,8 +48,8 @@ async function init(){
     const r = F.doc(fdb, path);
     return {
       id:r.id, path,
-      get:() => guard(async () => wrapDoc(await F.getDoc(r))),
-      set:d => guard(() => F.setDoc(r, d)),
+      get:opts => guard(async () => wrapDoc(await (opts && opts.source === 'server' ? F.getDocFromServer(r) : F.getDoc(r)))),
+      set:(d, opts) => guard(() => opts ? F.setDoc(r, d, opts) : F.setDoc(r, d)),
       update:d => guard(() => { const pairs = flatten(d); if (!pairs.length) return; const args = []; pairs.forEach(([p, v]) => args.push(new F.FieldPath(...p), v)); return F.updateDoc(r, ...args); }),
       delete:() => guard(() => F.deleteDoc(r)),
       onSnapshot:(next, onErr) => F.onSnapshot(r, s => next(wrapDoc(s)), e => { watchErr(path, e); onErr && onErr(err(e)); }),
