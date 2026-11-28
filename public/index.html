@@ -1843,8 +1843,13 @@ function authErrText(e){
 async function authRun(fn){
   try { sessionStorage.setItem('parlei-just-signed-in', '1'); } catch (e) {}
   S.authBusy = true; S.authError = ''; render(true);
-  try { await fn(); } catch (e) { if (!/popup-closed|cancelled-popup/.test((e && e.code) || '')) S.authError = authErrText(e); }
-  S.authBusy = false; if (S.authScreen) render(true);
+  let ok = false;
+  try { await fn(); ok = true; } catch (e) { if (!/popup-closed|cancelled-popup/.test((e && e.code) || '')) S.authError = authErrText(e); }
+  S.authBusy = false;
+  // Signed in: leave the sign-in screen right away and show "Signing you in…" while the account loads.
+  // (A Google redirect leaves the page instead, so there's nothing to do here.)
+  if (ok && S.platform && S.platform.currentUid && S.platform.currentUid()) { S.authScreen = false; render(true); return; }
+  if (S.authScreen) render(true);
 }
 
 /* ---- settings: account, notifications, display ---- */
@@ -2637,6 +2642,8 @@ async function boot(){
     let fresh = false; try { fresh = sessionStorage.getItem('parlei-just-signed-in') === '1'; sessionStorage.removeItem('parlei-just-signed-in'); } catch (e) {}
     if (fresh) { S.view = 'home'; if (location.hash !== '#home') history.replaceState(null, '', '#home'); }
     S.isOwner = !!u.isOwner; S.teacherCapable = !!u.isTeacher; S.verifyNote = !!u.needsVerify;
+    // If the instructor check was slow, it finishes in the background; an approved instructor then reloads into the teacher view.
+    if (u.teacherCheck) u.teacherCheck.then(t => { if (t && !S.teacherCapable) location.reload(); });
     S.assets = S.teacherCapable ? P.assets : null;
     // Creating an account signs you straight in. Set up the profile (and an instructor request) in the
     // background while the app opens, so a slow save never leaves someone on the sign-in screen.

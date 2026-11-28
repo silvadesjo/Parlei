@@ -138,12 +138,19 @@ async function init(){
     onUser(cb){
       A.onAuthStateChanged(auth, async u => {
         if (!u) return cb(null);
-        let isTeacher = isOwnerUser(u);
-        if (!isTeacher) { try { isTeacher = (await F.getDoc(F.doc(fdb, 'teachers/' + u.uid))).exists(); } catch (e) {} }
+        // Is this an approved instructor? Don't hold up sign-in for it: after 4 seconds carry on as a
+        // student and let the check finish in the background (the app reloads if it says "instructor").
+        let isTeacher = isOwnerUser(u), teacherCheck = null;
+        if (!isTeacher) {
+          const check = F.getDoc(F.doc(fdb, 'teachers/' + u.uid)).then(d => d.exists(), () => false);
+          const quick = await Promise.race([check, new Promise(r => setTimeout(() => r(null), 4000))]);
+          if (quick === null) teacherCheck = check; else isTeacher = quick;
+        }
         const usesPassword = u.providerData.some(p => p.providerId === 'password');
-        cb({uid:u.uid, email:u.email, displayName:u.displayName, isOwner:isOwnerUser(u), isTeacher, needsVerify:usesPassword && !u.emailVerified});
+        cb({uid:u.uid, email:u.email, displayName:u.displayName, isOwner:isOwnerUser(u), isTeacher, teacherCheck, needsVerify:usesPassword && !u.emailVerified});
       });
     },
+    currentUid:() => (auth.currentUser && auth.currentUser.uid) || null,
     signIn:(email, password) => A.signInWithEmailAndPassword(auth, email, password),
     async signUp(email, password, name){
       const cred = await A.createUserWithEmailAndPassword(auth, email, password);
